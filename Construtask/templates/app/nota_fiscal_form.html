@@ -1,0 +1,227 @@
+{% extends "app/base.html" %}
+
+{% block title %}{{ titulo }} | Construtask{% endblock %}
+
+{% block content %}
+<div class="toolbar">
+    <div>
+        <h2>{{ titulo }}</h2>
+    </div>
+</div>
+
+<section class="panel">
+    <form method="post">
+        {% csrf_token %}
+        {% for field in form %}
+        <div class="field">
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}
+                <div style="color:#b91c1c; margin-top:6px;">{{ field.errors }}</div>
+            {% endif %}
+        </div>
+        {% endfor %}
+        {% if form.non_field_errors %}
+            <div style="color:#b91c1c;">{{ form.non_field_errors }}</div>
+        {% endif %}
+
+        <div class="field">
+            <label>Rateio por Centro de Custo</label>
+            {{ rateio_formset.management_form }}
+            {% if rateio_formset.non_form_errors %}
+                <div style="color:#b91c1c; margin-bottom:10px;">{{ rateio_formset.non_form_errors }}</div>
+            {% endif %}
+            <table class="compact-table item-table">
+                <thead>
+                    <tr>
+                        <th>Centro de Custo</th>
+                        <th class="text-right">Valor</th>
+                        <th>Excluir</th>
+                    </tr>
+                </thead>
+                <tbody id="rateio-body">
+                    {% for rateio_form in rateio_formset %}
+                    <tr{% if not rateio_form.instance.pk and forloop.counter0 > 0 and not rateio_form.errors %} class="empty-row"{% endif %}>
+                        <td>
+                            {{ rateio_form.id }}
+                            {{ rateio_form.centro_custo }}
+                            {{ rateio_form.centro_custo.errors }}
+                        </td>
+                        <td class="text-right">{{ rateio_form.valor }}{{ rateio_form.valor.errors }}</td>
+                        <td>{% if rateio_form.instance.pk %}{{ rateio_form.DELETE }}{% endif %}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <div class="table-actions">
+                <button type="button" class="btn secondary" id="adicionar-rateio">Adicionar Centro de Custo</button>
+                <p class="muted inline-note">Os centros de custo disponíveis no rateio seguem a medição ou o pedido selecionado.</p>
+            </div>
+        </div>
+
+        <div class="actions">
+            <button class="btn" type="submit">Salvar</button>
+            <a class="btn secondary" href="{{ voltar_url }}">Voltar</a>
+        </div>
+    </form>
+</section>
+
+<template id="rateio-empty-form">
+    <tr>
+        <td>
+            {{ rateio_formset.empty_form.id }}
+            {{ rateio_formset.empty_form.centro_custo }}
+        </td>
+        <td class="text-right">{{ rateio_formset.empty_form.valor }}</td>
+        <td></td>
+    </tr>
+</template>
+
+<script>
+(() => {
+    const medicaoField = document.getElementById("id_medicao");
+    const pedidoField = document.getElementById("id_pedido_compra");
+    const fornecedorField = document.getElementById("id_fornecedor");
+    const cnpjField = document.getElementById("id_cnpj");
+    const origemInfoField = document.getElementById("id_origem_info");
+    const totalForms = document.getElementById("id_rateio-TOTAL_FORMS");
+    const tbody = document.getElementById("rateio-body");
+    const addButton = document.getElementById("adicionar-rateio");
+    const template = document.getElementById("rateio-empty-form");
+    let currentOptions = [];
+
+    function linhasAtivas() {
+        return Array.from(tbody.querySelectorAll("tr")).filter((row) => !row.classList.contains("empty-row"));
+    }
+
+    function limparOrigem() {
+        fornecedorField.value = "";
+        cnpjField.value = "";
+        origemInfoField.value = "";
+        currentOptions = [];
+        rebuildRateioRows([]);
+    }
+
+    function preencherOrigem(data, origem) {
+        fornecedorField.value = data.fornecedor || "";
+        cnpjField.value = data.cnpj || "";
+        origemInfoField.value = origem;
+        currentOptions = data.centros_custo || [];
+        rebuildRateioRows(currentOptions);
+    }
+
+    function setOptions(select, options, selectedValue = "") {
+        select.innerHTML = '<option value="">---------</option>';
+        options.forEach((option) => {
+            const opt = document.createElement("option");
+            opt.value = option.id;
+            opt.textContent = `${option.codigo} - ${option.descricao}`;
+            if (String(option.id) === String(selectedValue)) {
+                opt.selected = true;
+            }
+            select.appendChild(opt);
+        });
+        if (![...select.options].some((option) => option.value === String(selectedValue))) {
+            select.value = "";
+        }
+    }
+
+    function showHiddenRow() {
+        const hiddenRow = tbody.querySelector(".empty-row");
+        if (!hiddenRow) return null;
+        hiddenRow.classList.remove("empty-row");
+        return hiddenRow;
+    }
+
+    function addRow() {
+        const hiddenRow = showHiddenRow();
+        if (hiddenRow) {
+            return hiddenRow;
+        }
+        const index = Number(totalForms.value);
+        const html = template.innerHTML.replaceAll("__prefix__", index);
+        tbody.insertAdjacentHTML("beforeend", html);
+        totalForms.value = index + 1;
+        return tbody.lastElementChild;
+    }
+
+    function rebuildRateioRows(options) {
+        const rows = linhasAtivas();
+        rows.forEach((row, index) => {
+            const select = row.querySelector("select");
+            if (select) {
+                setOptions(select, options, index < options.length ? options[index].id : select.value);
+            }
+        });
+
+        while (linhasAtivas().length < options.length) {
+            const row = addRow();
+            const rowIndex = linhasAtivas().length - 1;
+            const select = row.querySelector("select");
+            if (select) {
+                setOptions(select, options, options[rowIndex]?.id || "");
+            }
+        }
+
+        linhasAtivas().forEach((row) => {
+            const select = row.querySelector("select");
+            if (select) {
+                setOptions(select, options, select.value);
+            }
+        });
+    }
+
+    async function carregarPedido() {
+        const pedidoId = pedidoField.value;
+        if (!pedidoId) {
+            if (!medicaoField.value) {
+                limparOrigem();
+            }
+            return;
+        }
+        medicaoField.value = "";
+        const response = await fetch(`/contratos/${pedidoId}/dados/`);
+        if (!response.ok) {
+            limparOrigem();
+            return;
+        }
+        const data = await response.json();
+        preencherOrigem(data, `Pedido ${pedidoField.options[pedidoField.selectedIndex].text}`);
+    }
+
+    async function carregarMedicao() {
+        const medicaoId = medicaoField.value;
+        if (!medicaoId) {
+            if (!pedidoField.value) {
+                limparOrigem();
+            }
+            return;
+        }
+        pedidoField.value = "";
+        const response = await fetch(`/medicoes/${medicaoId}/dados/`);
+        if (!response.ok) {
+            limparOrigem();
+            return;
+        }
+        const data = await response.json();
+        preencherOrigem(data, medicaoField.options[medicaoField.selectedIndex].text);
+    }
+
+    addButton.addEventListener("click", () => {
+        const row = addRow();
+        const select = row.querySelector("select");
+        if (select) {
+            setOptions(select, currentOptions);
+        }
+    });
+
+    pedidoField.addEventListener("change", carregarPedido);
+    medicaoField.addEventListener("change", carregarMedicao);
+    if (pedidoField.value) {
+        carregarPedido();
+    } else if (medicaoField.value) {
+        carregarMedicao();
+    }
+})();
+</script>
+{% endblock %}

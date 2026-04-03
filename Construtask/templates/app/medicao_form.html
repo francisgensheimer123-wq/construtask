@@ -1,0 +1,227 @@
+{% extends "app/base.html" %}
+
+{% block title %}{{ titulo }} | Construtask{% endblock %}
+
+{% block content %}
+<div class="toolbar">
+    <div>
+        <h2>{{ titulo }}</h2>
+    </div>
+</div>
+
+<section class="panel">
+    <form method="post">
+        {% csrf_token %}
+        {% for field in form %}
+        <div class="field">
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}
+                <div style="color:#b91c1c; margin-top:6px;">{{ field.errors }}</div>
+            {% endif %}
+        </div>
+        {% endfor %}
+        {% if form.non_field_errors %}
+            <div style="color:#b91c1c;">{{ form.non_field_errors }}</div>
+        {% endif %}
+        <div class="field">
+            <label>Itens da Medição</label>
+            {{ item_formset.management_form }}
+            {% if item_formset.non_form_errors %}
+                <div style="color:#b91c1c; margin-bottom:10px;">{{ item_formset.non_form_errors }}</div>
+            {% endif %}
+            <table class="compact-table item-table">
+                <thead>
+                    <tr>
+                        <th>Centro de Custo</th>
+                        <th>Unidade</th>
+                        <th class="text-right">Quantidade</th>
+                        <th class="text-right">Valor Unitário</th>
+                        <th>Excluir</th>
+                    </tr>
+                </thead>
+                <tbody id="itens-medicao-body">
+                    {% for item_form in item_formset %}
+                    <tr{% if not item_form.instance.pk and forloop.counter0 > 0 and not item_form.errors %} class="empty-row"{% endif %}>
+                        <td>
+                            {{ item_form.id }}
+                            {{ item_form.centro_custo }}
+                            {{ item_form.centro_custo.errors }}
+                        </td>
+                        <td>{{ item_form.unidade }}{{ item_form.unidade.errors }}</td>
+                        <td class="text-right">{{ item_form.quantidade }}{{ item_form.quantidade.errors }}</td>
+                        <td class="text-right">{{ item_form.valor_unitario }}{{ item_form.valor_unitario.errors }}</td>
+                        <td>{% if item_form.instance.pk %}{{ item_form.DELETE }}{% endif %}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <div class="table-actions">
+                <button type="button" class="btn secondary" id="adicionar-item-medicao">Adicionar Centro de Custo</button>
+                <p class="muted inline-note">O valor medido será calculado automaticamente pela soma de quantidade x valor unitário dos itens.</p>
+            </div>
+        </div>
+        <div class="actions">
+            <button class="btn" type="submit">Salvar</button>
+            <a class="btn secondary" href="{{ voltar_url }}">Voltar</a>
+        </div>
+    </form>
+</section>
+
+<template id="item-medicao-empty-form">
+    <tr>
+        <td>
+            {{ item_formset.empty_form.id }}
+            {{ item_formset.empty_form.centro_custo }}
+        </td>
+        <td>{{ item_formset.empty_form.unidade }}</td>
+        <td class="text-right">{{ item_formset.empty_form.quantidade }}</td>
+        <td class="text-right">{{ item_formset.empty_form.valor_unitario }}</td>
+        <td></td>
+    </tr>
+</template>
+
+<script>
+(() => {
+    const contratoField = document.getElementById("id_contrato");
+    const fornecedorField = document.getElementById("id_fornecedor_info");
+    const cnpjField = document.getElementById("id_cnpj_info");
+    const responsavelField = document.getElementById("id_responsavel_info");
+    const totalForms = document.getElementById("id_itens-TOTAL_FORMS");
+    const tbody = document.getElementById("itens-medicao-body");
+    const addButton = document.getElementById("adicionar-item-medicao");
+    const template = document.getElementById("item-medicao-empty-form");
+    let currentOptions = [];
+
+    const firstSelect = tbody.querySelector("select");
+    if (firstSelect) {
+        currentOptions = Array.from(firstSelect.options)
+            .filter((option) => option.value)
+            .map((option) => {
+                const texto = option.textContent.split(" - ");
+                return {
+                    id: option.value,
+                    codigo: texto[0] || "",
+                    descricao: texto.slice(1).join(" - "),
+                };
+            });
+    }
+
+    function limparInfos() {
+        fornecedorField.value = "";
+        cnpjField.value = "";
+        responsavelField.value = "";
+    }
+
+    function linhasAtivas() {
+        return Array.from(tbody.querySelectorAll("tr")).filter((row) => !row.classList.contains("empty-row"));
+    }
+
+    function rebuildOptions(options) {
+        const rows = linhasAtivas();
+        rows.forEach((row) => {
+            const select = row.querySelector("select");
+            if (!select) return;
+            const valorAtual = select.value;
+            select.innerHTML = '<option value="">---------</option>';
+            options.forEach((option) => {
+                const opt = document.createElement("option");
+                opt.value = option.id;
+                opt.textContent = `${option.codigo} - ${option.descricao}`;
+                if (String(option.id) === valorAtual) {
+                    opt.selected = true;
+                }
+                select.appendChild(opt);
+            });
+            if (![...select.options].some((option) => option.value === valorAtual)) {
+                select.value = "";
+            }
+            preencherCamposDaLinha(row, select.value);
+        });
+    }
+
+    function preencherCamposDaLinha(row, centroId) {
+        const unidadeInput = row.querySelector("input[name$='unidade']");
+        const valorUnitarioInput = row.querySelector("input[name$='valor_unitario']");
+        const item = currentOptions.find((option) => String(option.id) === String(centroId));
+
+        if (!unidadeInput || !valorUnitarioInput) {
+            return;
+        }
+
+        if (!item) {
+            unidadeInput.value = "";
+            valorUnitarioInput.value = "";
+            return;
+        }
+
+        unidadeInput.value = item.unidade || "";
+        valorUnitarioInput.value = item.valor_unitario || "";
+    }
+
+    function bindRow(row) {
+        const select = row.querySelector("select");
+        if (!select || select.dataset.bound === "true") {
+            return;
+        }
+        select.dataset.bound = "true";
+        select.addEventListener("change", () => preencherCamposDaLinha(row, select.value));
+        preencherCamposDaLinha(row, select.value);
+    }
+
+    function bindAllRows() {
+        Array.from(tbody.querySelectorAll("tr")).forEach(bindRow);
+    }
+
+    function showHiddenRow() {
+        const hiddenRow = tbody.querySelector(".empty-row");
+        if (!hiddenRow) return false;
+        hiddenRow.classList.remove("empty-row");
+        rebuildOptions(currentOptions);
+        return true;
+    }
+
+    addButton.addEventListener("click", () => {
+        if (showHiddenRow()) {
+            return;
+        }
+
+        const index = Number(totalForms.value);
+        const html = template.innerHTML.replaceAll("__prefix__", index);
+        tbody.insertAdjacentHTML("beforeend", html);
+        totalForms.value = index + 1;
+        rebuildOptions(currentOptions);
+        bindAllRows();
+    });
+
+    async function carregarContrato() {
+        const contratoId = contratoField.value;
+        if (!contratoId) {
+            limparInfos();
+            rebuildOptions([]);
+            return;
+        }
+
+        const response = await fetch(`/contratos/${contratoId}/dados/`);
+        if (!response.ok) {
+            limparInfos();
+            rebuildOptions([]);
+            return;
+        }
+
+        const data = await response.json();
+        fornecedorField.value = data.fornecedor || "";
+        cnpjField.value = data.cnpj || "";
+        responsavelField.value = data.responsavel || "";
+        currentOptions = data.centros_custo || [];
+        rebuildOptions(currentOptions);
+    }
+
+    contratoField.addEventListener("change", carregarContrato);
+    bindAllRows();
+    if (contratoField.value) {
+        carregarContrato();
+    }
+})();
+</script>
+{% endblock %}

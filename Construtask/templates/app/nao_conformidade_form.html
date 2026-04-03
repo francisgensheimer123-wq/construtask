@@ -1,0 +1,30 @@
+{% extends "app/base.html" %}
+
+{% block title %}Nao Conformidade | Construtask{% endblock %}
+
+{% block content %}
+<div class="panel" style="max-width:920px;">
+    <div class="toolbar">
+        <div>
+            <h2>{% if object %}Editar Nao Conformidade{% else %}Nova Nao Conformidade{% endif %}</h2>
+            <p>Registre a ocorrencia, a causa e a acao corretiva associada.</p>
+        </div>
+    </div>
+    <form method="post">
+        {% csrf_token %}
+        {% for field in form %}
+        <div class="field">
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}
+            <div class="message error" style="margin-top:8px;">{{ field.errors|striptags }}</div>
+            {% endif %}
+        </div>
+        {% endfor %}
+        <div class="actions">
+            <button class="btn" type="submit">Salvar</button>
+            <a class="btn secondary" href="{% url 'nao_conformidade_list' %}">Voltar</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

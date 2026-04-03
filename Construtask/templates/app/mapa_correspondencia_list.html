@@ -1,0 +1,205 @@
+{% extends "app/base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Mapeamentos Cronograma ↔ EAP</h1>
+        <a href="{% url 'plano_fisico_list' %}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Voltar aos Cronogramas
+        </a>
+    </div>
+
+    {% if obra %}
+    <div class="alert alert-info">
+        <strong>Obra:</strong> {{ obra.codigo }} - {{ obra.nome }}
+    </div>
+    {% endif %}
+
+    {% if estatisticas %}
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Total de Mapeamentos</h5>
+                    <p class="card-text display-4">{{ estatisticas.total }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Vinculados</h5>
+                    <p class="card-text display-4 text-success">{{ estatisticas.vinculados }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Não Vinculados</h5>
+                    <p class="card-text display-4 text-warning">{{ estatisticas.nao_vinculados }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">% Vinculado</h5>
+                    <p class="card-text display-4">{{ estatisticas.percentual_vinculado }}%</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if mapeamentos %}
+    <div class="table-responsive">
+        <table class="table table-striped table-hover">
+            <thead>
+                <tr>
+                    <th>Código Atividade</th>
+                    <th>Atividade</th>
+                    <th>Código EAP</th>
+                    <th>Descrição EAP</th>
+                    <th>% Rateio</th>
+                    <th>Status</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for mp in mapeamentos %}
+                <tr>
+                    <td>{{ mp.plano_fisico_item.codigo_atividade }}</td>
+                    <td>{{ mp.plano_fisico_item.atividade|truncatechars:50 }}</td>
+                    <td>
+                        {% if mp.plano_contas %}
+                        {{ mp.plano_contas.codigo }}
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if mp.plano_contas %}
+                        {{ mp.plano_contas.descricao|truncatechars:50 }}
+                        {% else %}
+                        <span class="text-muted">Não vinculado</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ mp.percentual_rateio }}%</td>
+                    <td>
+                        <span class="badge bg-{% if mp.status == 'ATIVO' %}success{% else %}secondary{% endif %}">
+                            {{ mp.get_status_display }}
+                        </span>
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary" onclick="editarMapeamento({{ mp.pk }}, '{{ mp.plano_fisico_item.codigo_atividade }}')">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="alert alert-warning">
+        <p>Nenhum mapeamento encontrado.</p>
+        <p>Importe um cronograma e vincule as atividades aos itens da EAP.</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal para editar mapeamento -->
+<div class="modal fade" id="mapeamentoModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Vincular Atividade à EAP</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="mapeamentoForm">
+                    <div class="mb-3">
+                        <label for="planoContasSelect" class="form-label">Selecione o Item da EAP</label>
+                        <select class="form-control" id="planoContasSelect" name="plano_contas_id">
+                            <option value="">-- Selecione --</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="percentualRateio" class="form-label">% de Rateio</label>
+                        <input type="number" class="form-control" id="percentualRateio" name="percentual" value="100" min="0" max="100">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="salvarMapeamento()">Salvar</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let mapeamentoAtual = null;
+
+function editarMapeamento(id, codigoAtividade) {
+    mapeamentoAtual = id;
+    
+    // Buscar sugestões via AJAX
+    fetch('{% url "mapa_correspondencia_sugerir" %}?item_id=' + encodeURIComponent(codigoAtividade))
+        .then(response => response.json())
+        .then(data => {
+            const select = document.getElementById('planoContasSelect');
+            select.innerHTML = '<option value="">-- Selecione --</option>';
+            
+            if (data.sugestoes && data.sugestoes.length > 0) {
+                data.sugestoes.forEach(function(sug) {
+                    const option = document.createElement('option');
+                    option.value = sug.id;
+                    option.textContent = sug.codigo + ' - ' + sug.descricao + ' (pontuação: ' + sug.pontuacao + ')';
+                    select.appendChild(option);
+                });
+            }
+        })
+        .catch(error => console.error('Erro:', error));
+    
+    // Mostrar modal
+    const modal = new bootstrap.Modal(document.getElementById('mapeamentoModal'));
+    modal.show();
+}
+
+function salvarMapeamento() {
+    if (!mapeamentoAtual) return;
+    
+    const planoContasId = document.getElementById('planoContasSelect').value;
+    const percentual = document.getElementById('percentualRateio').value;
+    
+    // Enviar via AJAX
+    const formData = new FormData();
+    formData.append('item_id', mapeamentoAtual);
+    if (planoContasId) {
+        formData.append('plano_contas_id', planoContasId);
+    }
+    formData.append('percentual', percentual);
+    
+    fetch('{% url "mapa_correspondencia_vincular" %}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Erro: ' + data.error);
+        }
+    })
+    .catch(error => console.error('Erro:', error));
+}
+</script>
+{% endblock %}

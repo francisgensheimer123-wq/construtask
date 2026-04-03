@@ -1,0 +1,58 @@
+{% extends "app/base.html" %}
+{% load formatters %}
+
+{% block main_class %}main-full{% endblock %}
+{% block title %}Projeção Financeira | Construtask{% endblock %}
+
+{% block content %}
+<div class="toolbar">
+    <div>
+        <h2>Projeção Financeira</h2>
+        <p>Entradas (NF) e saídas (medições previstas) por mês no horizonte.</p>
+    </div>
+    <form method="get" style="display:flex; gap:10px; align-items:center;">
+        <label class="muted" style="font-weight:600;">Horizonte</label>
+        <select name="meses" style="min-width:110px;">
+            {% for opt in meses_opcoes %}
+                <option value="{{ opt }}"{% if opt == meses_qtd %} selected{% endif %}>{{ opt }} meses</option>
+            {% endfor %}
+        </select>
+        <button class="btn secondary" type="submit" style="padding:7px 10px;">Atualizar</button>
+    </form>
+</div>
+
+<section class="cards">
+    <div class="card"><span>Total Entradas</span><strong class="money" style="text-align:left;">{{ total_entradas|money_br }}</strong></div>
+    <div class="card"><span>Total Saídas</span><strong class="money" style="text-align:left;">{{ total_saidas|money_br }}</strong></div>
+    <div class="card"><span>Saldo no Horizonte</span><strong class="money" style="text-align:left;">{{ total_saldo|money_br }}</strong></div>
+</section>
+
+<section class="panel">
+    <h3>Visão Mensal</h3>
+    {% if series %}
+    <table class="compact-table">
+        <thead>
+            <tr>
+                <th>Mês</th>
+                <th class="text-right">Entradas</th>
+                <th class="text-right">Saídas</th>
+                <th class="text-right">Saldo</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for mes in series %}
+            <tr>
+                <td>{{ mes.label }}</td>
+                <td class="money">{{ mes.entrada|money_br }}</td>
+                <td class="money">{{ mes.saida|money_br }}</td>
+                <td class="money">{{ mes.saldo|money_br }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="empty">Nenhuma projeção disponível para o período.</p>
+    {% endif %}
+</section>
+{% endblock %}
+

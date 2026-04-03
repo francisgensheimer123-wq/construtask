@@ -1,0 +1,249 @@
+{% extends "app/base.html" %}
+{% load formatters %}
+
+{% block main_class %}main-full{% endblock %}
+{% block title %}Plano de Contas | Construtask{% endblock %}
+
+{% block content %}
+<div class="toolbar">
+    <div>
+        <h2>Plano de Contas</h2>
+        <p>Consulta da estrutura orcamentaria, dos centros de custo e da execucao financeira.</p>
+    </div>
+    <div style="display:flex; gap:10px;">
+        <a class="btn secondary" href="{% url 'plano_contas_importar' %}">Importar Excel</a>
+        <a class="btn secondary" href="{% url 'plano_contas_export' %}?q={{ busca|urlencode }}">Exportar Excel</a>
+    </div>
+</div>
+
+<section class="panel" style="width: 100%; margin: 0;">
+    <form method="get" class="toolbar" style="justify-content:flex-start;">
+        <input type="text" name="q" value="{{ busca }}" placeholder="Buscar por codigo ou descricao" style="max-width:380px;">
+        <button class="btn" type="submit">Buscar</button>
+    </form>
+
+    {% if planos_contas %}
+    <table class="compact-table plano-table">
+        <colgroup>
+            <col style="width: 8%;">
+            <col style="width: 22%;">
+            <col style="width: 4%;">
+            <col style="width: 5%;">
+            <col style="width: 7%;">
+            <col style="width: 7%;">
+            <col style="width: 7%;">
+            <col style="width: 7%;">
+            <col style="width: 8%;">
+            <col style="width: 7%;">
+            <col style="width: 7%;">
+            <col style="width: 7%;">
+            <col style="width: 9%;">
+        </colgroup>
+        <thead>
+            <tr>
+                <th>Codigo</th>
+                <th>Descricao</th>
+                <th>Unidade</th>
+                <th class="text-right">Quantidade</th>
+                <th class="text-right">Valor Unitario</th>
+                <th class="text-right">Valor Total</th>
+                <th class="text-right">Comprometido</th>
+                <th class="text-right">Medido</th>
+                <th class="text-right">Valor Executado</th>
+                <th class="text-right">Saldo a Comprometer</th>
+                <th class="text-right">Saldo a Medir</th>
+                <th class="text-right">Saldo a Executar</th>
+                <th>Acoes</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for plano in planos_contas %}
+            <tr class="plano-row {% if plano.filhos_count %}synthetic{% endif %}" data-notas-url="{% url 'plano_contas_notas' plano.pk %}">
+                <td class="tree-code">{{ plano.codigo }}</td>
+                <td class="wrap-text plano-descricao-cell">{{ plano.descricao }}</td>
+                <td>{% if plano.unidade and plano.unidade != "nan" %}{{ plano.unidade }}{% else %}-{% endif %}</td>
+                <td class="money">{% if plano.quantidade is not None %}{{ plano.quantidade|trunc2 }}{% else %}-{% endif %}</td>
+                <td class="money">{% if plano.valor_unitario is not None %}{{ plano.valor_unitario|money_br }}{% else %}-{% endif %}</td>
+                <td class="money">{{ plano.valor_total_consolidado_calc|money_br }}</td>
+                <td class="money">{{ plano.valor_comprometido_calc|money_br }}</td>
+                <td class="money">{{ plano.valor_medido_calc|money_br }}</td>
+                <td class="money">{{ plano.valor_executado_calc|money_br }}</td>
+                <td class="money">{{ plano.saldo_a_comprometer_calc|money_br }}</td>
+                <td class="money">{{ plano.saldo_a_medir_calc|money_br }}</td>
+                <td class="money">{{ plano.saldo_a_executar_calc|money_br }}</td>
+                <td onclick="event.stopPropagation();">
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <a href="{% url 'plano_contas_update' plano.pk %}">Editar</a>
+                        <form method="post" action="{% url 'plano_contas_delete' %}" onsubmit="event.stopPropagation(); return confirm('Excluir este centro de custo?');" style="display:inline;">
+                            {% csrf_token %}
+                            <input type="hidden" name="id" value="{{ plano.pk }}">
+                            <button type="submit" style="background:none; border:0; color:#651111; cursor:pointer; padding:0;">Excluir</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="empty">Nenhum item encontrado.</p>
+    {% endif %}
+</section>
+
+<div id="notas-modal" class="modal-shell" hidden>
+    <div class="modal-backdrop" data-close-modal></div>
+    <section class="modal-card">
+        <div class="toolbar" style="margin-bottom: 14px;">
+            <div>
+                <h3 id="notas-modal-title" style="margin-bottom: 4px;">Notas do Centro de Custo</h3>
+                <p id="notas-modal-subtitle" class="muted">Carregando...</p>
+            </div>
+            <button type="button" class="btn secondary" data-close-modal>Fechar</button>
+        </div>
+        <div id="notas-modal-content">
+            <p class="muted">Carregando notas...</p>
+        </div>
+    </section>
+</div>
+
+<style>
+    .plano-table {
+        table-layout: fixed;
+        width: 100%;
+    }
+
+    .plano-row {
+        cursor: pointer;
+    }
+
+    .plano-row:hover {
+        background: rgba(127, 29, 29, 0.06);
+    }
+
+    .plano-descricao-cell {
+        white-space: normal;
+        word-break: break-word;
+        line-height: 1.3;
+    }
+
+    .modal-shell {
+        position: fixed;
+        inset: 0;
+        z-index: 60;
+    }
+
+    .modal-backdrop {
+        position: absolute;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.52);
+    }
+
+    .modal-card {
+        position: relative;
+        width: min(1120px, calc(100vw - 48px));
+        max-height: calc(100vh - 48px);
+        overflow: auto;
+        margin: 24px auto;
+        background: #ffffff;
+        border-radius: 18px;
+        padding: 20px;
+        box-shadow: 0 24px 80px rgba(15, 23, 42, 0.22);
+    }
+
+    .modal-notas-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .modal-notas-table th,
+    .modal-notas-table td {
+        padding: 10px 12px;
+        border-bottom: 1px solid #d5d9df;
+        vertical-align: top;
+    }
+
+    .modal-notas-table th {
+        text-align: left;
+        background: #eef0f3;
+    }
+</style>
+
+<script>
+(() => {
+    const modal = document.getElementById("notas-modal");
+    const modalTitle = document.getElementById("notas-modal-title");
+    const modalSubtitle = document.getElementById("notas-modal-subtitle");
+    const modalContent = document.getElementById("notas-modal-content");
+
+    function fecharModal() {
+        modal.hidden = true;
+    }
+
+    function abrirModal() {
+        modal.hidden = false;
+    }
+
+    function renderTabelaNotas(payload) {
+        if (!payload.notas.length) {
+            modalContent.innerHTML = '<p class="muted">Nenhuma nota fiscal apropriada neste centro de custo.</p>';
+            return;
+        }
+
+        const linhas = payload.notas.map((nota) => `
+            <tr>
+                <td>${nota.id}</td>
+                <td>${nota.numero}</td>
+                <td>${nota.cnpj}</td>
+                <td>${nota.fornecedor}</td>
+                <td>${nota.descricao}</td>
+                <td>${nota.centro_custo}</td>
+                <td class="text-right">${nota.valor}</td>
+                <td>${nota.data}</td>
+            </tr>
+        `).join("");
+
+        modalContent.innerHTML = `
+            <table class="modal-notas-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Numero da Nota</th>
+                        <th>CNPJ</th>
+                        <th>Fornecedor</th>
+                        <th>Descricao</th>
+                        <th>Centro de Custo</th>
+                        <th class="text-right">Valor Apropriado</th>
+                        <th>Data</th>
+                    </tr>
+                </thead>
+                <tbody>${linhas}</tbody>
+            </table>
+        `;
+    }
+
+    async function carregarNotas(url) {
+        modalSubtitle.textContent = "Carregando...";
+        modalContent.innerHTML = '<p class="muted">Carregando notas...</p>';
+        abrirModal();
+        const response = await fetch(url);
+        if (!response.ok) {
+            modalSubtitle.textContent = "Erro";
+            modalContent.innerHTML = '<p class="muted">Nao foi possivel carregar as notas deste centro de custo.</p>';
+            return;
+        }
+        const payload = await response.json();
+        modalTitle.textContent = "Notas do Centro de Custo";
+        modalSubtitle.textContent = `${payload.centro_custo} | ${payload.quantidade_notas} nota(s)`;
+        renderTabelaNotas(payload);
+    }
+
+    document.querySelectorAll(".plano-row").forEach((row) => {
+        row.addEventListener("click", () => carregarNotas(row.dataset.notasUrl));
+    });
+
+    document.querySelectorAll("[data-close-modal]").forEach((element) => {
+        element.addEventListener("click", fecharModal);
+    });
+})();
+</script>
+{% endblock %}

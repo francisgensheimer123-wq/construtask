@@ -1,0 +1,131 @@
+{% extends "app/base.html" %}
+{% load formatters %}
+
+{% block main_class %}main-full{% endblock %}
+{% block title %}Detalhe da Solicitacao | Construtask{% endblock %}
+
+{% block content %}
+<div class="toolbar">
+    <div>
+        <h2>{{ solicitacao.numero }}</h2>
+        <p>{{ solicitacao.titulo }} | {{ solicitacao.get_status_display }}</p>
+    </div>
+    <div style="display:flex; gap:10px;">
+        <a class="btn secondary" href="{% url 'solicitacao_compra_pdf' solicitacao.pk %}">Gerar PDF</a>
+        <a class="btn secondary" href="{% url 'cotacao_create' %}?solicitacao={{ solicitacao.pk }}">Nova Cotacao</a>
+        <a class="btn secondary" href="{% url 'solicitacao_compra_list' %}">Voltar</a>
+    </div>
+</div>
+
+<section class="grid-2">
+    <div class="panel">
+        <h3>Dados da solicitacao</h3>
+        <table class="compact-table">
+            <tbody>
+                <tr><th>Obra</th><td>{{ solicitacao.obra.codigo }} - {{ solicitacao.obra.nome }}</td></tr>
+                <tr><th>Centro de custo principal</th><td>{% if solicitacao.plano_contas %}{{ solicitacao.plano_contas.codigo }} - {{ solicitacao.plano_contas.descricao }}{% else %}-{% endif %}</td></tr>
+                <tr><th>Solicitante</th><td>{{ solicitacao.solicitante }}</td></tr>
+                <tr><th>Data</th><td>{{ solicitacao.data_solicitacao|date:"d/m/Y" }}</td></tr>
+                <tr><th>Descricao</th><td class="wrap-text">{{ solicitacao.descricao|default:"-" }}</td></tr>
+                <tr><th>Observacoes</th><td class="wrap-text">{{ solicitacao.observacoes|default:"-" }}</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="panel">
+        <h3>Relacionamentos</h3>
+        <table class="compact-table">
+            <tbody>
+                <tr><th class="text-right">Cotacoes</th><td class="money">{{ solicitacao.cotacoes.count }}</td></tr>
+                <tr><th class="text-right">Resultados em Compras e Contratacoes</th><td class="money">{{ compromissos_resultantes|length }}</td></tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="grid-2">
+    <div class="panel">
+        <h3>Cotacoes Vinculadas</h3>
+        {% if solicitacao.cotacoes.all %}
+        <table class="compact-table">
+            <thead>
+                <tr>
+                    <th>Numero</th>
+                    <th>Fornecedor</th>
+                    <th>Status</th>
+                    <th>Data</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for cotacao in solicitacao.cotacoes.all %}
+                <tr>
+                    <td><a href="{% url 'cotacao_detail' cotacao.pk %}">{{ cotacao.numero }}</a></td>
+                    <td>{{ cotacao.fornecedor }}</td>
+                    <td>{{ cotacao.get_status_display }}</td>
+                    <td>{{ cotacao.data_cotacao|date:"d/m/Y" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="empty">Ainda nao ha cotacoes vinculadas.</p>
+        {% endif %}
+    </div>
+
+    <div class="panel">
+        <h3>Compras e Contratacoes Geradas</h3>
+        {% if compromissos_resultantes %}
+        <table class="compact-table">
+            <thead>
+                <tr>
+                    <th>Numero</th>
+                    <th>Tipo</th>
+                    <th>Fornecedor</th>
+                    <th class="text-right">Valor</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for compromisso in compromissos_resultantes %}
+                <tr>
+                    <td><a href="{% url 'contrato_detail' compromisso.pk %}">{{ compromisso.numero }}</a></td>
+                    <td>{{ compromisso.get_tipo_display }}</td>
+                    <td>{{ compromisso.fornecedor }}</td>
+                    <td class="money">{{ compromisso.valor_contratado|money_br }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="empty">Nenhum contrato ou pedido gerado a partir desta solicitacao.</p>
+        {% endif %}
+    </div>
+</section>
+
+<section class="panel">
+    <h3>Itens</h3>
+    {% if solicitacao.itens.all %}
+    <table class="compact-table">
+        <thead>
+                <tr>
+                    <th>Centro de Custo</th>
+                    <th>Descricao Tecnica</th>
+                    <th>Unidade</th>
+                    <th class="text-right">Quantidade</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for item in solicitacao.itens.all %}
+            <tr>
+                <td>{{ item.plano_contas.codigo }} - {{ item.plano_contas.descricao }}</td>
+                <td class="wrap-text">{{ item.descricao_tecnica|default:"-" }}</td>
+                <td>{{ item.unidade|default:"-" }}</td>
+                <td class="money">{{ item.quantidade|trunc2 }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="empty">Ainda nao ha itens cadastrados para esta solicitacao.</p>
+    {% endif %}
+</section>
+{% endblock %}

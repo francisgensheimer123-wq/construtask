@@ -1,0 +1,129 @@
+{% extends "app/base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Importar Cronograma</h1>
+        <a href="{% url 'plano_fisico_list' %}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Voltar
+        </a>
+    </div>
+
+    {% if obra %}
+    <div class="alert alert-info">
+        <strong>Obra:</strong> {{ obra.codigo }} - {{ obra.nome }}
+    </div>
+    {% else %}
+    <div class="alert alert-warning">
+        Selecione uma obra no menu antes de importar o cronograma.
+    </div>
+    {% endif %}
+
+    <div class="card">
+        <div class="card-body">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                
+                <div class="mb-3">
+                    <label for="id_titulo" class="form-label">Título do Cronograma</label>
+                    <input type="text" name="titulo" id="id_titulo" class="form-control" 
+                           placeholder="Deixe em branco para usar o nome do arquivo">
+                </div>
+
+                <div class="mb-3">
+                    <label for="id_arquivo" class="form-label">Arquivo (.xlsx, .xls, .mpp)</label>
+                    <input type="file" name="arquivo" id="id_arquivo" class="form-control" 
+                           accept=".xlsx,.xls,.mpp" required>
+                    <small class="text-muted">
+                        Formatos suportados: Excel (.xlsx, .xls) e Microsoft Project (.mpp)
+                    </small>
+                </div>
+
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input type="checkbox" name="criar_baseline" id="id_criar_baseline" class="form-check-input">
+                        <label for="id_criar_baseline" class="form-check-label">
+                            Criar como Baseline
+                        </label>
+                        <small class="text-muted d-block">
+                            Marque esta opção se este for o cronograma baseline (referência) da obra.
+                        </small>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-upload"></i> Importar
+                    </button>
+                    <a href="{% url 'plano_fisico_list' %}" class="btn btn-secondary">Cancelar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5>Formato Esperado do Arquivo</h5>
+        </div>
+        <div class="card-body">
+            <p>O arquivo Excel deve conter as seguintes colunas:</p>
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>Coluna</th>
+                        <th>Obrigatório</th>
+                        <th>Descrição</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>CODIGO</code></td>
+                        <td><span class="badge bg-danger">Sim</span></td>
+                        <td>Código da atividade</td>
+                    </tr>
+                    <tr>
+                        <td><code>ATIVIDADE</code></td>
+                        <td><span class="badge bg-danger">Sim</span></td>
+                        <td>Nome da atividade</td>
+                    </tr>
+                    <tr>
+                        <td><code>DATA_INICIO</code></td>
+                        <td><span class="badge bg-danger">Sim</span></td>
+                        <td>Data de início prevista (dd/mm/yyyy)</td>
+                    </tr>
+                    <tr>
+                        <td><code>DATA_FIM</code></td>
+                        <td><span class="badge bg-danger">Sim</span></td>
+                        <td>Data de fim prevista (dd/mm/yyyy)</td>
+                    </tr>
+                    <tr>
+                        <td><code>DURACAO_DIAS</code></td>
+                        <td><span class="badge bg-secondary">Não</span></td>
+                        <td>Duração em dias (calculado se não informado)</td>
+                    </tr>
+                    <tr>
+                        <td><code>PREDECESSORA</code></td>
+                        <td><span class="badge bg-secondary">Não</span></td>
+                        <td>Código da atividade predecessora</td>
+                    </tr>
+                    <tr>
+                        <td><code>MARCO</code></td>
+                        <td><span class="badge bg-secondary">Não</span></td>
+                        <td>Marcar como marco (S/N)</td>
+                    </tr>
+                    <tr>
+                        <td><code>CODIGO_EAP</code></td>
+                        <td><span class="badge bg-secondary">Não</span></td>
+                        <td>Código do item da EAP (orçamento)</td>
+                    </tr>
+                    <tr>
+                        <td><code>VALOR</code></td>
+                        <td><span class="badge bg-secondary">Não</span></td>
+                        <td>Valor planejado da atividade</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends "app/base.html" %}
+{% load formatters %}
+
+{% block main_class %}main-full{% endblock %}
+{% block title %}Curva ABC | Construtask{% endblock %}
+
+{% block content %}
+<div class="toolbar">
+    <div>
+        <h2>Curva ABC</h2>
+        <p>Classificacao por representatividade acumulada (A ate 80%, B ate 95%, C o restante).</p>
+    </div>
+    <div>
+        <a class="btn secondary" href="{% url 'plano_contas_list' %}">Voltar</a>
+    </div>
+</div>
+
+{% if dados %}
+<section class="panel">
+    <table class="compact-table">
+        <thead>
+            <tr>
+                <th>Código</th>
+                <th>Descrição</th>
+                <th class="text-right">Valor Total</th>
+                <th class="text-right">%</th>
+                <th class="text-right">% Acumulado</th>
+                <th>Classe</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in dados %}
+            <tr>
+                <td>{{ item.codigo }}</td>
+                <td class="wrap-text">{{ item.descricao }}</td>
+                <td class="money">{{ item.valor_total|money_br }}</td>
+                <td class="money">{{ item.percentual }}%</td>
+                <td class="money">{{ item.acumulado }}%</td>
+                <td>{{ item.classe }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% else %}
+<p class="empty">Nenhum dado para gerar a Curva ABC no escopo atual.</p>
+{% endif %}
+{% endblock %}
+

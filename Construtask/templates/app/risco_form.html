@@ -1,0 +1,134 @@
+{% extends "app/base.html" %}
+
+{% block title %}{{ titulo }} - Construtask{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-exclamation-triangle"></i> {{ titulo }}</h2>
+        <a href="{% url 'risco_list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Voltar
+        </a>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Obra *</label>
+                        {{ form.obra }}
+                        {% if form.obra.errors %}
+                        <div class="text-danger">{{ form.obra.errors }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">EAP (Nível 5)</label>
+                        {{ form.plano_contas }}
+                        {% if form.plano_contas.errors %}
+                        <div class="text-danger">{{ form.plano_contas.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Categoria *</label>
+                        {{ form.categoria }}
+                        {% if form.categoria.errors %}
+                        <div class="text-danger">{{ form.categoria.errors }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Processo/Atividade</label>
+                        {{ form.processo }}
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Título *</label>
+                    {{ form.titulo }}
+                    {% if form.titulo.errors %}
+                    <div class="text-danger">{{ form.titulo.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Descrição *</label>
+                    {{ form.descricao }}
+                    {% if form.descricao.errors %}
+                    <div class="text-danger">{{ form.descricao.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Causa Raiz</label>
+                    {{ form.causa }}
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Probabilidade *</label>
+                        {{ form.probabilidade }}
+                        {% if form.probabilidade.errors %}
+                        <div class="text-danger">{{ form.probabilidade.errors }}</div>
+                        {% endif %}
+                        <small class="text-muted">1=Rara a 5=Quase Certa</small>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Impacto *</label>
+                        {{ form.impacto }}
+                        {% if form.impacto.errors %}
+                        <div class="text-danger">{{ form.impacto.errors }}</div>
+                        {% endif %}
+                        <small class="text-muted">1=Insignificante a 5=Catastrófico</small>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Nível (calculado)</label>
+                        <div class="alert alert-{% if risco and risco.nivel_texto == 'BAIXO' %}success{% elif risco and risco.nivel_texto == 'MÉDIO' %}warning{% elif risco and risco.nivel_texto == 'ALTO' %}danger{% else %}dark{% endif %} mb-0">
+                            <h4 class="mb-0">{{ risco.nivel|default:'-' }}</h4>
+                            <small>{{ risco.get_probabilidade_display }} × {{ risco.get_impacto_display }}</small>
+                        </div>
+                    </div>
+                </div>
+
+                <hr>
+
+                <div class="mb-3">
+                    <label class="form-label">Plano de Resposta</label>
+                    {{ form.plano_resposta }}
+                    <small class="text-muted">Estratégia e ações para mitigar o risco</small>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Responsável *</label>
+                        {{ form.responsavel }}
+                        {% if form.responsavel.errors %}
+                        <div class="text-danger">{{ form.responsavel.errors }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Data Meta para Tratamento</label>
+                        {{ form.data_meta_tratamento }}
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Observações</label>
+                    {{ form.observacoes }}
+                </div>
+
+                <div class="d-flex justify-content-between">
+                    <a href="{% if voltar_url %}{{ voltar_url }}{% else %}{% url 'risco_list' %}{% endif %}" class="btn btn-secondary">Cancelar</a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save"></i> Salvar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

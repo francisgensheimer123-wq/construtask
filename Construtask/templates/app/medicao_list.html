@@ -1,0 +1,92 @@
+{% extends "app/base.html" %}
+{% load formatters %}
+
+{% block main_class %}main-full{% endblock %}
+{% block title %}Medicoes | Construtask{% endblock %}
+
+{% block content %}
+<div class="toolbar">
+    <div>
+        <h2>Medicoes</h2>
+        <p>Acompanhamento das medicoes por obra e status.</p>
+    </div>
+    <div style="display:flex; gap:10px;">
+        <a class="btn secondary" href="{% url 'medicao_export' %}?q={{ busca|urlencode }}">Exportar Excel</a>
+        <a class="btn" href="{% url 'medicao_create' %}">Nova Medicao</a>
+    </div>
+</div>
+
+<section class="panel" style="margin-bottom:18px;">
+    <form method="get" class="toolbar" style="justify-content:flex-start; flex-wrap:wrap;">
+        <input type="text" name="q" value="{{ busca }}" placeholder="Buscar por numero, fornecedor ou CNPJ" style="max-width:320px;">
+        <input type="text" name="fornecedor" value="{{ fornecedor_filtro }}" placeholder="Fornecedor" style="max-width:220px;">
+        <input type="text" name="responsavel" value="{{ responsavel_filtro }}" placeholder="Responsavel" style="max-width:200px;">
+        <input type="text" name="contrato" value="{{ contrato_filtro }}" placeholder="Numero do contrato" style="max-width:200px;">
+        <input type="date" name="data_inicio" value="{{ data_inicio }}" style="max-width:170px;">
+        <input type="date" name="data_fim" value="{{ data_fim }}" style="max-width:170px;">
+        <select name="obra" style="max-width:220px;">
+            <option value="">Todas as obras</option>
+            {% for obra in obras %}
+            <option value="{{ obra.pk }}"{% if obra_filtro == obra.pk|stringformat:"s" %} selected{% endif %}>{{ obra.codigo }} - {{ obra.nome }}</option>
+            {% endfor %}
+        </select>
+        <select name="centro_custo" style="max-width:280px;">
+            <option value="">Todos os centros de custo</option>
+            {% for centro in centros_custo %}
+            <option value="{{ centro.pk }}"{% if centro_custo_filtro == centro.pk|stringformat:"s" %} selected{% endif %}>{{ centro.codigo }} - {{ centro.descricao }}</option>
+            {% endfor %}
+        </select>
+        <select name="status" style="max-width:220px;">
+            <option value="">Todos os status</option>
+            {% for value, label in status_choices %}
+            <option value="{{ value }}"{% if status_filtro == value %} selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <button class="btn" type="submit">Filtrar</button>
+    </form>
+</section>
+
+{% if medicoes %}
+<table class="compact-table">
+    <thead>
+        <tr>
+            <th>Numero</th>
+            <th>Obra</th>
+            <th>Status</th>
+            <th>Contrato</th>
+            <th>Fornecedor</th>
+            <th>Descricao</th>
+            <th class="text-right">Valor Total</th>
+            <th>Data</th>
+            <th>Acoes</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for medicao in medicoes %}
+        <tr>
+            <td><a href="{% url 'medicao_detail' medicao.pk %}">{{ medicao.numero_da_medicao }}</a></td>
+            <td>{% if medicao.obra %}{{ medicao.obra.codigo }}{% else %}-{% endif %}</td>
+            <td>{{ medicao.get_status_display }}</td>
+            <td>{{ medicao.contrato.numero }}</td>
+            <td>{{ medicao.fornecedor }}</td>
+            <td class="wrap-text">{{ medicao.descricao }}</td>
+            <td class="money">{{ medicao.valor_medido|money_br }}</td>
+            <td>{{ medicao.data_medicao|date:"d/m/Y" }}</td>
+            <td>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <a href="{% url 'medicao_update' medicao.pk %}">Editar</a>
+                    <form method="post" action="{% url 'medicao_delete' %}" onsubmit="return confirm('Excluir este registro?');" style="display:inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="id" value="{{ medicao.pk }}">
+                        <button type="submit" style="background:none; border:0; color:#651111; cursor:pointer; padding:0;">Excluir</button>
+                    </form>
+                </div>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p class="empty">Nenhuma medicao cadastrada.</p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,72 @@
+{% extends "app/base.html" %}
+{% load formatters %}
+
+{% block main_class %}main-full{% endblock %}
+{% block title %}Detalhe da Ordem de Compra | Construtask{% endblock %}
+
+{% block content %}
+<div class="toolbar">
+    <div>
+        <h2>{{ ordem_compra.numero }}</h2>
+        <p>{{ ordem_compra.fornecedor }} | {{ ordem_compra.get_status_display }}</p>
+    </div>
+    <div style="display:flex; gap:10px;">
+        <a class="btn secondary" href="{% url 'ordem_compra_list' %}">Voltar</a>
+    </div>
+</div>
+
+<section class="grid-2">
+    <div class="panel">
+        <h3>Resumo</h3>
+        <table class="compact-table">
+            <tbody>
+                <tr><th>Solicitacao</th><td>{{ ordem_compra.solicitacao.numero }}</td></tr>
+                <tr><th>Cotacao aprovada</th><td>{{ ordem_compra.cotacao_aprovada.numero }}</td></tr>
+                <tr><th>Fornecedor</th><td>{{ ordem_compra.fornecedor }}</td></tr>
+                <tr><th>Data de emissao</th><td>{{ ordem_compra.data_emissao|date:"d/m/Y" }}</td></tr>
+                <tr><th>Compromisso integrado</th><td>{% if ordem_compra.compromisso_relacionado %}<a href="{% url 'contrato_detail' ordem_compra.compromisso_relacionado.pk %}">{{ ordem_compra.compromisso_relacionado.numero }}</a>{% else %}-{% endif %}</td></tr>
+                <tr><th>Descricao</th><td class="wrap-text">{{ ordem_compra.descricao|default:"-" }}</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="panel">
+        <h3>Valor</h3>
+        <table class="compact-table">
+            <tbody>
+                <tr><th class="text-right">Valor total</th><td class="money">{{ ordem_compra.valor_total|money_br }}</td></tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="panel">
+    <h3>Itens da ordem</h3>
+    {% if ordem_compra.itens.all %}
+    <table class="compact-table">
+        <thead>
+            <tr>
+                <th>Centro de Custo</th>
+                <th>Unidade</th>
+                <th class="text-right">Quantidade</th>
+                <th class="text-right">Valor Unitario</th>
+                <th class="text-right">Valor Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in ordem_compra.itens.all %}
+            <tr>
+                <td>{{ item.plano_contas.codigo }} - {{ item.plano_contas.descricao }}</td>
+                <td>{{ item.unidade|default:"-" }}</td>
+                <td class="money">{{ item.quantidade|trunc2 }}</td>
+                <td class="money">{{ item.valor_unitario|money_br }}</td>
+                <td class="money">{{ item.valor_total|money_br }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="empty">Nenhum item vinculado a esta ordem.</p>
+    {% endif %}
+</section>
+{% endblock %}

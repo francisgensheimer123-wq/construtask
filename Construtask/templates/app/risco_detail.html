@@ -1,0 +1,142 @@
+{% extends "app/base.html" %}
+
+{% block main_class %}main-full{% endblock %}
+{% block title %}{{ risco.titulo }} | Construtask{% endblock %}
+
+{% block content %}
+<div class="toolbar">
+    <div>
+        <h2>{{ risco.titulo }}</h2>
+        <p>Visao consolidada do risco, matriz de classificacao, plano de resposta e historico de tratamento.</p>
+    </div>
+    <div style="display:flex; gap:10px;">
+        {% if pode_editar %}
+        <a class="btn secondary" href="{% url 'risco_update' risco.pk %}">Editar</a>
+        {% endif %}
+        <a class="btn secondary" href="{% url 'risco_list' %}">Voltar</a>
+    </div>
+</div>
+
+<section class="cards">
+    <div class="card"><span>Nivel do Risco</span><strong>{{ risco.nivel }}</strong></div>
+    <div class="card"><span>Probabilidade</span><strong>{{ risco.probabilidade }}</strong></div>
+    <div class="card"><span>Impacto</span><strong>{{ risco.impacto }}</strong></div>
+    <div class="card"><span>Status</span><strong style="text-align:left;">{{ risco.get_status_display }}</strong></div>
+    <div class="card"><span>Responsavel</span><strong style="text-align:left;">{{ risco.responsavel.username }}</strong></div>
+    <div class="card"><span>Dias para Meta</span><strong>{% if dias_para_meta != None %}{{ dias_para_meta }}{% else %}-{% endif %}</strong></div>
+</section>
+
+<section class="grid-2">
+    <div class="panel">
+        <h3>Dados do Risco</h3>
+        <table class="compact-table">
+            <tbody>
+                <tr><td>Obra</td><td>{{ risco.obra.codigo }} - {{ risco.obra.nome }}</td></tr>
+                <tr><td>Categoria</td><td>{{ risco.get_categoria_display }}</td></tr>
+                <tr><td>Processo</td><td>{{ risco.processo|default:"-" }}</td></tr>
+                <tr><td>EAP</td><td>{% if risco.plano_contas %}{{ risco.plano_contas.codigo }} - {{ risco.plano_contas.descricao }}{% else %}-{% endif %}</td></tr>
+                <tr><td>Criado em</td><td>{{ risco.criado_em|date:"d/m/Y H:i" }}</td></tr>
+                <tr><td>Data Meta</td><td>{% if risco.data_meta_tratamento %}{{ risco.data_meta_tratamento|date:"d/m/Y" }}{% else %}-{% endif %}</td></tr>
+                <tr><td>Data Fechamento</td><td>{% if risco.data_fechamento %}{{ risco.data_fechamento|date:"d/m/Y" }}{% else %}-{% endif %}</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="panel">
+        <h3>Matriz de Risco</h3>
+        <table class="compact-table">
+            <thead>
+                <tr>
+                    <th>Impacto \ Prob.</th>
+                    <th>1</th>
+                    <th>2</th>
+                    <th>3</th>
+                    <th>4</th>
+                    <th>5</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for linha in matriz_risco %}
+                <tr>
+                    <td><strong>{{ linha.0.impacto }}</strong></td>
+                    {% for celula in linha %}
+                    <td style="text-align:center; font-weight:700; background:
+                        {% if celula.cor == 'success' %}#dcfce7
+                        {% elif celula.cor == 'warning' %}#fef3c7
+                        {% elif celula.cor == 'danger' %}#fee2e2
+                        {% else %}#111827; color:#fff
+                        {% endif %};
+                        {% if celula.atual %}outline:3px solid #7f1d1d;{% endif %}">
+                        {{ celula.nivel }}
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="grid-2">
+    <div class="panel">
+        <h3>Descricao e Causa</h3>
+        <table class="compact-table">
+            <tbody>
+                <tr><td>Descricao</td><td class="wrap-text">{{ risco.descricao|linebreaksbr }}</td></tr>
+                <tr><td>Causa Raiz</td><td class="wrap-text">{{ risco.causa|default:"-"|linebreaksbr }}</td></tr>
+                <tr><td>Plano de Resposta</td><td class="wrap-text">{{ risco.plano_resposta|default:"-"|linebreaksbr }}</td></tr>
+                <tr><td>Observacoes</td><td class="wrap-text">{{ risco.observacoes|default:"-"|linebreaksbr }}</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="panel">
+        <h3>Acoes Operacionais</h3>
+        <div class="actions" style="display:flex; flex-wrap:wrap; gap:10px;">
+            {% if pode_tratar %}
+            <form method="post">{% csrf_token %}<input type="hidden" name="acao" value="iniciar_tratamento"><button class="btn" type="submit">Iniciar Tratamento</button></form>
+            {% endif %}
+            {% if risco.status == 'EM_TRATAMENTO' %}
+            <form method="post">{% csrf_token %}<input type="hidden" name="acao" value="mitigar"><button class="btn" type="submit">Marcar Mitigado</button></form>
+            {% endif %}
+            {% if pode_fechar %}
+            <form method="post">{% csrf_token %}<input type="hidden" name="acao" value="fechar"><button class="btn" type="submit">Fechar Risco</button></form>
+            {% endif %}
+            {% if risco.status == 'FECHADO' or risco.status == 'CANCELADO' %}
+            <form method="post">{% csrf_token %}<input type="hidden" name="acao" value="reabrir"><button class="btn secondary" type="submit">Reabrir</button></form>
+            {% endif %}
+            {% if pode_editar and risco.status != 'FECHADO' %}
+            <form method="post">{% csrf_token %}<input type="hidden" name="acao" value="cancelar"><button class="btn secondary" type="submit">Cancelar</button></form>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+<section class="panel">
+    <h3>Historico do Risco</h3>
+    {% if historico %}
+    <table class="compact-table">
+        <thead>
+            <tr>
+                <th>Data</th>
+                <th>Acao</th>
+                <th>Usuario</th>
+                <th>Observacao</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in historico %}
+            <tr>
+                <td>{{ item.timestamp|date:"d/m/Y H:i" }}</td>
+                <td>{{ item.get_acao_display }}</td>
+                <td>{{ item.usuario.username }}</td>
+                <td class="wrap-text">{{ item.observacao|default:"-" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="empty">Nenhum historico registrado.</p>
+    {% endif %}
+</section>
+{% endblock %}

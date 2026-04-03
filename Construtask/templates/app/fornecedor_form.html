@@ -1,0 +1,26 @@
+{% extends "app/base.html" %}
+
+{% block title %}Fornecedor | Construtask{% endblock %}
+
+{% block content %}
+<div class="panel" style="max-width:920px;">
+    <h2>Novo Fornecedor</h2>
+    <p>Cadastre fornecedores para uso em cotacoes e ordens de compra.</p>
+    <form method="post">
+        {% csrf_token %}
+        {% for field in form %}
+        <div class="field">
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}
+            <div class="message error" style="margin-top:8px;">{{ field.errors|striptags }}</div>
+            {% endif %}
+        </div>
+        {% endfor %}
+        <div class="actions">
+            <button class="btn" type="submit">Salvar</button>
+            <a class="btn secondary" href="{% url 'fornecedor_list' %}">Voltar</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

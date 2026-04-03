@@ -1,0 +1,113 @@
+{% extends "app/base.html" %}
+{% load formatters %}
+
+{% block main_class %}main-full{% endblock %}
+{% block title %}Cronogramas Fisicos | Construtask{% endblock %}
+
+{% block content %}
+<div class="toolbar">
+    <div>
+        <h2>Cronogramas Fisicos</h2>
+        <p>Versionamento, baselines e acompanhamento do planejamento fisico por obra.</p>
+    </div>
+    <div style="display:flex; gap:10px;">
+        <a class="btn secondary" href="{% url 'plano_fisico_dashboard' %}">Dashboard</a>
+        <a class="btn" href="{% url 'plano_fisico_importar' %}">Importar Cronograma</a>
+    </div>
+</div>
+
+{% if obra %}
+<section class="panel">
+    <strong>Obra:</strong> {{ obra.codigo }} - {{ obra.nome }}
+</section>
+{% endif %}
+
+<section class="cards">
+    <div class="card"><span>Total de Planos</span><strong>{{ total_planos|default:0 }}</strong></div>
+    <div class="card"><span>Baselines</span><strong>{{ baselines_count|default:0 }}</strong></div>
+    <div class="card"><span>Planos Ativos</span><strong>{{ ativos_count|default:0 }}</strong></div>
+    <div class="card"><span>Atividades</span><strong>{{ atividades_total|default:0 }}</strong></div>
+    <div class="card"><span>Atividades Atrasadas</span><strong>{{ atividades_atrasadas|default:0 }}</strong></div>
+</section>
+
+<section class="panel">
+    <form method="get" style="display:grid; grid-template-columns: 2fr 1fr 1fr auto; gap:12px; align-items:end;">
+        <div class="field" style="margin-bottom:0;">
+            <label for="id_q">Busca</label>
+            <input id="id_q" type="text" name="q" value="{{ busca }}" placeholder="Titulo, descricao, atividade, codigo">
+        </div>
+        <div class="field" style="margin-bottom:0;">
+            <label for="id_status">Status</label>
+            <select id="id_status" name="status">
+                <option value="">Todos</option>
+                {% for value, label in status_choices %}
+                <option value="{{ value }}" {% if status_filtro == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="field" style="margin-bottom:0;">
+            <label for="id_tipo">Tipo</label>
+            <select id="id_tipo" name="tipo">
+                <option value="">Todos</option>
+                {% for value, label in tipo_choices %}
+                <option value="{{ value }}" {% if tipo_filtro == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="actions" style="margin:0;">
+            <button class="btn secondary" type="submit">Filtrar</button>
+        </div>
+    </form>
+</section>
+
+<section class="panel">
+    {% if planos %}
+    <table class="compact-table">
+        <thead>
+            <tr>
+                <th>Titulo</th>
+                <th>Versao</th>
+                <th>Status</th>
+                <th class="text-right">Itens</th>
+                <th class="text-right">% Geral</th>
+                <th>Importacao</th>
+                <th>Responsavel</th>
+                <th>Acoes</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for plano in planos %}
+            <tr>
+                <td>
+                    <a href="{% url 'plano_fisico_detail' plano.pk %}">{{ plano.titulo }}</a>
+                    {% if plano.is_baseline %}<strong style="margin-left:8px;">[Baseline]</strong>{% endif %}
+                </td>
+                <td>v{{ plano.versao }}</td>
+                <td>{{ plano.get_status_display }}</td>
+                <td class="money">{{ plano.total_itens }}</td>
+                <td class="money">{{ plano.percentual_geral|trunc2 }}%</td>
+                <td>{{ plano.created_at|date:"d/m/Y H:i" }}</td>
+                <td>{{ plano.responsavel_importacao.username }}</td>
+                <td style="display:flex; gap:8px;">
+                    <a class="btn secondary" href="{% url 'plano_fisico_detail' plano.pk %}">Abrir</a>
+                    {% if not plano.is_baseline %}
+                    <a class="btn secondary" href="{% url 'plano_fisico_criar_baseline' plano.pk %}">Baseline</a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="empty">Nenhum cronograma fisico encontrado no contexto atual.</p>
+    {% endif %}
+</section>
+
+<section class="panel">
+    <div class="toolbar">
+        <h3>Mapeamentos Cronograma x EAP</h3>
+        <a class="btn secondary" href="{% url 'mapa_correspondencia_list' %}">Ver Mapeamentos</a>
+    </div>
+    <p class="muted">Use esta secao para consolidar planejamento, EAP e controle fisico-financeiro.</p>
+</section>
+{% endblock %}

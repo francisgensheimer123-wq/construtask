@@ -1,0 +1,106 @@
+{% extends "app/base.html" %}
+{% load formatters %}
+
+{% block main_class %}main-full{% endblock %}
+{% block title %}Usuarios da Empresa | Construtask{% endblock %}
+
+{% block content %}
+<div class="toolbar">
+    <div>
+        <h2>Usuarios da Empresa</h2>
+        <p>Gerencie os usuarios da empresa {{ empresa.nome }} e suas permissoes de acesso.</p>
+    </div>
+    <div style="display:flex; gap:10px;">
+        {% if is_admin_sistema %}
+        <a class="btn secondary" href="{% url 'usuario_empresa_create' %}">Novo Usuario</a>
+        {% endif %}
+        <a class="btn secondary" href="{% url 'home' %}">Voltar</a>
+    </div>
+</div>
+
+{% if messages %}
+<div class="messages">
+    {% for message in messages %}
+    <div class="message {{ message.tags }}">{{ message }}</div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<section class="panel" style="margin-bottom: 20px;">
+    <h3>{{ empresa.nome }}</h3>
+    <p>CNPJ: {{ empresa.cnpj }}</p>
+    {% if empresas %}
+    <form method="get" style="margin-top: 12px;">
+        <label for="empresa">Filtrar por empresa:</label>
+        <select name="empresa" id="empresa" onchange="this.form.submit()">
+            <option value="">-- Selecione --</option>
+            {% for emp in empresas %}
+            <option value="{{ emp.pk }}"{% if emp.pk == empresa.pk %} selected{% endif %}>{{ emp.nome }}</option>
+            {% endfor %}
+        </select>
+    </form>
+    {% endif %}
+</section>
+
+<section class="panel">
+    <div class="toolbar">
+        <h3>Usuarios Cadastrados ({{ usuarios_empresa.count }})</h3>
+    </div>
+    
+    {% if usuarios_empresa %}
+    <table>
+        <thead>
+            <tr>
+                <th>Usuario</th>
+                <th>Email</th>
+                <th>Tipo</th>
+                <th>Obras Permitidas</th>
+                <th>Acoes</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ue in usuarios_empresa %}
+            <tr>
+                <td><strong>{{ ue.usuario.username }}</strong></td>
+                <td>{{ ue.usuario.email|default:"-" }}</td>
+                <td>
+                    {% if ue.is_admin_empresa %}
+                    <span style="color: #059669; font-weight: 600;">Admin da Empresa</span>
+                    {% else %}
+                    <span style="color: #6b7280;">Usuario</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if ue.is_admin_empresa %}
+                    <span style="color: #059669;">Todas as obras da empresa</span>
+                    {% else %}
+                    {{ ue.obras_permitidas.count }} obra(s)
+                    {% endif %}
+                </td>
+                <td>
+                    {% if not ue.is_admin_empresa %}
+                    <form method="post" style="display:inline-flex; gap:8px; align-items:center;">
+                        {% csrf_token %}
+                        <input type="hidden" name="usuario_empresa_id" value="{{ ue.pk }}">
+                        <select name="obras" multiple style="min-width:200px; height: 60px;">
+                            {% for obra in obras_da_empresa %}
+                            <option value="{{ obra.pk }}"{% if obra in ue.obras_permitidas.all %} selected{% endif %}>
+                                {{ obra.codigo }} - {{ obra.nome }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <button type="submit" class="btn secondary" style="padding: 6px 12px;">Atualizar</button>
+                    </form>
+                    {% else %}
+                    <span style="color: #9ca3af; font-style: italic;">Admin - acesso total</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="empty">Nenhum usuario cadastrado para esta empresa.</p>
+    {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,59 @@
+{% extends "app/base.html" %}
+{% load formatters %}
+
+{% block main_class %}main-full{% endblock %}
+{% block title %}Obras | Construtask{% endblock %}
+
+{% block content %}
+<div class="toolbar">
+    <div>
+        <h2>Obras</h2>
+        <p>Cadastro e acompanhamento da estrutura operacional.</p>
+    </div>
+    <a class="btn" href="{% url 'obra_create' %}">Nova Obra</a>
+</div>
+
+<section class="panel" style="margin-bottom:18px;">
+    <form method="get" class="toolbar" style="justify-content:flex-start;">
+        <input type="text" name="q" value="{{ busca }}" placeholder="Buscar por codigo, nome ou cliente" style="max-width:320px;">
+        <select name="status" style="max-width:220px;">
+            <option value="">Todos os status</option>
+            {% for value, label in status_choices %}
+            <option value="{{ value }}"{% if status_filtro == value %} selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <button class="btn" type="submit">Filtrar</button>
+    </form>
+</section>
+
+{% if obras %}
+<table class="compact-table">
+    <thead>
+        <tr>
+            <th>Codigo</th>
+            <th>Nome</th>
+            <th>Cliente</th>
+            <th>Responsavel</th>
+            <th>Status</th>
+            <th>Periodo</th>
+            <th>Acoes</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for obra in obras %}
+        <tr>
+            <td>{{ obra.codigo }}</td>
+            <td>{{ obra.nome }}</td>
+            <td>{{ obra.cliente|default:"-" }}</td>
+            <td>{{ obra.responsavel|default:"-" }}</td>
+            <td>{{ obra.get_status_display }}</td>
+            <td>{% if obra.data_inicio %}{{ obra.data_inicio|date:"d/m/Y" }}{% else %}-{% endif %} a {% if obra.data_fim %}{{ obra.data_fim|date:"d/m/Y" }}{% else %}-{% endif %}</td>
+            <td><a href="{% url 'obra_update' obra.pk %}">Editar</a></td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p class="empty">Nenhuma obra cadastrada.</p>
+{% endif %}
+{% endblock %}

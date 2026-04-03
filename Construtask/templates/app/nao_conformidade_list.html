@@ -1,0 +1,66 @@
+{% extends "app/base.html" %}
+
+{% block main_class %}main-full{% endblock %}
+{% block title %}Nao Conformidades | Construtask{% endblock %}
+
+{% block content %}
+<div class="toolbar">
+    <div>
+        <h2>Nao Conformidades</h2>
+        <p>Controle de qualidade, tratamento e verificacao das ocorrencias da obra.</p>
+    </div>
+    <a class="btn" href="{% url 'nao_conformidade_create' %}">Nova Nao Conformidade</a>
+</div>
+
+<div class="panel">
+    <form method="get" class="toolbar" style="align-items:end;">
+        <div class="field" style="min-width:320px; margin:0;">
+            <label for="id_q">Buscar</label>
+            <input id="id_q" type="text" name="q" value="{{ request.GET.q }}" placeholder="Descricao da ocorrencia">
+        </div>
+        <div class="field" style="min-width:220px; margin:0;">
+            <label for="id_status">Status</label>
+            <select id="id_status" name="status">
+                <option value="">Todos</option>
+                <option value="ABERTA"{% if request.GET.status == "ABERTA" %} selected{% endif %}>Aberta</option>
+                <option value="EM_TRATAMENTO"{% if request.GET.status == "EM_TRATAMENTO" %} selected{% endif %}>Em Tratamento</option>
+                <option value="EM_VERIFICACAO"{% if request.GET.status == "EM_VERIFICACAO" %} selected{% endif %}>Em Verificacao</option>
+                <option value="ENCERRADA"{% if request.GET.status == "ENCERRADA" %} selected{% endif %}>Encerrada</option>
+                <option value="CANCELADA"{% if request.GET.status == "CANCELADA" %} selected{% endif %}>Cancelada</option>
+            </select>
+        </div>
+        <button class="btn secondary" type="submit">Buscar</button>
+    </form>
+
+    {% if nao_conformidades %}
+    <table class="compact-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Obra</th>
+                <th>Centro de Custo</th>
+                <th>Descricao</th>
+                <th>Responsavel</th>
+                <th>Status</th>
+                <th>Data</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for nc in nao_conformidades %}
+            <tr>
+                <td><a href="{% url 'nao_conformidade_detail' nc.pk %}">NC-{{ nc.pk }}</a></td>
+                <td>{{ nc.obra.codigo }} - {{ nc.obra.nome }}</td>
+                <td>{% if nc.plano_contas %}{{ nc.plano_contas.codigo }} - {{ nc.plano_contas.descricao }}{% else %}-{% endif %}</td>
+                <td class="wrap-text">{{ nc.descricao|truncatechars:120 }}</td>
+                <td>{{ nc.responsavel }}</td>
+                <td>{{ nc.get_status_display }}</td>
+                <td>{{ nc.data_abertura|date:"d/m/Y" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="empty">Nenhuma nao conformidade cadastrada para o contexto atual.</p>
+    {% endif %}
+</div>
+{% endblock %}

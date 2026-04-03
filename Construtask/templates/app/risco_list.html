@@ -1,0 +1,114 @@
+{% extends "app/base.html" %}
+
+{% block main_class %}main-full{% endblock %}
+{% block title %}Riscos | Construtask{% endblock %}
+
+{% block content %}
+<div class="toolbar">
+    <div>
+        <h2>Gestao de Riscos</h2>
+        <p>Registro, classificacao e tratamento dos riscos operacionais, de prazo, qualidade e custo da obra.</p>
+    </div>
+    <div style="display:flex; gap:10px;">
+        <a class="btn secondary" href="{% url 'risco_dashboard' %}">Dashboard</a>
+        <a class="btn" href="{% url 'risco_create' %}">Novo Risco</a>
+    </div>
+</div>
+
+<section class="cards">
+    <div class="card"><span>Total de Riscos</span><strong>{{ total_riscos }}</strong></div>
+    <div class="card"><span>Riscos Ativos</span><strong>{{ riscos_ativos }}</strong></div>
+    <div class="card"><span>Riscos Criticos</span><strong>{{ riscos_criticos }}</strong></div>
+    <div class="card"><span>Em Tratamento</span><strong>{{ riscos_em_tratamento }}</strong></div>
+    <div class="card"><span>Fechados</span><strong>{{ riscos_fechados }}</strong></div>
+    <div class="card"><span>Categoria Prazo</span><strong>{{ riscos_prazo }}</strong></div>
+</section>
+
+<section class="panel">
+    <form method="get" class="filters-grid" style="display:grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap:12px; align-items:end;">
+        <div class="field" style="margin-bottom:0;">
+            <label for="id_q">Busca</label>
+            <input id="id_q" type="text" name="q" value="{{ busca }}" placeholder="Titulo, descricao, processo, EAP">
+        </div>
+        <div class="field" style="margin-bottom:0;">
+            <label for="id_status">Status</label>
+            <select id="id_status" name="status">
+                <option value="">Todos</option>
+                {% for value, label in status_choices %}
+                <option value="{{ value }}" {% if status_filtro == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="field" style="margin-bottom:0;">
+            <label for="id_categoria">Categoria</label>
+            <select id="id_categoria" name="categoria">
+                <option value="">Todas</option>
+                {% for value, label in categoria_choices %}
+                <option value="{{ value }}" {% if categoria_filtro == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="field" style="margin-bottom:0;">
+            <label for="id_nivel">Nivel</label>
+            <select id="id_nivel" name="nivel">
+                <option value="">Todos</option>
+                <option value="BAIXO" {% if nivel_filtro == "BAIXO" %}selected{% endif %}>Baixo</option>
+                <option value="MEDIO" {% if nivel_filtro == "MEDIO" %}selected{% endif %}>Medio</option>
+                <option value="ALTO" {% if nivel_filtro == "ALTO" %}selected{% endif %}>Alto</option>
+                <option value="CRITICO" {% if nivel_filtro == "CRITICO" %}selected{% endif %}>Critico</option>
+            </select>
+        </div>
+        <div class="actions" style="margin:0;">
+            <button class="btn secondary" type="submit">Filtrar</button>
+        </div>
+    </form>
+</section>
+
+<section class="panel">
+    {% if riscos %}
+    <table class="compact-table">
+        <thead>
+            <tr>
+                <th>Nivel</th>
+                <th>Titulo</th>
+                <th>Categoria</th>
+                <th>Processo</th>
+                <th>EAP</th>
+                <th>Status</th>
+                <th>Responsavel</th>
+                <th>Meta</th>
+                <th>Acoes</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for risco in riscos %}
+            <tr>
+                <td>
+                    <span class="badge" style="background:
+                    {% if risco.nivel_texto == 'BAIXO' %}#166534
+                    {% elif risco.nivel_texto == 'MÉDIO' or risco.nivel_texto == 'MÃ‰DIO' %}#a16207
+                    {% elif risco.nivel_texto == 'ALTO' %}#991b1b
+                    {% else %}#111827{% endif %};
+                    color:#fff; padding:6px 10px; border-radius:999px;">
+                        {{ risco.nivel }} - {{ risco.nivel_texto }}
+                    </span>
+                </td>
+                <td><a href="{% url 'risco_detail' risco.pk %}">{{ risco.titulo }}</a></td>
+                <td>{{ risco.get_categoria_display }}</td>
+                <td>{{ risco.processo|default:"-" }}</td>
+                <td>{% if risco.plano_contas %}{{ risco.plano_contas.codigo }} - {{ risco.plano_contas.descricao }}{% else %}-{% endif %}</td>
+                <td>{{ risco.get_status_display }}</td>
+                <td>{{ risco.responsavel.username }}</td>
+                <td>{% if risco.data_meta_tratamento %}{{ risco.data_meta_tratamento|date:"d/m/Y" }}{% else %}-{% endif %}</td>
+                <td>
+                    <a class="btn secondary" href="{% url 'risco_detail' risco.pk %}">Abrir</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="empty">Nenhum risco encontrado para o contexto atual.</p>
+    {% endif %}
+</section>
+{% endblock %}

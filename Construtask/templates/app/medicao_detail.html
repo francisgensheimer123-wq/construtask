@@ -1,0 +1,139 @@
+{% extends "app/base.html" %}
+{% load formatters %}
+
+{% block main_class %}main-full{% endblock %}
+{% block title %}Medição {{ medicao.numero_da_medicao }} | Construtask{% endblock %}
+
+{% block content %}
+<div class="toolbar">
+    <div>
+        <h2>Medição {{ medicao.numero_da_medicao }}</h2>
+        <p>Visão consolidada da medição e sua execução fiscal.</p>
+    </div>
+    <div style="display:flex; gap:10px;">
+        <a class="btn secondary" href="{% url 'medicao_update' medicao.pk %}">Editar</a>
+        <a class="btn secondary" href="{% url 'medicao_list' %}">Voltar</a>
+    </div>
+</div>
+
+<section class="cards">
+    <div class="card"><span>Obra</span><strong style="text-align:left;">{% if medicao.obra %}{{ medicao.obra.codigo }}{% else %}-{% endif %}</strong></div>
+    <div class="card"><span>Status</span><strong style="text-align:left;">{{ medicao.get_status_display }}</strong></div>
+    <div class="card"><span>Contrato</span><strong style="text-align:left;">{{ medicao.contrato.numero }}</strong></div>
+    <div class="card"><span>Valor Contrato</span><strong>{{ medicao.contrato.valor_contratado|money_br }}</strong></div>
+    <div class="card"><span>Valor Medido</span><strong>{{ medicao.valor_medido|money_br }}</strong></div>
+    <div class="card"><span>% do Contrato</span><strong>{{ saldo_percentual|trunc2 }}%</strong></div>
+</section>
+
+<section class="grid-2">
+    <div class="panel">
+        <h3>Dados da Medição</h3>
+        <table class="compact-table">
+            <tbody>
+                <tr><td>Fornecedor</td><td>{{ medicao.fornecedor }}</td></tr>
+                <tr><td>CNPJ</td><td>{{ medicao.cnpj }}</td></tr>
+                <tr><td>Responsável</td><td>{{ medicao.responsavel }}</td></tr>
+                <tr><td>Descrição</td><td>{{ medicao.descricao }}</td></tr>
+                <tr><td>Estrutura</td><td>{{ medicao.torre|default:"-" }} / {{ medicao.bloco|default:"-" }} / {{ medicao.etapa|default:"-" }}</td></tr>
+                <tr><td>Data</td><td>{{ medicao.data_medicao|date:"d/m/Y" }}</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="panel">
+        <h3>Anexos</h3>
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            {% for field in anexo_form %}
+            <div class="field">
+                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+            </div>
+            {% endfor %}
+            <div class="actions">
+                <button type="submit" class="btn">Incluir Anexo</button>
+            </div>
+        </form>
+        {% if medicao.anexos.all %}
+        <ul>
+            {% for anexo in medicao.anexos.all %}
+            <li>{{ anexo.descricao }}{% if anexo.arquivo %} - <a href="{{ anexo.arquivo.url }}">arquivo</a>{% endif %}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+    </div>
+</section>
+
+<section class="grid-2">
+    <div class="panel">
+        <h3>Itens Medidos</h3>
+        <table class="compact-table">
+            <thead>
+                <tr>
+                    <th>Centro de Custo</th>
+                    <th class="text-right">Quantidade</th>
+                    <th>Unidade</th>
+                    <th class="text-right">Valor Unitário</th>
+                    <th class="text-right">Valor Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in medicao.itens.all %}
+                <tr>
+                    <td>{{ item.centro_custo.codigo }} - {{ item.centro_custo.descricao }}</td>
+                    <td class="money">{{ item.quantidade|trunc2 }}</td>
+                    <td>{{ item.unidade|default:"-" }}</td>
+                    <td class="money">{{ item.valor_unitario|money_br }}</td>
+                    <td class="money">{{ item.valor_total|money_br }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="panel">
+        <h3>Histórico</h3>
+        {% if medicao.historicos.all %}
+        <table class="compact-table">
+            <tbody>
+                {% for item in medicao.historicos.all|slice:":12" %}
+                <tr>
+                    <td>{{ item.criado_em|date:"d/m/Y" }}</td>
+                    <td>{{ item.acao }}</td>
+                    <td>{{ item.descricao }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="empty">Nenhum histórico registrado.</p>
+        {% endif %}
+    </div>
+</section>
+
+<section class="panel">
+    <h3>Notas Vinculadas à Medição</h3>
+    {% if notas_medicao %}
+    <table class="compact-table">
+        <thead>
+            <tr>
+                <th>Número</th>
+                <th>Status</th>
+                <th>Descrição</th>
+                <th class="text-right">Valor</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for nota in notas_medicao %}
+            <tr>
+                <td>{{ nota.numero }}</td>
+                <td>{{ nota.get_status_display }}</td>
+                <td>{{ nota.descricao }}</td>
+                <td class="money">{{ nota.valor_total|money_br }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="empty">Nenhuma nota vinculada.</p>
+    {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,120 @@
+{% extends "app/base.html" %}
+
+{% block title %}Solicitacao de Compra | Construtask{% endblock %}
+
+{% block content %}
+<div class="panel" style="max-width:1200px;">
+    <h2>Nova Solicitacao de Compra</h2>
+    <p>Registre a demanda inicial com os centros de custo e os itens tecnicos que serao enviados para cotacao.</p>
+    <form method="post">
+        {% csrf_token %}
+        {% for field in form %}
+        <div class="field">
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}
+            <div class="message error" style="margin-top:8px;">{{ field.errors|striptags }}</div>
+            {% endif %}
+        </div>
+        {% endfor %}
+
+        <div class="field">
+            <label>Itens da Solicitacao</label>
+            {{ item_formset.management_form }}
+            {% if item_formset.non_form_errors %}
+            <div class="message error" style="margin-bottom:10px;">{{ item_formset.non_form_errors }}</div>
+            {% endif %}
+            <table class="compact-table item-table" id="solicitacao-itens-table">
+                <thead>
+                    <tr>
+                        <th>Centro de Custo</th>
+                        <th>Descricao Tecnica</th>
+                        <th>Unidade</th>
+                        <th class="text-right">Quantidade</th>
+                        <th>Excluir</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item_form in item_formset %}
+                    <tr class="solicitacao-item-row">
+                        <td>
+                            {{ item_form.id }}
+                            {{ item_form.plano_contas }}
+                            {{ item_form.plano_contas.errors }}
+                        </td>
+                        <td>
+                            {{ item_form.descricao_tecnica }}
+                            {{ item_form.descricao_tecnica.errors }}
+                        </td>
+                        <td>
+                            {{ item_form.unidade }}
+                            {{ item_form.unidade.errors }}
+                        </td>
+                        <td class="text-right">
+                            {{ item_form.quantidade }}
+                            {{ item_form.quantidade.errors }}
+                        </td>
+                        <td>
+                            {% if item_form.instance.pk %}
+                                {{ item_form.DELETE }}
+                            {% else %}
+                                <input type="checkbox" disabled>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <div class="actions" style="margin-top:12px;">
+                <button class="btn secondary" type="button" id="add-solicitacao-item">Adicionar Centro de Custo</button>
+            </div>
+        </div>
+
+        <div class="actions">
+            <button class="btn" type="submit">Salvar</button>
+            <a class="btn secondary" href="{% url 'solicitacao_compra_list' %}">Voltar</a>
+        </div>
+    </form>
+</div>
+
+<template id="solicitacao-item-empty-row">
+    <tr class="solicitacao-item-row">
+        <td>
+            __ID_FIELD__
+            __PLANO__
+        </td>
+        <td>__DESCRICAO__</td>
+        <td>__UNIDADE__</td>
+        <td class="text-right">__QUANTIDADE__</td>
+        <td><input type="checkbox" disabled></td>
+    </tr>
+</template>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const addButton = document.getElementById("add-solicitacao-item");
+    const totalForms = document.getElementById("id_itens-TOTAL_FORMS");
+    const tbody = document.querySelector("#solicitacao-itens-table tbody");
+    const template = document.getElementById("solicitacao-item-empty-row").innerHTML;
+    const emptyForm = {
+        idField: `{% filter escapejs %}{{ item_formset.empty_form.id }}{% endfilter %}`,
+        plano: `{% filter escapejs %}{{ item_formset.empty_form.plano_contas }}{% endfilter %}`,
+        descricao: `{% filter escapejs %}{{ item_formset.empty_form.descricao_tecnica }}{% endfilter %}`,
+        unidade: `{% filter escapejs %}{{ item_formset.empty_form.unidade }}{% endfilter %}`,
+        quantidade: `{% filter escapejs %}{{ item_formset.empty_form.quantidade }}{% endfilter %}`,
+    };
+
+    addButton.addEventListener("click", function () {
+        const index = Number(totalForms.value);
+        let html = template
+            .replace("__ID_FIELD__", emptyForm.idField.replace(/__prefix__/g, index))
+            .replace("__PLANO__", emptyForm.plano.replace(/__prefix__/g, index))
+            .replace("__DESCRICAO__", emptyForm.descricao.replace(/__prefix__/g, index))
+            .replace("__UNIDADE__", emptyForm.unidade.replace(/__prefix__/g, index))
+            .replace("__QUANTIDADE__", emptyForm.quantidade.replace(/__prefix__/g, index));
+        tbody.insertAdjacentHTML("beforeend", html);
+        totalForms.value = index + 1;
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,84 @@
+{% extends "app/base.html" %}
+
+{% block main_class %}main-full{% endblock %}
+{% block title %}Detalhe da Nao Conformidade | Construtask{% endblock %}
+
+{% block content %}
+<div class="toolbar">
+    <div>
+        <h2>NC-{{ nc.pk }}</h2>
+        <p>{{ nc.get_status_display }} | {{ nc.obra.codigo }} - {{ nc.obra.nome }}</p>
+    </div>
+    <div style="display:flex; gap:10px;">
+        <a class="btn secondary" href="{% url 'nao_conformidade_update' nc.pk %}">Editar</a>
+        <a class="btn secondary" href="{% url 'nao_conformidade_list' %}">Voltar</a>
+    </div>
+</div>
+
+<section class="grid-2">
+    <div class="panel">
+        <h3>Registro</h3>
+        <table class="compact-table">
+            <tbody>
+                <tr><th>Centro de custo</th><td>{% if nc.plano_contas %}{{ nc.plano_contas.codigo }} - {{ nc.plano_contas.descricao }}{% else %}-{% endif %}</td></tr>
+                <tr><th>Responsavel</th><td>{{ nc.responsavel }}</td></tr>
+                <tr><th>Data de abertura</th><td>{{ nc.data_abertura|date:"d/m/Y" }}</td></tr>
+                <tr><th>Descricao</th><td class="wrap-text">{{ nc.descricao }}</td></tr>
+                <tr><th>Causa</th><td class="wrap-text">{{ nc.causa|default:"-" }}</td></tr>
+                <tr><th>Acao corretiva</th><td class="wrap-text">{{ nc.acao_corretiva|default:"-" }}</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="panel">
+        <h3>Workflow</h3>
+        <form method="post">
+            {% csrf_token %}
+            <div class="field">
+                <label for="id_acao">Acao</label>
+                <select id="id_acao" name="acao">
+                    <option value="TRATAMENTO">Iniciar tratamento</option>
+                    <option value="VERIFICACAO">Enviar para verificacao</option>
+                    <option value="ENCERRAMENTO">Encerrar</option>
+                    <option value="CANCELAMENTO">Cancelar</option>
+                </select>
+            </div>
+            <div class="field">
+                <label for="id_observacao">Observacao</label>
+                <textarea id="id_observacao" name="observacao" rows="4"></textarea>
+            </div>
+            <div class="actions">
+                <button class="btn" type="submit">Atualizar workflow</button>
+            </div>
+        </form>
+    </div>
+</section>
+
+<section class="panel">
+    <h3>Historico</h3>
+    {% if nc.historico.all %}
+    <table class="compact-table">
+        <thead>
+            <tr>
+                <th>Data</th>
+                <th>Acao</th>
+                <th>Usuario</th>
+                <th>Observacao</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in nc.historico.all %}
+            <tr>
+                <td>{{ item.timestamp|date:"d/m/Y H:i" }}</td>
+                <td>{{ item.get_acao_display }}</td>
+                <td>{{ item.usuario }}</td>
+                <td class="wrap-text">{{ item.observacao|default:"-" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="empty">Ainda nao ha historico para esta nao conformidade.</p>
+    {% endif %}
+</section>
+{% endblock %}

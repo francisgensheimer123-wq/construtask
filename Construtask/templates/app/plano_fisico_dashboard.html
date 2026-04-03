@@ -1,0 +1,172 @@
+{% extends "app/base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Dashboard de Cronogramas</h1>
+        <a href="{% url 'plano_fisico_list' %}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Voltar aos Cronogramas
+        </a>
+    </div>
+
+    {% if obra %}
+    <div class="alert alert-info">
+        <strong>Obra:</strong> {{ obra.codigo }} - {{ obra.nome }}
+    </div>
+    {% endif %}
+
+    {% if baseline_ativo %}
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Baseline</h5>
+                    <p class="card-text">{{ baseline_ativo.titulo }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Total de Atividades</h5>
+                    <p class="card-text display-4">{{ total_atividades }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Marcos</h5>
+                    <p class="card-text display-4">{{ total_macros }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Atividades Atrasadas</h5>
+                    <p class="card-text display-4 text-danger">{{ atividades_atrasadas }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if curva_planejada %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>Curva S - Planejado vs Realizado</h5>
+        </div>
+        <div class="card-body">
+            <canvas id="curvaSChart" width="400" height="150"></canvas>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if divergencias %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>Divergências de Mapeamento ({{ total_divergencias }})</h5>
+        </div>
+        <div class="card-body">
+            <ul>
+                {% for div in divergencias %}
+                <li>{{ div.mensagem }}</li>
+                {% endfor %}
+            </ul>
+            <a href="{% url 'mapa_correspondencia_list' %}" class="btn btn-warning">
+                Ver Todos os Mapeamentos
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="alert alert-warning">
+        <p>Nenhum baseline encontrado para esta obra.</p>
+        <p>Importe um cronograma e marque-o como baseline para visualizar o dashboard.</p>
+    </div>
+    {% endif %}
+
+    <div class="card">
+        <div class="card-header">
+            <h5>Cronogramas da Obra</h5>
+        </div>
+        <div class="card-body">
+            {% if planos %}
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Título</th>
+                        <th>Versão</th>
+                        <th>Status</th>
+                        <th>Itens</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for plano in planos %}
+                    <tr>
+                        <td>{{ plano.titulo }}</td>
+                        <td>v{{ plano.versao }}</td>
+                        <td>
+                            <span class="badge bg-{% if plano.is_baseline %}success{% else %}primary{% endif %}">
+                                {{ plano.get_status_display }}
+                            </span>
+                        </td>
+                        <td>{{ plano.total_itens }}</td>
+                        <td>
+                            <a href="{% url 'plano_fisico_detail' plano.pk %}" class="btn btn-sm btn-primary">
+                                Ver Detalhes
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p>Nenhum cronograma encontrado.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if curva_planejada %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('curvaSChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [{% for p in curva_planejada %}'{{ p.mes }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+            datasets: [{
+                label: 'Planejado',
+                data: [{% for p in curva_planejada %}{{ p.acumulado }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+                borderColor: '#0d6efd',
+                backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                fill: true
+            },
+            {% if curva_realizada %}
+            {
+                label: 'Realizado',
+                data: [{% for r in curva_realizada %}{{ r.acumulado }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+                borderColor: '#198754',
+                backgroundColor: 'rgba(25, 135, 84, 0.1)',
+                fill: true
+            }
+            {% endif %}
+            ]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: { beginAtZero: true }
+            }
+        }
+    });
+});
+</script>
+{% endif %}
+{% endblock %}

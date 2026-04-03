@@ -1,0 +1,56 @@
+{% extends "app/base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>{{ titulo|default:"Editar Cronograma" }}</h1>
+        <a href="{{ voltar_url }}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Voltar
+        </a>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="mb-3">
+                    <label for="id_titulo" class="form-label">Título</label>
+                    <input type="text" name="titulo" id="id_titulo" class="form-control" value="{{ form.titulo.value }}">
+                </div>
+
+                <div class="mb-3">
+                    <label for="id_descricao" class="form-label">Descrição</label>
+                    <textarea name="descricao" id="id_descricao" class="form-control" rows="3">{{ form.descricao.value|default:"" }}</textarea>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="id_data_base" class="form-label">Data Base</label>
+                            <input type="date" name="data_base" id="id_data_base" class="form-control" value="{{ form.data_base.value|date:'Y-m-d' }}">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="id_status" class="form-label">Status</label>
+                            <select name="status" id="id_status" class="form-control">
+                                {% for choice in status_choices %}
+                                <option value="{{ choice.0 }}" {% if form.status.value == choice.0 %}selected{% endif %}>{{ choice.1 }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save"></i> Salvar
+                    </button>
+                    <a href="{{ voltar_url }}" class="btn btn-secondary">Cancelar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

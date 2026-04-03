@@ -1,0 +1,46 @@
+{% extends "app/base.html" %}
+{% load formatters %}
+
+{% block main_class %}main-full{% endblock %}
+{% block title %}Cotacoes | Construtask{% endblock %}
+
+{% block content %}
+<div class="toolbar">
+    <div>
+        <h2>Cotacoes</h2>
+        <p>Comparativo e aprovacao de fornecedores antes da emissao da ordem de compra.</p>
+    </div>
+    <a class="btn" href="{% url 'cotacao_create' %}">Nova Cotacao</a>
+</div>
+
+<div class="panel">
+    {% if cotacoes %}
+    <table class="compact-table">
+        <thead>
+            <tr>
+                <th>Numero</th>
+                <th>Solicitacao</th>
+                <th>Fornecedor</th>
+                <th>Status</th>
+                <th>Data</th>
+                <th class="text-right">Valor Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for cotacao in cotacoes %}
+            <tr>
+                <td><a href="{% url 'cotacao_detail' cotacao.pk %}">{{ cotacao.numero }}</a></td>
+                <td>{{ cotacao.solicitacao.numero }}</td>
+                <td>{{ cotacao.fornecedor }}</td>
+                <td>{{ cotacao.get_status_display }}</td>
+                <td>{{ cotacao.data_cotacao|date:"d/m/Y" }}</td>
+                <td class="money">{{ cotacao.valor_total|money_br }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="empty">Nenhuma cotacao cadastrada.</p>
+    {% endif %}
+</div>
+{% endblock %}

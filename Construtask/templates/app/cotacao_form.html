@@ -1,0 +1,273 @@
+{% extends "app/base.html" %}
+{% load formatters %}
+
+{% block main_class %}main-full{% endblock %}
+{% block title %}Cotacao | Construtask{% endblock %}
+
+{% block content %}
+<div class="panel" style="width:100%; max-width:100%; overflow-x:auto;">
+    <h2>Nova Cotacao Comparativa</h2>
+    <p>Compare fornecedores lado a lado, defina o vencedor e registre a proposta de cada um na mesma tela.</p>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {% for field in form %}
+        <div class="field">
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}
+            <div class="message error" style="margin-top:8px;">{{ field.errors|striptags }}</div>
+            {% endif %}
+        </div>
+        {% endfor %}
+
+        <div class="field">
+            <label>Comparativo de Fornecedores</label>
+            {{ fornecedor_formset.management_form }}
+            {% if fornecedor_formset.non_form_errors %}
+            <div class="message error" style="margin-bottom:10px;">{{ fornecedor_formset.non_form_errors }}</div>
+            {% endif %}
+
+            {% if not itens_solicitacao %}
+            <p class="empty">Selecione uma solicitacao para carregar os itens da cotacao.</p>
+            {% else %}
+            <table class="compact-table" style="min-width:1700px;">
+                <thead>
+                    <tr>
+                        <th rowspan="2" style="min-width:220px;">Centro de Custo</th>
+                        <th rowspan="2" style="min-width:280px;">Descricao Tecnica</th>
+                        <th rowspan="2" style="min-width:90px;">Unidade</th>
+                        <th rowspan="2" class="text-right" style="min-width:90px;">Quantidade</th>
+                        {% for supplier_row in supplier_rows %}
+                        {% with fornecedor_form=supplier_row.form %}
+                        <th colspan="4" style="text-align:center; min-width:520px;">
+                            <div style="display:flex; flex-direction:column; gap:8px;">
+                                <span style="font-weight:700;">Fornecedor {{ forloop.counter }}</span>
+                                <div>
+                                    {{ fornecedor_form.fornecedor }}
+                                    {% if fornecedor_form.fornecedor.errors %}
+                                    <div class="message error" style="margin-top:8px;">{{ fornecedor_form.fornecedor.errors|striptags }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </th>
+                        {% endwith %}
+                        {% endfor %}
+                    </tr>
+                    <tr>
+                        {% for supplier_row in supplier_rows %}
+                        <th style="min-width:150px;">Fornecedor</th>
+                        <th class="text-right" style="min-width:110px;">Vlr. Unit.</th>
+                        <th class="text-right" style="min-width:110px;">Vlr. Total</th>
+                        <th class="text-right" style="min-width:110px;">Prazo</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in itens_solicitacao %}
+                    <tr>
+                        <td>{{ item.plano_contas.codigo }} - {{ item.plano_contas.descricao }}</td>
+                        <td class="wrap-text">{{ item.descricao_tecnica|default:"-" }}</td>
+                        <td>{{ item.unidade|default:"-" }}</td>
+                        <td class="money">{{ item.quantidade|trunc2 }}</td>
+                        {% for supplier_row in supplier_rows %}
+                        {% for entry in supplier_row.item_entries %}
+                        {% if entry.item.pk == item.pk %}
+                        <td style="background:#fafafa;" class="js-proposta-cell" data-supplier-index="{{ supplier_row.index }}">
+                            {% if forloop.parentloop.counter0 == 0 %}
+                            <span class="muted">Proposta</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-right js-valor-cell" data-supplier-index="{{ supplier_row.index }}">
+                            {{ entry.valor_field }}
+                            {% if entry.valor_field.errors %}
+                            <div class="message error" style="margin-top:8px;">{{ entry.valor_field.errors|striptags }}</div>
+                            {% endif %}
+                            <div class="js-menor-custo-item" style="display:none; margin-top:6px; font-size:10px; background:#111827; color:#fff; padding:2px 6px; border-radius:999px;">Menor custo</div>
+                        </td>
+                        <td class="money js-cotacao-total" data-supplier-index="{{ supplier_row.index }}" data-quantidade="{{ item.quantidade|floatformat:2 }}">$ 0,00</td>
+                        <td class="text-right js-prazo-cell" data-supplier-index="{{ supplier_row.index }}">
+                            {{ entry.prazo_field }}
+                            <div class="js-menor-prazo-item" style="display:none; margin-top:6px; font-size:10px; background:#7f1d1d; color:#fff; padding:2px 6px; border-radius:999px;">Menor prazo</div>
+                        </td>
+                        {% endif %}
+                        {% endfor %}
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                    <tr>
+                        <th colspan="4" style="background:#f5f5f5;">Resumo Comparativo</th>
+                        {% for supplier_row in supplier_rows %}
+                        {% with fornecedor_form=supplier_row.form %}
+                        <td colspan="4" style="background:#f5f5f5; vertical-align:top;" data-supplier-index="{{ supplier_row.index }}">
+                            <label style="display:flex; align-items:center; gap:8px; font-weight:700; margin-bottom:10px;">
+                                {{ fornecedor_form.escolhido }} Vencedor
+                            </label>
+                            <div style="font-size:11px; color:#4b5563;">Total Geral: <strong class="js-cotacao-total-geral" data-supplier-index="{{ supplier_row.index }}">$ 0,00</strong></div>
+                            <div style="font-size:11px; color:#4b5563;">Prazo Medio: <strong class="js-cotacao-prazo-geral" data-supplier-index="{{ supplier_row.index }}">0,00 dias</strong></div>
+                            <div style="margin-top:6px; display:flex; gap:6px; flex-wrap:wrap;">
+                                <span class="js-indicador-custo-geral" data-supplier-index="{{ supplier_row.index }}" style="display:none; background:#111827; color:#fff; padding:3px 8px; border-radius:999px; font-size:10px;">Menor custo total</span>
+                                <span class="js-indicador-prazo-geral" data-supplier-index="{{ supplier_row.index }}" style="display:none; background:#7f1d1d; color:#fff; padding:3px 8px; border-radius:999px; font-size:10px;">Menor prazo medio</span>
+                            </div>
+                        </td>
+                        {% endwith %}
+                        {% endfor %}
+                    </tr>
+                    <tr>
+                        <th colspan="4" style="background:#f5f5f5;">Anexos / Propostas</th>
+                        {% for supplier_row in supplier_rows %}
+                        {% with fornecedor_form=supplier_row.form %}
+                        <td colspan="4" style="background:#f5f5f5; vertical-align:top;">
+                            <div class="field" style="margin-bottom:10px;">
+                                <label for="{{ fornecedor_form.anexo_descricao.id_for_label }}">Descricao do Anexo</label>
+                                {{ fornecedor_form.anexo_descricao }}
+                            </div>
+                            <div class="field">
+                                <label for="{{ fornecedor_form.anexo_arquivo.id_for_label }}">Arquivo da Proposta</label>
+                                {{ fornecedor_form.anexo_arquivo }}
+                            </div>
+                        </td>
+                        {% endwith %}
+                        {% endfor %}
+                    </tr>
+                </tbody>
+            </table>
+            {% endif %}
+        </div>
+
+        <div class="actions">
+            <button class="btn" type="submit">Salvar Cotacoes</button>
+            <a class="btn secondary" href="{% url 'cotacao_list' %}">Voltar</a>
+        </div>
+    </form>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    function parseDecimal(value) {
+        const normalized = (value || "0").toString().replace(/\./g, "").replace(",", ".");
+        const number = Number(normalized);
+        return Number.isFinite(number) ? number : 0;
+    }
+
+    function formatMoney(value) {
+        return "$ " + value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function recalculateCotacaoTotals() {
+        const totalsBySupplier = {};
+        const prazoBySupplier = {};
+        const prazoCountBySupplier = {};
+        document.querySelectorAll(".js-cotacao-total").forEach(function (cell) {
+            const supplierIndex = cell.dataset.supplierIndex;
+            const quantidade = parseDecimal(cell.dataset.quantidade);
+            const valueCell = cell.previousElementSibling;
+            const prazoCell = cell.nextElementSibling;
+            const unitInput = valueCell ? valueCell.querySelector("input[name*='_valor_unitario']") : null;
+            const prazoInput = prazoCell ? prazoCell.querySelector("input[name*='_prazo_entrega_dias']") : null;
+            const valorUnitario = unitInput ? parseDecimal(unitInput.value) : 0;
+            const prazo = prazoInput ? parseDecimal(prazoInput.value) : 0;
+            const total = quantidade * valorUnitario;
+            cell.textContent = formatMoney(total);
+            totalsBySupplier[supplierIndex] = (totalsBySupplier[supplierIndex] || 0) + total;
+            prazoBySupplier[supplierIndex] = (prazoBySupplier[supplierIndex] || 0) + prazo;
+            prazoCountBySupplier[supplierIndex] = (prazoCountBySupplier[supplierIndex] || 0) + 1;
+        });
+
+        let menorCusto = null;
+        let menorPrazo = null;
+        Object.keys(totalsBySupplier).forEach(function (index) {
+            const total = totalsBySupplier[index] || 0;
+            const prazoMedio = (prazoBySupplier[index] || 0) / Math.max(prazoCountBySupplier[index] || 1, 1);
+            if (total > 0 && (menorCusto === null || total < menorCusto)) {
+                menorCusto = total;
+            }
+            if (prazoMedio > 0 && (menorPrazo === null || prazoMedio < menorPrazo)) {
+                menorPrazo = prazoMedio;
+            }
+        });
+
+        document.querySelectorAll(".js-cotacao-total-geral").forEach(function (cell) {
+            const index = cell.dataset.supplierIndex;
+            cell.textContent = formatMoney(totalsBySupplier[index] || 0);
+        });
+        document.querySelectorAll(".js-cotacao-prazo-geral").forEach(function (cell) {
+            const index = cell.dataset.supplierIndex;
+            const prazoMedio = (prazoBySupplier[index] || 0) / Math.max(prazoCountBySupplier[index] || 1, 1);
+            cell.textContent = prazoMedio > 0
+                ? prazoMedio.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " dias"
+                : "0,00 dias";
+        });
+        document.querySelectorAll(".js-indicador-custo-geral").forEach(function (badge) {
+            const index = badge.dataset.supplierIndex;
+            const total = totalsBySupplier[index] || 0;
+            badge.style.display = menorCusto !== null && total === menorCusto && total > 0 ? "inline-flex" : "none";
+        });
+        document.querySelectorAll(".js-indicador-prazo-geral").forEach(function (badge) {
+            const index = badge.dataset.supplierIndex;
+            const prazoMedio = (prazoBySupplier[index] || 0) / Math.max(prazoCountBySupplier[index] || 1, 1);
+            badge.style.display = menorPrazo !== null && prazoMedio === menorPrazo && prazoMedio > 0 ? "inline-flex" : "none";
+        });
+
+        document.querySelectorAll("tbody tr").forEach(function (row) {
+            const valorCells = Array.from(row.querySelectorAll(".js-valor-cell"));
+            const prazoCells = Array.from(row.querySelectorAll(".js-prazo-cell"));
+            if (!valorCells.length && !prazoCells.length) {
+                return;
+            }
+            const menorCustoItem = valorCells.reduce(function (acc, cell) {
+                const input = cell.querySelector("input[name*='_valor_unitario']");
+                const value = input ? parseDecimal(input.value) : 0;
+                if (value <= 0) {
+                    return acc;
+                }
+                return acc === null || value < acc ? value : acc;
+            }, null);
+            const menorPrazoItem = prazoCells.reduce(function (acc, cell) {
+                const input = cell.querySelector("input[name*='_prazo_entrega_dias']");
+                const value = input ? parseDecimal(input.value) : 0;
+                if (value <= 0) {
+                    return acc;
+                }
+                return acc === null || value < acc ? value : acc;
+            }, null);
+            valorCells.forEach(function (cell) {
+                const input = cell.querySelector("input[name*='_valor_unitario']");
+                const value = input ? parseDecimal(input.value) : 0;
+                const badge = cell.querySelector(".js-menor-custo-item");
+                if (badge) {
+                    badge.style.display = menorCustoItem !== null && value === menorCustoItem && value > 0 ? "inline-flex" : "none";
+                }
+            });
+            prazoCells.forEach(function (cell) {
+                const input = cell.querySelector("input[name*='_prazo_entrega_dias']");
+                const value = input ? parseDecimal(input.value) : 0;
+                const badge = cell.querySelector(".js-menor-prazo-item");
+                if (badge) {
+                    badge.style.display = menorPrazoItem !== null && value === menorPrazoItem && value > 0 ? "inline-flex" : "none";
+                }
+            });
+        });
+    }
+
+    document.querySelectorAll("input[name*='_valor_unitario']").forEach(function (input) {
+        input.addEventListener("input", recalculateCotacaoTotals);
+    });
+    document.querySelectorAll("input[name*='_prazo_entrega_dias']").forEach(function (input) {
+        input.addEventListener("input", recalculateCotacaoTotals);
+    });
+    recalculateCotacaoTotals();
+
+    const solicitacaoSelect = document.getElementById("id_solicitacao");
+    if (solicitacaoSelect) {
+        solicitacaoSelect.addEventListener("change", function () {
+            if (!this.value) {
+                return;
+            }
+            const target = new URL(window.location.href);
+            target.searchParams.set("solicitacao", this.value);
+            window.location.href = target.toString();
+        });
+    }
+});
+</script>
+{% endblock %}

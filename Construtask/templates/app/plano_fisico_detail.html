@@ -1,0 +1,193 @@
+{% extends "app/base.html" %}
+{% load formatters %}
+
+{% block main_class %}main-full{% endblock %}
+{% block title %}{{ plano.titulo }} | Construtask{% endblock %}
+
+{% block content %}
+<div class="toolbar">
+    <div>
+        <h2>{{ plano.titulo }}</h2>
+        <p>Visao consolidada do cronograma, baseline, andamento fisico, desvios e vinculos com a EAP.</p>
+    </div>
+    <div style="display:flex; gap:10px;">
+        <a class="btn secondary" href="{% url 'plano_fisico_update' plano.pk %}">Editar</a>
+        <a class="btn secondary" href="{% url 'plano_fisico_list' %}">Voltar</a>
+    </div>
+</div>
+
+<section class="cards">
+    <div class="card"><span>Versao</span><strong>{{ plano.versao }}</strong></div>
+    <div class="card"><span>Status</span><strong style="text-align:left;">{{ plano.get_status_display }}</strong></div>
+    <div class="card"><span>Atividades</span><strong>{{ estatisticas.total_itens }}</strong></div>
+    <div class="card"><span>Marcos</span><strong>{{ estatisticas.total_macros }}</strong></div>
+    <div class="card"><span>% Geral</span><strong>{{ estatisticas.media_execucao|trunc2 }}%</strong></div>
+    <div class="card"><span>Atrasadas</span><strong>{{ estatisticas.atrasados }}</strong></div>
+    <div class="card"><span>Valor Planejado</span><strong>{{ estatisticas.valor_planejado|money_br }}</strong></div>
+    <div class="card"><span>Valor Realizado</span><strong>{{ estatisticas.valor_realizado|money_br }}</strong></div>
+</section>
+
+<section class="grid-2">
+    <div class="panel">
+        <h3>Dados do Cronograma</h3>
+        <table class="compact-table">
+            <tbody>
+                <tr><td>Obra</td><td>{{ plano.obra.codigo }} - {{ plano.obra.nome }}</td></tr>
+                <tr><td>Versao</td><td>v{{ plano.versao }}</td></tr>
+                <tr><td>Status</td><td>{{ plano.get_status_display }}</td></tr>
+                <tr><td>Baseline</td><td>{% if plano.is_baseline %}Sim{% else %}Nao{% endif %}</td></tr>
+                <tr><td>Data Base</td><td>{% if plano.data_base %}{{ plano.data_base|date:"d/m/Y" }}{% else %}-{% endif %}</td></tr>
+                <tr><td>Importado em</td><td>{{ plano.created_at|date:"d/m/Y H:i" }}</td></tr>
+                <tr><td>Responsavel</td><td>{{ plano.responsavel_importacao.username }}</td></tr>
+                <tr><td>Descricao</td><td class="wrap-text">{{ plano.descricao|default:"-" }}</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="panel">
+        <h3>Desvios e Mapeamento</h3>
+        <table class="compact-table">
+            <tbody>
+                <tr><td>Atividades Atrasadas</td><td class="money">{{ estatisticas.atrasados }}</td></tr>
+                <tr><td>Atividades Adiantadas</td><td class="money">{{ estatisticas.adiantados }}</td></tr>
+                <tr><td>Divergencias</td><td class="money">{{ divergencias|length }}</td></tr>
+                <tr><td>Mapeamentos</td><td><a href="{% url 'mapa_correspondencia_list' %}">Abrir mapa de correspondencia</a></td></tr>
+            </tbody>
+        </table>
+        {% if tem_divergencias %}
+        <div style="margin-top:12px;">
+            <strong>Divergencias principais</strong>
+            <ul style="margin-top:8px;">
+                {% for div in divergencias|slice:":5" %}
+                <li>{{ div.mensagem }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+<section class="grid-2">
+    <div class="panel">
+        <h3>Atividades Criticas</h3>
+        {% if itens_criticos %}
+        <table class="compact-table">
+            <thead>
+                <tr>
+                    <th>Codigo</th>
+                    <th>Atividade</th>
+                    <th class="text-right">Desvio</th>
+                    <th class="text-right">% Exec</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in itens_criticos %}
+                <tr>
+                    <td>{{ item.codigo_atividade }}</td>
+                    <td class="wrap-text">{{ item.atividade }}</td>
+                    <td class="money">{{ item.dias_desvio }}</td>
+                    <td class="money">{{ item.percentual_concluido|trunc2 }}%</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="empty">Nenhuma atividade critica por atraso.</p>
+        {% endif %}
+    </div>
+
+    <div class="panel">
+        <h3>Curva S</h3>
+        {% if curva_planejada %}
+        <canvas id="curvaSChart" height="120"></canvas>
+        {% else %}
+        <p class="empty">Curva S indisponivel para este cronograma.</p>
+        {% endif %}
+    </div>
+</section>
+
+<section class="panel">
+    <h3>Atividades do Cronograma</h3>
+    {% if itens %}
+    <table class="compact-table">
+        <thead>
+            <tr>
+                <th>Codigo</th>
+                <th>Atividade</th>
+                <th>Previsao</th>
+                <th>Real</th>
+                <th class="text-right">Duracao</th>
+                <th class="text-right">% Exec</th>
+                <th class="text-right">Desvio</th>
+                <th>EAP</th>
+                <th class="text-right">Vlr. Planejado</th>
+                <th class="text-right">Vlr. Realizado</th>
+                <th>Acoes</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in itens %}
+            <tr>
+                <td>{{ item.codigo_atividade }}</td>
+                <td class="wrap-text">{% if item.is_marco %}<strong>[Marco]</strong> {% endif %}{{ item.atividade }}</td>
+                <td>{% if item.data_inicio_prevista %}{{ item.data_inicio_prevista|date:"d/m/Y" }} a {{ item.data_fim_prevista|date:"d/m/Y" }}{% else %}-{% endif %}</td>
+                <td>{% if item.data_inicio_real %}{{ item.data_inicio_real|date:"d/m/Y" }} a {{ item.data_fim_real|date:"d/m/Y" }}{% else %}-{% endif %}</td>
+                <td class="money">{{ item.duracao }}</td>
+                <td class="money">{{ item.percentual_concluido|trunc2 }}%</td>
+                <td class="money">{{ item.dias_desvio }}</td>
+                <td>{% if item.plano_contas %}{{ item.plano_contas.codigo }} - {{ item.plano_contas.descricao }}{% else %}-{% endif %}</td>
+                <td class="money">{{ item.valor_planejado|money_br }}</td>
+                <td class="money">{{ item.valor_realizado|money_br }}</td>
+                <td><a class="btn secondary" href="{% url 'plano_fisico_item_update' plano.pk item.pk %}">Editar</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="empty">Nenhuma atividade encontrada.</p>
+    {% endif %}
+</section>
+{% endblock %}
+
+{% block extra_js %}
+{% if curva_planejada %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const ctx = document.getElementById("curvaSChart");
+    if (!ctx) return;
+    new Chart(ctx.getContext("2d"), {
+        type: "line",
+        data: {
+            labels: [{% for p in curva_planejada %}"{{ p.mes }}"{% if not forloop.last %}, {% endif %}{% endfor %}],
+            datasets: [
+                {
+                    label: "Planejado",
+                    data: [{% for p in curva_planejada %}{{ p.acumulado }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+                    borderColor: "#111827",
+                    backgroundColor: "rgba(17,24,39,0.10)",
+                    fill: true,
+                    tension: 0.2
+                }
+                {% if curva_realizada %},
+                {
+                    label: "Realizado",
+                    data: [{% for r in curva_realizada %}{{ r.acumulado }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+                    borderColor: "#7f1d1d",
+                    backgroundColor: "rgba(127,29,29,0.10)",
+                    fill: true,
+                    tension: 0.2
+                }
+                {% endif %}
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { position: "bottom" } },
+            scales: { y: { beginAtZero: true } }
+        }
+    });
+});
+</script>
+{% endif %}
+{% endblock %}

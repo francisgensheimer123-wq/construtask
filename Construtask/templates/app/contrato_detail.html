@@ -1,0 +1,299 @@
+{% extends "app/base.html" %}
+{% load formatters %}
+
+{% block main_class %}main-full{% endblock %}
+{% block title %}{{ contrato.get_tipo_display }} {{ contrato.numero }} | Construtask{% endblock %}
+
+{% block content %}
+<div class="toolbar">
+    <div>
+        <h2>{{ contrato.get_tipo_display }} {{ contrato.numero }}</h2>
+        <p>Visao consolidada do registro e sua execucao.</p>
+    </div>
+    <div style="display:flex; gap:10px;">
+        <a class="btn secondary" href="{% url 'compromisso_pdf' contrato.pk %}">Gerar PDF</a>
+        <a class="btn secondary" href="{% url 'compromisso_update' contrato.pk %}">Editar</a>
+        <a class="btn secondary" href="{% url 'compromisso_list' %}">Voltar</a>
+    </div>
+</div>
+
+<section class="cards">
+    <div class="card"><span>Obra</span><strong style="text-align:left;">{% if contrato.obra %}{{ contrato.obra.codigo }}{% else %}-{% endif %}</strong></div>
+    <div class="card"><span>Status</span><strong style="text-align:left;">{{ contrato.get_status_display }}</strong></div>
+    <div class="card"><span>Valor Contratado</span><strong>{{ contrato.valor_contratado|money_br }}</strong></div>
+    <div class="card"><span>Valor Executado</span><strong>{{ contrato.valor_executado|money_br }}</strong></div>
+    <div class="card"><span>Saldo</span><strong>{{ contrato.saldo|money_br }}</strong></div>
+    <div class="card"><span>% Executado</span><strong>{{ saldo_percentual|trunc2 }}%</strong></div>
+</section>
+
+<section class="grid-2">
+    <div class="panel">
+        <h3>Dados do Contrato</h3>
+        <table class="compact-table">
+            <tbody>
+                <tr><td>Fornecedor</td><td>{{ contrato.fornecedor }}</td></tr>
+                <tr><td>CNPJ</td><td>{{ contrato.cnpj }}</td></tr>
+                <tr><td>Descricao</td><td>{{ contrato.descricao }}</td></tr>
+                <tr><td>Estrutura</td><td>{{ contrato.torre|default:"-" }} / {{ contrato.bloco|default:"-" }} / {{ contrato.etapa|default:"-" }}</td></tr>
+                <tr><td>Responsavel</td><td>{{ contrato.responsavel }}</td></tr>
+                <tr><td>Data</td><td>{{ contrato.data_assinatura|date:"d/m/Y" }}</td></tr>
+                {% if origem_aquisicao %}
+                <tr><td>Solicitacao de Compra</td><td><a href="{% url 'solicitacao_compra_detail' origem_aquisicao.solicitacao.pk %}">{{ origem_aquisicao.solicitacao.numero }}</a></td></tr>
+                <tr><td>Cotacao de Origem</td><td><a href="{% url 'cotacao_detail' origem_aquisicao.cotacao_aprovada.pk %}">{{ origem_aquisicao.cotacao_aprovada.numero }}</a></td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="panel">
+        <h3>Anexos</h3>
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            {% for field in anexo_form %}
+            <div class="field">
+                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+            </div>
+            {% endfor %}
+            <div class="actions">
+                <button type="submit" class="btn">Incluir Anexo</button>
+            </div>
+        </form>
+        {% if contrato.anexos.all %}
+        <ul>
+            {% for anexo in contrato.anexos.all %}
+            <li>{{ anexo.descricao }}{% if anexo.arquivo %} - <a href="{{ anexo.arquivo.url }}">arquivo</a>{% endif %}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+    </div>
+</section>
+
+<section class="grid-2">
+    <div class="panel">
+        <h3>Itens Contratados</h3>
+        <table class="compact-table">
+            <thead>
+                <tr>
+                    <th>Centro de Custo</th>
+                    <th>Descricao Tecnica</th>
+                    <th class="text-right">Quantidade</th>
+                    <th>Unidade</th>
+                    <th class="text-right">Valor Unitario</th>
+                    <th class="text-right">Valor Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in contrato.itens.all %}
+                <tr>
+                    <td>{{ item.centro_custo.codigo }} - {{ item.centro_custo.descricao }}</td>
+                    <td class="wrap-text">{{ item.descricao_tecnica|default:"-" }}</td>
+                    <td class="money">{{ item.quantidade|trunc2 }}</td>
+                    <td>{{ item.unidade|default:"-" }}</td>
+                    <td class="money">{{ item.valor_unitario|money_br }}</td>
+                    <td class="money">{{ item.valor_total|money_br }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="panel">
+        <h3>Historico</h3>
+        {% if contrato.historicos.all %}
+        <table class="compact-table">
+            <tbody>
+                {% for item in contrato.historicos.all|slice:":12" %}
+                <tr>
+                    <td>{{ item.criado_em|date:"d/m/Y" }}</td>
+                    <td>{{ item.acao }}</td>
+                    <td>{{ item.descricao }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="empty">Nenhum historico registrado.</p>
+        {% endif %}
+    </div>
+</section>
+
+{% if contrato.tipo == "CONTRATO" %}
+<section class="panel" style="margin-top:18px;">
+    <h3>Aditivos</h3>
+    {% if aditivos %}
+    <table class="compact-table">
+        <thead>
+            <tr>
+                <th>Tipo</th>
+                <th>Descricao</th>
+                <th class="text-right">Delta/Valor</th>
+                <th>Data</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for aditivo in aditivos %}
+            <tr>
+                <td>{{ aditivo.get_tipo_display }}</td>
+                <td class="wrap-text">{{ aditivo.descricao|default:"-" }}</td>
+                <td class="money text-right">
+                    {% if aditivo.tipo == "PRAZO" %}
+                        {{ aditivo.delta_dias }}
+                        dias
+                    {% else %}
+                        {{ aditivo.itens.all|length }} item(s)
+                    {% endif %}
+                </td>
+                <td>{{ aditivo.criado_em|date:"d/m/Y" }}</td>
+            </tr>
+            {% if aditivo.tipo != "PRAZO" %}
+            <tr>
+                <td colspan="4" class="muted">
+                    {% for item in aditivo.itens.all %}
+                        {{ item.centro_custo.codigo }} - {{ item.centro_custo.descricao }}: {{ item.valor|money_br }}{% if not forloop.last %} | {% endif %}
+                    {% empty %}
+                        -
+                    {% endfor %}
+                </td>
+            </tr>
+            {% endif %}
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="empty">Nenhum aditivo registrado.</p>
+    {% endif %}
+
+    <form method="post" action="{% url 'aditivo_contrato_create' contrato.pk %}" style="margin-top:18px;">
+        {% csrf_token %}
+
+        <div class="field">
+            <label for="{{ aditivo_form.tipo.id_for_label }}">Tipo</label>
+            {{ aditivo_form.tipo }}
+            {% if aditivo_form.tipo.errors %}
+                <div style="color:#b91c1c; margin-top:6px;">{{ aditivo_form.tipo.errors }}</div>
+            {% endif %}
+        </div>
+
+        <div class="field">
+            <label for="{{ aditivo_form.descricao.id_for_label }}">Descricao</label>
+            {{ aditivo_form.descricao }}
+            {% if aditivo_form.descricao.errors %}
+                <div style="color:#b91c1c; margin-top:6px;">{{ aditivo_form.descricao.errors }}</div>
+            {% endif %}
+        </div>
+
+        <div class="field">
+            <label for="{{ aditivo_form.delta_dias.id_for_label }}">Delta de dias (apenas para PRAZO)</label>
+            {{ aditivo_form.delta_dias }}
+            {% if aditivo_form.delta_dias.errors %}
+                <div style="color:#b91c1c; margin-top:6px;">{{ aditivo_form.delta_dias.errors }}</div>
+            {% endif %}
+        </div>
+
+        <div class="field">
+            <label>Itens do Aditivo (Valor/Escopo)</label>
+            {{ aditivo_item_formset.management_form }}
+            {% if aditivo_item_formset.non_form_errors %}
+                <div style="color:#b91c1c; margin-bottom:10px;">{{ aditivo_item_formset.non_form_errors }}</div>
+            {% endif %}
+            <table class="compact-table item-table">
+                <thead>
+                    <tr>
+                        <th>Centro de Custo</th>
+                        <th class="text-right">Valor</th>
+                        <th>Excluir</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item_form in aditivo_item_formset %}
+                    <tr{% if not item_form.instance.pk and forloop.counter0 > 0 and not item_form.errors %} class="empty-row"{% endif %}>
+                        <td>
+                            {{ item_form.id }}
+                            {{ item_form.centro_custo }}
+                            {{ item_form.centro_custo.errors }}
+                        </td>
+                        <td class="text-right">
+                            {{ item_form.valor }}{{ item_form.valor.errors }}
+                        </td>
+                        <td>
+                            {% if item_form.instance.pk %}
+                                {{ item_form.DELETE }}
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if aditivo_form.non_field_errors %}
+            <div style="color:#b91c1c; margin-bottom:10px;">{{ aditivo_form.non_field_errors }}</div>
+        {% endif %}
+
+        <div class="actions">
+            <button class="btn" type="submit">Incluir Aditivo</button>
+            <a class="btn secondary" href="{% url 'contrato_detail' contrato.pk %}">Atualizar</a>
+        </div>
+    </form>
+</section>
+{% endif %}
+
+<section class="grid-2">
+    <div class="panel">
+        <h3>{% if contrato.tipo == "CONTRATO" %}Medicoes{% else %}Execucao do Pedido{% endif %}</h3>
+        {% if medicoes_contrato %}
+        <table class="compact-table">
+            <thead>
+                <tr>
+                    <th>Numero</th>
+                    <th>Status</th>
+                    <th>Descricao</th>
+                    <th class="text-right">Valor</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for medicao in medicoes_contrato %}
+                <tr>
+                    <td><a href="{% url 'medicao_detail' medicao.pk %}">{{ medicao.numero_da_medicao }}</a></td>
+                    <td>{{ medicao.get_status_display }}</td>
+                    <td>{{ medicao.descricao }}</td>
+                    <td class="money">{{ medicao.valor_medido|money_br }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="empty">{% if contrato.tipo == "CONTRATO" %}Nenhuma medicao registrada.{% else %}Este pedido nao possui medicoes; a execucao ocorre diretamente pelas notas fiscais vinculadas.{% endif %}</p>
+        {% endif %}
+    </div>
+
+    <div class="panel">
+        <h3>Notas Vinculadas</h3>
+        {% if notas_contrato %}
+        <table class="compact-table">
+            <thead>
+                <tr>
+                    <th>Numero</th>
+                    <th>Status</th>
+                    <th>Descricao</th>
+                    <th class="text-right">Valor</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for nota in notas_contrato %}
+                <tr>
+                    <td>{{ nota.numero }}</td>
+                    <td>{{ nota.get_status_display }}</td>
+                    <td>{{ nota.descricao }}</td>
+                    <td class="money">{{ nota.valor_total|money_br }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="empty">Nenhuma nota vinculada.</p>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

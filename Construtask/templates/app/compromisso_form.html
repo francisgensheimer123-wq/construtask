@@ -1,0 +1,145 @@
+{% extends "app/base.html" %}
+
+{% block title %}{{ titulo }} | Construtask{% endblock %}
+
+{% block content %}
+<div class="toolbar">
+    <div>
+        <h2>{{ titulo }}</h2>
+    </div>
+</div>
+
+<section class="panel">
+    <form method="post">
+        {% csrf_token %}
+        {% for field in form %}
+            {% if field.name != "centro_custo" %}
+            <div class="field">
+                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+                {% if field.errors %}
+                    <div style="color:#b91c1c; margin-top:6px;">{{ field.errors }}</div>
+                {% endif %}
+            </div>
+            {% endif %}
+        {% endfor %}
+
+        {{ form.centro_custo }}
+
+        {% if form.non_field_errors %}
+            <div style="color:#b91c1c;">{{ form.non_field_errors }}</div>
+        {% endif %}
+
+        <div class="field">
+            <label>Itens da Compra ou Contratação</label>
+            {{ item_formset.management_form }}
+            {% if item_formset.non_form_errors %}
+                <div style="color:#b91c1c; margin-bottom:10px;">{{ item_formset.non_form_errors }}</div>
+            {% endif %}
+            <table class="compact-table item-table">
+                <thead>
+                    <tr>
+                        <th>Centro de Custo</th>
+                        <th>Unidade</th>
+                        <th class="text-right">Quantidade</th>
+                        <th class="text-right">Valor Unitário</th>
+                        <th>Excluir</th>
+                    </tr>
+                </thead>
+                <tbody id="itens-compromisso-body">
+                    {% for item_form in item_formset %}
+                    <tr{% if not item_form.instance.pk and forloop.counter0 > 0 and not item_form.errors %} class="empty-row"{% endif %}>
+                        <td>
+                            {{ item_form.id }}
+                            {{ item_form.centro_custo }}
+                            {{ item_form.centro_custo.errors }}
+                        </td>
+                        <td>{{ item_form.unidade }}{{ item_form.unidade.errors }}</td>
+                        <td class="text-right">{{ item_form.quantidade }}{{ item_form.quantidade.errors }}</td>
+                        <td class="text-right">{{ item_form.valor_unitario }}{{ item_form.valor_unitario.errors }}</td>
+                        <td>{% if item_form.instance.pk %}{{ item_form.DELETE }}{% endif %}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <div class="table-actions">
+                <button type="button" class="btn secondary" id="adicionar-item-compromisso">Adicionar Centro de Custo</button>
+                <p class="muted inline-note">A unidade será carregada automaticamente do plano de contas.</p>
+            </div>
+        </div>
+        <div class="actions">
+            <button class="btn" type="submit">Salvar</button>
+            <a class="btn secondary" href="{{ voltar_url }}">Voltar</a>
+        </div>
+    </form>
+</section>
+
+<template id="item-compromisso-empty-form">
+    <tr>
+        <td>
+            {{ item_formset.empty_form.id }}
+            {{ item_formset.empty_form.centro_custo }}
+        </td>
+        <td>{{ item_formset.empty_form.unidade }}</td>
+        <td class="text-right">{{ item_formset.empty_form.quantidade }}</td>
+        <td class="text-right">{{ item_formset.empty_form.valor_unitario }}</td>
+        <td></td>
+    </tr>
+</template>
+
+<script>
+(() => {
+    const totalForms = document.getElementById("id_itens-TOTAL_FORMS");
+    const tbody = document.getElementById("itens-compromisso-body");
+    const addButton = document.getElementById("adicionar-item-compromisso");
+    const template = document.getElementById("item-compromisso-empty-form");
+
+    function extrairUnidade(select) {
+        const texto = select.options[select.selectedIndex]?.textContent || "";
+        const match = texto.match(/\[(.+)\]$/);
+        return match ? match[1] : "";
+    }
+
+    function preencherUnidade(row) {
+        const select = row.querySelector("select");
+        const unidadeInput = row.querySelector("input[name$='unidade']");
+        if (!select || !unidadeInput) return;
+        unidadeInput.value = extrairUnidade(select);
+    }
+
+    function bindRow(row) {
+        const select = row.querySelector("select");
+        if (!select || select.dataset.bound === "true") return;
+        select.dataset.bound = "true";
+        select.addEventListener("change", () => preencherUnidade(row));
+        preencherUnidade(row);
+    }
+
+    function bindAllRows() {
+        Array.from(tbody.querySelectorAll("tr")).forEach(bindRow);
+    }
+
+    function showHiddenRow() {
+        const hiddenRow = tbody.querySelector(".empty-row");
+        if (!hiddenRow) return false;
+        hiddenRow.classList.remove("empty-row");
+        bindRow(hiddenRow);
+        return true;
+    }
+
+    addButton.addEventListener("click", () => {
+        if (showHiddenRow()) {
+            return;
+        }
+
+        const index = Number(totalForms.value);
+        const html = template.innerHTML.replaceAll("__prefix__", index);
+        tbody.insertAdjacentHTML("beforeend", html);
+        totalForms.value = index + 1;
+        bindAllRows();
+    });
+
+    bindAllRows();
+})();
+</script>
+{% endblock %}

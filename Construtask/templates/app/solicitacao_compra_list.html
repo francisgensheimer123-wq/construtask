@@ -1,0 +1,47 @@
+{% extends "app/base.html" %}
+
+{% block main_class %}main-full{% endblock %}
+{% block title %}Solicitacoes de Compra | Construtask{% endblock %}
+
+{% block content %}
+<div class="toolbar">
+    <div>
+        <h2>Solicitacoes de Compra</h2>
+        <p>Primeira etapa do fluxo estruturado de aquisicoes.</p>
+    </div>
+    <a class="btn" href="{% url 'solicitacao_compra_create' %}">Nova Solicitacao</a>
+</div>
+
+<div class="panel">
+    {% if solicitacoes %}
+    <table class="compact-table">
+        <thead>
+            <tr>
+                <th>Numero</th>
+                <th>Obra</th>
+                <th>Titulo</th>
+                <th>Centro de Custo</th>
+                <th>Solicitante</th>
+                <th>Status</th>
+                <th>Data</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for solicitacao in solicitacoes %}
+            <tr>
+                <td><a href="{% url 'solicitacao_compra_detail' solicitacao.pk %}">{{ solicitacao.numero }}</a></td>
+                <td>{{ solicitacao.obra.codigo }}</td>
+                <td>{{ solicitacao.titulo }}</td>
+                <td>{% if solicitacao.plano_contas %}{{ solicitacao.plano_contas.codigo }} - {{ solicitacao.plano_contas.descricao }}{% else %}-{% endif %}</td>
+                <td>{{ solicitacao.solicitante }}</td>
+                <td>{{ solicitacao.get_status_display }}</td>
+                <td>{{ solicitacao.data_solicitacao|date:"d/m/Y" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="empty">Nenhuma solicitacao registrada.</p>
+    {% endif %}
+</div>
+{% endblock %}

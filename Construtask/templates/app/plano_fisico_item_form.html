@@ -1,0 +1,76 @@
+{% extends "app/base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Editar Atividade</h1>
+        <a href="{{ voltar_url }}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Voltar
+        </a>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h5>{{ item.codigo_atividade }} - {{ item.atividade }}</h5>
+        </div>
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="id_data_inicio_real" class="form-label">Data Início Real</label>
+                            <input type="date" name="data_inicio_real" id="id_data_inicio_real" 
+                                   class="form-control" value="{{ item.data_inicio_real|date:'Y-m-d' }}">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="id_data_fim_real" class="form-label">Data Fim Real</label>
+                            <input type="date" name="data_fim_real" id="id_data_fim_real" 
+                                   class="form-control" value="{{ item.data_fim_real|date:'Y-m-d' }}">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="id_percentual_concluido" class="form-label">% Concluído</label>
+                            <input type="number" name="percentual_concluido" id="id_percentual_concluido" 
+                                   class="form-control" value="{{ item.percentual_concluido }}" min="0" max="100">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="id_valor_realizado" class="form-label">Valor Realizado</label>
+                            <input type="number" name="valor_realizado" id="id_valor_realizado" 
+                                   class="form-control" value="{{ item.valor_realizado }}" step="0.01">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="id_plano_contas" class="form-label">Vincular à EAP (Orçamento)</label>
+                    <select name="plano_contas" id="id_plano_contas" class="form-control">
+                        <option value="">-- Selecione --</option>
+                        {% for pc in plano_contas_list %}
+                        <option value="{{ pc.id }}" {% if item.plano_contas_id == pc.id %}selected{% endif %}>
+                            {{ pc.codigo }} - {{ pc.descricao }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save"></i> Salvar
+                    </button>
+                    <a href="{{ voltar_url }}" class="btn btn-secondary">Cancelar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

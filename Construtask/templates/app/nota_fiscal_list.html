@@ -1,0 +1,95 @@
+{% extends "app/base.html" %}
+{% load formatters %}
+
+{% block main_class %}main-full{% endblock %}
+{% block title %}Notas Fiscais | Construtask{% endblock %}
+
+{% block content %}
+<div class="toolbar">
+    <div>
+        <h2>Notas Fiscais</h2>
+        <p>Registro das notas por obra e status operacional.</p>
+    </div>
+    <div style="display:flex; gap:10px;">
+        <a class="btn secondary" href="{% url 'nota_fiscal_export' %}?q={{ busca|urlencode }}">Exportar Excel</a>
+        <a class="btn" href="{% url 'nota_fiscal_create' %}">Nova Nota Fiscal</a>
+    </div>
+</div>
+
+<section class="panel" style="margin-bottom:18px;">
+    <form method="get" class="toolbar" style="justify-content:flex-start; flex-wrap:wrap;">
+        <input type="text" name="q" value="{{ busca }}" placeholder="Buscar por numero, fornecedor ou CNPJ" style="max-width:320px;">
+        <input type="text" name="fornecedor" value="{{ fornecedor_filtro }}" placeholder="Fornecedor" style="max-width:220px;">
+        <input type="text" name="contrato" value="{{ contrato_filtro }}" placeholder="Contrato/Pedido origem" style="max-width:220px;">
+        <input type="date" name="data_inicio" value="{{ data_inicio }}" style="max-width:170px;">
+        <input type="date" name="data_fim" value="{{ data_fim }}" style="max-width:170px;">
+        <select name="obra" style="max-width:220px;">
+            <option value="">Todas as obras</option>
+            {% for obra in obras %}
+            <option value="{{ obra.pk }}"{% if obra_filtro == obra.pk|stringformat:"s" %} selected{% endif %}>{{ obra.codigo }} - {{ obra.nome }}</option>
+            {% endfor %}
+        </select>
+        <select name="centro_custo" style="max-width:280px;">
+            <option value="">Todos os centros de custo</option>
+            {% for centro in centros_custo %}
+            <option value="{{ centro.pk }}"{% if centro_custo_filtro == centro.pk|stringformat:"s" %} selected{% endif %}>{{ centro.codigo }} - {{ centro.descricao }}</option>
+            {% endfor %}
+        </select>
+        <select name="status" style="max-width:220px;">
+            <option value="">Todos os status</option>
+            {% for value, label in status_choices %}
+            <option value="{{ value }}"{% if status_filtro == value %} selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <button class="btn" type="submit">Filtrar</button>
+    </form>
+</section>
+
+{% if notas_fiscais %}
+<table class="compact-table">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Numero da Nota</th>
+            <th>Obra</th>
+            <th>Status</th>
+            <th>Origem</th>
+            <th>Fornecedor</th>
+            <th class="text-right">Valor</th>
+            <th>Data</th>
+            <th>Acoes</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for nota in notas_fiscais %}
+        <tr>
+            <td>{{ nota.pk }}</td>
+            <td>{{ nota.numero }}</td>
+            <td>{% if nota.obra %}{{ nota.obra.codigo }}{% else %}-{% endif %}</td>
+            <td>{{ nota.get_status_display }}</td>
+            <td>
+                {% if nota.medicao %}Medicao {{ nota.medicao.numero_da_medicao }}
+                {% elif nota.pedido_compra %}Pedido {{ nota.pedido_compra.numero }}
+                {% else %}-{% endif %}
+            </td>
+            <td>{{ nota.fornecedor }}</td>
+            <td class="money">{{ nota.valor_total|money_br }}</td>
+            <td>{{ nota.data_emissao|date:"d/m/Y" }}</td>
+            <td>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <a href="{% url 'nota_fiscal_update' nota.pk %}">Editar</a>
+                    <form method="post" action="{% url 'nota_fiscal_delete' %}" onsubmit="return confirm('Excluir este registro?');" style="display:inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="id" value="{{ nota.pk }}">
+                        <button type="submit" style="background:none; border:0; color:#651111; cursor:pointer; padding:0;">Excluir</button>
+                    </form>
+                </div>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p class="empty">Nenhuma nota fiscal cadastrada.</p>
+{% endif %}
+{% endblock %}

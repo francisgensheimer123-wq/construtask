@@ -1,0 +1,47 @@
+{% extends "app/base.html" %}
+{% load formatters %}
+
+{% block main_class %}main-full{% endblock %}
+{% block title %}Ordens de Compra | Construtask{% endblock %}
+
+{% block content %}
+<div class="toolbar">
+    <div>
+        <h2>Ordens de Compra</h2>
+        <p>Ordens emitidas a partir de cotacoes aprovadas e integradas ao compromisso financeiro.</p>
+    </div>
+</div>
+
+<div class="panel">
+    {% if ordens_compra %}
+    <table class="compact-table">
+        <thead>
+            <tr>
+                <th>Numero</th>
+                <th>Solicitacao</th>
+                <th>Fornecedor</th>
+                <th>Status</th>
+                <th>Compromisso</th>
+                <th>Data</th>
+                <th class="text-right">Valor Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ordem in ordens_compra %}
+            <tr>
+                <td><a href="{% url 'ordem_compra_detail' ordem.pk %}">{{ ordem.numero }}</a></td>
+                <td>{{ ordem.solicitacao.numero }}</td>
+                <td>{{ ordem.fornecedor }}</td>
+                <td>{{ ordem.get_status_display }}</td>
+                <td>{% if ordem.compromisso_relacionado %}<a href="{% url 'contrato_detail' ordem.compromisso_relacionado.pk %}">{{ ordem.compromisso_relacionado.numero }}</a>{% else %}-{% endif %}</td>
+                <td>{{ ordem.data_emissao|date:"d/m/Y" }}</td>
+                <td class="money">{{ ordem.valor_total|money_br }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="empty">Nenhuma ordem de compra emitida.</p>
+    {% endif %}
+</div>
+{% endblock %}

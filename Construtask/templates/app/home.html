@@ -1,0 +1,254 @@
+{% extends "app/base.html" %}
+{% load formatters %}
+
+{% block main_class %}main-full{% endblock %}
+{% block title %}Painel | Construtask{% endblock %}
+
+{% block content %}
+<div class="toolbar">
+    <div>
+        <h2>Painel Operacional</h2>
+        <p>Visao integrada de custo, prazo, qualidade e aquisicoes{% if obra_contexto %} da obra {{ obra_contexto.codigo }} - {{ obra_contexto.nome }}{% endif %}.</p>
+    </div>
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <a class="btn secondary" href="{% url 'nao_conformidade_list' %}">Nao Conformidades</a>
+        <a class="btn secondary" href="{% url 'solicitacao_compra_list' %}">Solicitacoes</a>
+        <a class="btn secondary" href="{% url 'cotacao_list' %}">Cotacoes</a>
+        <a class="btn secondary" href="{% url 'compromisso_list' %}">Compras e Contratacoes</a>
+    </div>
+</div>
+
+{% if sem_obra_selecionada %}
+<div class="panel">
+    <p class="empty">Selecione uma obra no cabecalho para carregar o dashboard executivo.</p>
+</div>
+{% else %}
+<section class="cards">
+    <div class="card"><span>Orcado</span><strong>{{ indicadores_exec.orcado|money_br }}</strong></div>
+    <div class="card"><span>Comprometido</span><strong>{{ indicadores_exec.comprometido|money_br }}</strong></div>
+    <div class="card"><span>Medido</span><strong>{{ indicadores_exec.medido|money_br }}</strong></div>
+    <div class="card"><span>Executado</span><strong>{{ indicadores_exec.executado|money_br }}</strong></div>
+    <div class="card"><span>Planejado</span><strong>{{ indicadores_exec.planejado|money_br }}</strong></div>
+    <div class="card"><span>CPI</span><strong>{{ eva.CPI|trunc2 }}</strong></div>
+    <div class="card"><span>SPI</span><strong>{{ eva.SPI|trunc2 }}</strong></div>
+    <div class="card"><span>% Planejado x Executado</span><strong>{{ indicadores_dashboard.percentual_planejado_vs_executado|trunc2 }}%</strong></div>
+</section>
+
+<section class="grid-2">
+    <div class="panel">
+        <div class="toolbar">
+            <h3>Integracao Fisico-Financeira</h3>
+            <a class="btn secondary" href="{% url 'plano_fisico_dashboard' %}">Cronograma</a>
+        </div>
+        {% for item in grafico_geral %}
+        <div class="chart-row">
+            <div class="chart-head">
+                <span>{{ item.label }}</span>
+                <span class="money">{{ item.valor|money_br }}{% if item.mostrar_percentual %} | {{ item.percentual|trunc2 }}%{% endif %}</span>
+            </div>
+            <div class="chart-track">
+                <div class="chart-fill" style="width: {{ item.percentual }}%; background: {{ item.cor }};"></div>
+            </div>
+        </div>
+        {% endfor %}
+        <table class="compact-table" style="margin-top:18px;">
+            <thead>
+                <tr>
+                    <th>Indicador EVA</th>
+                    <th class="text-right">Valor</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>PV</td><td class="money">{{ eva.PV|money_br }}</td></tr>
+                <tr><td>EV</td><td class="money">{{ eva.EV|money_br }}</td></tr>
+                <tr><td>AC</td><td class="money">{{ eva.AC|money_br }}</td></tr>
+                <tr><td>CV</td><td class="money">{{ eva.CV|money_br }}</td></tr>
+                <tr><td>SV</td><td class="money">{{ eva.SV|money_br }}</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="panel">
+        <div class="toolbar">
+            <h3>Riscos e Qualidade</h3>
+            <a class="btn secondary" href="{% url 'risco_dashboard' %}">Riscos</a>
+        </div>
+        <table class="compact-table">
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th class="text-right">Quantidade</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>Riscos criticos</td><td class="money">{{ resumo_riscos.criticos }}</td></tr>
+                <tr><td>Riscos altos</td><td class="money">{{ resumo_riscos.altos }}</td></tr>
+                <tr><td>Riscos em tratamento</td><td class="money">{{ resumo_riscos.em_tratamento }}</td></tr>
+                <tr><td>NCs abertas</td><td class="money">{{ nao_conformidades_abertas|length }}</td></tr>
+            </tbody>
+        </table>
+        <div style="margin-top:18px;">
+            <h4 style="margin:0 0 10px;">Nao conformidades abertas</h4>
+            {% if nao_conformidades_abertas %}
+            <table class="compact-table">
+                <thead>
+                    <tr>
+                        <th>Status</th>
+                        <th>Descricao</th>
+                        <th>Responsavel</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for nc in nao_conformidades_abertas %}
+                    <tr>
+                        <td><a href="{% url 'nao_conformidade_detail' nc.pk %}">{{ nc.get_status_display }}</a></td>
+                        <td class="wrap-text">{{ nc.descricao|truncatechars:90 }}</td>
+                        <td>{{ nc.responsavel }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="empty">Nenhuma nao conformidade aberta.</p>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+<section class="grid-2">
+    <div class="panel">
+        <div class="toolbar">
+            <h3>Aquisicoes Estruturadas</h3>
+            <a class="btn secondary" href="{% url 'solicitacao_compra_create' %}">Nova Solicitacao</a>
+        </div>
+        <table class="compact-table">
+            <thead>
+                <tr>
+                    <th>Pipeline</th>
+                    <th class="text-right">Quantidade</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in pipeline_aquisicoes %}
+                <tr>
+                    <td>{{ item.label }}</td>
+                    <td class="money">{{ item.valor }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <div style="margin-top:18px;">
+            <h4 style="margin:0 0 10px;">Ultimos resultados de cotacao</h4>
+            {% if ultimas_ordens_compra %}
+            <table class="compact-table">
+                <thead>
+                    <tr>
+                        <th>Numero</th>
+                        <th>Fornecedor</th>
+                        <th class="text-right">Valor</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for oc in ultimas_ordens_compra %}
+                    <tr>
+                        <td>{% if oc.compromisso_relacionado %}<a href="{% url 'contrato_detail' oc.compromisso_relacionado.pk %}">{{ oc.numero }}</a>{% else %}{{ oc.numero }}{% endif %}</td>
+                        <td>{{ oc.fornecedor }}</td>
+                        <td class="money">{{ oc.valor_total|money_br }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="empty">Nenhuma ordem de compra emitida.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="panel">
+        <div class="toolbar">
+            <h3>Alertas Operacionais</h3>
+        </div>
+        <table class="compact-table">
+            <thead>
+                <tr>
+                    <th>Indicador</th>
+                    <th>Nivel</th>
+                    <th class="text-right">Quantidade</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for alerta in alertas_operacionais %}
+                <tr>
+                    <td>{{ alerta.label }}</td>
+                    <td>{{ alerta.nivel|upper }}</td>
+                    <td class="money">{{ alerta.valor }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <div style="margin-top:18px;">
+            <h4 style="margin:0 0 10px;">Contratos com saldo critico</h4>
+            {% if alertas %}
+            <table class="compact-table">
+                <thead>
+                    <tr>
+                        <th>Contrato</th>
+                        <th class="text-right">Saldo</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for contrato in alertas %}
+                    <tr>
+                        <td><a href="{% url 'contrato_detail' contrato.pk %}">{{ contrato.numero }}</a></td>
+                        <td class="money">{{ contrato.saldo|money_br }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="empty">Nenhum contrato em faixa critica.</p>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+<section class="panel" style="margin-top:18px;">
+    <div class="toolbar">
+        <h3>Principais Itens do Orcamento</h3>
+        <a class="btn secondary" href="{% url 'plano_contas_list' %}">Plano de Contas</a>
+    </div>
+    {% if top_itens_orcamento %}
+    <table class="compact-table">
+        <thead>
+            <tr>
+                <th>Centro de Custo</th>
+                <th class="text-right">Orcado</th>
+                <th class="text-right">Comprometido</th>
+                <th class="text-right">Medido</th>
+                <th class="text-right">Executado</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in top_itens_orcamento %}
+            <tr>
+                <td>
+                    {% if item.centro %}
+                    {{ item.centro.codigo }} - {{ item.centro.descricao }}
+                    {% else %}
+                    {{ item.codigo }} - {{ item.descricao }}
+                    {% endif %}
+                </td>
+                <td class="money">{% if item.valor_orcado %}{{ item.valor_orcado|money_br }}{% else %}{{ item.valor_total_consolidado_calc|money_br }}{% endif %}</td>
+                <td class="money">{% if item.valor_comprometido %}{{ item.valor_comprometido|money_br }}{% else %}{{ item.valor_comprometido_calc|money_br }}{% endif %}</td>
+                <td class="money">{% if item.valor_medido %}{{ item.valor_medido|money_br }}{% else %}{{ item.valor_medido_calc|money_br }}{% endif %}</td>
+                <td class="money">{% if item.valor_pago %}{{ item.valor_pago|money_br }}{% else %}{{ item.valor_executado_calc|money_br }}{% endif %}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="empty">Nenhum item orcamentario disponivel.</p>
+    {% endif %}
+</section>
+{% endif %}
+{% endblock %}

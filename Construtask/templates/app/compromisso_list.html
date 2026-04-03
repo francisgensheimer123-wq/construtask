@@ -1,0 +1,101 @@
+{% extends "app/base.html" %}
+{% load formatters %}
+
+{% block main_class %}main-full{% endblock %}
+{% block title %}Compras e Contratacoes | Construtask{% endblock %}
+
+{% block content %}
+<div class="toolbar">
+    <div>
+        <h2>Compras e Contratacoes</h2>
+        <p>Contratos e pedidos com visao operacional por obra.</p>
+    </div>
+    <div style="display:flex; gap:10px;">
+        <a class="btn secondary" href="{% url 'compromisso_export' %}?q={{ busca|urlencode }}">Exportar Excel</a>
+        <a class="btn" href="{% url 'compromisso_create' %}">Nova Compra ou Contratacao</a>
+    </div>
+</div>
+
+<section class="panel" style="margin-bottom:18px;">
+    <form method="get" class="toolbar" style="justify-content:flex-start; flex-wrap:wrap;">
+        <input type="text" name="q" value="{{ busca }}" placeholder="Buscar por numero, fornecedor, nome, descricao ou CNPJ" style="max-width:360px;">
+        <input type="text" name="fornecedor" value="{{ fornecedor_filtro }}" placeholder="Fornecedor" style="max-width:220px;">
+        <input type="text" name="responsavel" value="{{ responsavel_filtro }}" placeholder="Responsavel" style="max-width:200px;">
+        <input type="date" name="data_inicio" value="{{ data_inicio }}" style="max-width:170px;">
+        <input type="date" name="data_fim" value="{{ data_fim }}" style="max-width:170px;">
+        <select name="obra" style="max-width:220px;">
+            <option value="">Todas as obras</option>
+            {% for obra in obras %}
+            <option value="{{ obra.pk }}"{% if obra_filtro == obra.pk|stringformat:"s" %} selected{% endif %}>{{ obra.codigo }} - {{ obra.nome }}</option>
+            {% endfor %}
+        </select>
+        <select name="centro_custo" style="max-width:280px;">
+            <option value="">Todos os centros de custo</option>
+            {% for centro in centros_custo %}
+            <option value="{{ centro.pk }}"{% if centro_custo_filtro == centro.pk|stringformat:"s" %} selected{% endif %}>{{ centro.codigo }} - {{ centro.descricao }}</option>
+            {% endfor %}
+        </select>
+        <select name="status" style="max-width:220px;">
+            <option value="">Todos os status</option>
+            {% for value, label in status_choices %}
+            <option value="{{ value }}"{% if status_filtro == value %} selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <button class="btn" type="submit">Filtrar</button>
+    </form>
+</section>
+
+{% if compromissos %}
+<table class="compact-table">
+    <thead>
+        <tr>
+            <th>Numero</th>
+            <th>Obra</th>
+            <th>Status</th>
+            <th>Tipo</th>
+            <th>CNPJ</th>
+            <th>Fornecedor</th>
+            <th>Descricao</th>
+            <th class="text-right">Valor Total</th>
+            <th class="text-right">Valor Executado</th>
+            <th class="text-right">Saldo</th>
+            <th>Acoes</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for compromisso in compromissos %}
+        <tr>
+            <td>
+                {% if compromisso.tipo == "CONTRATO" %}
+                <a href="{% url 'contrato_detail' compromisso.pk %}">{{ compromisso.numero }}</a>
+                {% else %}
+                {{ compromisso.numero }}
+                {% endif %}
+            </td>
+            <td>{% if compromisso.obra %}{{ compromisso.obra.codigo }}{% else %}-{% endif %}</td>
+            <td>{{ compromisso.get_status_display }}</td>
+            <td>{{ compromisso.get_tipo_display }}</td>
+            <td>{{ compromisso.cnpj }}</td>
+            <td>{{ compromisso.fornecedor }}</td>
+            <td class="wrap-text">{{ compromisso.descricao }}</td>
+            <td class="money">{{ compromisso.valor_contratado|money_br }}</td>
+            <td class="money">{{ compromisso.valor_executado|money_br }}</td>
+            <td class="money">{{ compromisso.saldo|money_br }}</td>
+            <td>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <a href="{% url 'compromisso_update' compromisso.pk %}">Editar</a>
+                    <form method="post" action="{% url 'compromisso_delete' %}" onsubmit="return confirm('Excluir este registro?');" style="display:inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="id" value="{{ compromisso.pk }}">
+                        <button type="submit" style="background:none; border:0; color:#651111; cursor:pointer; padding:0;">Excluir</button>
+                    </form>
+                </div>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p class="empty">Nenhuma compra ou contratacao cadastrada.</p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,110 @@
+{% extends "app/base.html" %}
+{% load formatters %}
+
+{% block main_class %}main-full{% endblock %}
+{% block title %}Fechamento Mensal | Construtask{% endblock %}
+
+{% block content %}
+<div class="toolbar">
+    <div>
+        <h2>Fechamento Mensal</h2>
+        <p>Consolidado operacional mensal por obra.</p>
+    </div>
+</div>
+
+<section class="panel" style="margin-bottom:18px;">
+    <form method="get" class="toolbar" style="justify-content:flex-start;">
+        <select name="obra" style="max-width:240px;">
+            {% for obra in obras %}
+            <option value="{{ obra.pk }}"{% if obra_atual and obra_atual.pk == obra.pk %} selected{% endif %}>{{ obra.codigo }} - {{ obra.nome }}</option>
+            {% endfor %}
+        </select>
+        <input type="number" name="mes" value="{{ mes }}" min="1" max="12" style="max-width:110px;">
+        <input type="number" name="ano" value="{{ ano|stringformat:'d' }}" min="2020" max="2100" style="max-width:130px;">
+        <button class="btn" type="submit">Consultar</button>
+    </form>
+</section>
+
+<section class="cards">
+    <div class="card"><span>Comprometido</span><strong>{{ resumo.valor_comprometido|money_br }}</strong></div>
+    <div class="card"><span>Medido</span><strong>{{ resumo.valor_medido|money_br }}</strong></div>
+    <div class="card"><span>Notas</span><strong>{{ resumo.valor_notas|money_br }}</strong></div>
+    <div class="card"><span>Qtd. Compromissos</span><strong>{{ resumo.qtd_compromissos }}</strong></div>
+    <div class="card"><span>Qtd. Medicoes</span><strong>{{ resumo.qtd_medicoes }}</strong></div>
+    <div class="card"><span>Qtd. Notas</span><strong>{{ resumo.qtd_notas }}</strong></div>
+</section>
+
+{% if obra_atual %}
+<section class="panel" style="margin-bottom:18px;">
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="obra" value="{{ obra_atual.pk }}">
+        <input type="hidden" name="mes" value="{{ mes }}">
+        <input type="hidden" name="ano" value="{{ ano }}">
+        <button class="btn" type="submit">Registrar Fechamento</button>
+    </form>
+</section>
+{% endif %}
+
+<section class="panel">
+    <h3>Consolidado por Centro de Custo (Mes/Ano)</h3>
+    {% if resumo_centros %}
+    <table class="compact-table" style="margin-bottom:18px;">
+        <thead>
+            <tr>
+                <th>Centro de Custo</th>
+                <th class="text-right">Comprometido</th>
+                <th class="text-right">Medido</th>
+                <th class="text-right">Notas</th>
+                <th class="text-right">Saldo a Medir</th>
+                <th class="text-right">Saldo a Executar</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for linha in resumo_centros %}
+            <tr>
+                <td>{{ linha.centro.codigo }} - {{ linha.centro.descricao }}</td>
+                <td class="money">{{ linha.comprometido|money_br }}</td>
+                <td class="money">{{ linha.medido|money_br }}</td>
+                <td class="money">{{ linha.notas|money_br }}</td>
+                <td class="money">{{ linha.saldo_a_medir|money_br }}</td>
+                <td class="money">{{ linha.saldo_a_executar|money_br }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="empty">Sem movimentacoes por centro de custo no periodo selecionado.</p>
+    {% endif %}
+</section>
+
+<section class="panel">
+    <h3>Ultimos Fechamentos Registrados</h3>
+    {% if fechamentos %}
+    <table class="compact-table">
+        <thead>
+            <tr>
+                <th>Obra</th>
+                <th>Mes</th>
+                <th class="text-right">Comprometido</th>
+                <th class="text-right">Medido</th>
+                <th class="text-right">Notas</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in fechamentos %}
+            <tr>
+                <td>{{ item.obra.codigo }}</td>
+                <td>{{ item.mes|stringformat:"02d" }}/{{ item.ano|stringformat:"d" }}</td>
+                <td class="money">{{ item.valor_comprometido|money_br }}</td>
+                <td class="money">{{ item.valor_medido|money_br }}</td>
+                <td class="money">{{ item.valor_notas|money_br }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="empty">Nenhum fechamento registrado.</p>
+    {% endif %}
+</section>
+{% endblock %}

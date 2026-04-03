@@ -1,0 +1,42 @@
+{% extends "app/base.html" %}
+{% load formatters %}
+
+{% block main_class %}main-full{% endblock %}
+{% block title %}Importar Plano de Contas | Construtask{% endblock %}
+
+{% block content %}
+<div class="toolbar">
+    <div>
+        <h2>Importar Plano de Contas</h2>
+        <p>Importe um arquivo Excel com o plano de contas para a obra "{{ obra_contexto.codigo }} - {{ obra_contexto.nome }}".</p>
+    </div>
+    <div>
+        <a class="btn secondary" href="{% url 'plano_contas_list' %}">Voltar</a>
+    </div>
+</div>
+
+{% if messages %}
+<div class="messages">
+    {% for message in messages %}
+    <div class="message {{ message.tags }}">{{ message }}</div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<section class="panel">
+    <h3>Selecionar Arquivo Excel</h3>
+    <p class="muted">O arquivo deve conter as colunas: ITEM, DESCRIÇÃO, UN, QTD, VALOR UNIT.</p>
+    
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="field">
+            <label for="id_arquivo">Arquivo Excel *</label>
+            <input type="file" name="arquivo" id="id_arquivo" accept=".xlsx,.xls" required>
+        </div>
+        
+        <div class="actions">
+            <button type="submit" class="btn">Importar</button>
+        </div>
+    </form>
+</section>
+{% endblock %}

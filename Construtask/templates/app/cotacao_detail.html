@@ -1,0 +1,160 @@
+{% extends "app/base.html" %}
+{% load formatters %}
+
+{% block main_class %}main-full{% endblock %}
+{% block title %}Detalhe da Cotacao | Construtask{% endblock %}
+
+{% block content %}
+<div class="toolbar">
+    <div>
+        <h2>{{ cotacao.numero }}</h2>
+        <p>{{ cotacao.fornecedor }} | {{ cotacao.get_status_display }}</p>
+    </div>
+    <div style="display:flex; gap:10px;">
+        <a class="btn secondary" href="{% url 'cotacao_pdf' cotacao.pk %}">Gerar PDF</a>
+        <a class="btn secondary" href="{% url 'solicitacao_compra_detail' cotacao.solicitacao.pk %}">Solicitacao</a>
+        <a class="btn secondary" href="{% url 'cotacao_list' %}">Voltar</a>
+    </div>
+</div>
+
+<section class="grid-2">
+    <div class="panel">
+        <h3>Resumo</h3>
+        <table class="compact-table">
+            <tbody>
+                <tr><th>Solicitacao</th><td>{{ cotacao.solicitacao.numero }}</td></tr>
+                <tr><th>Fornecedor</th><td>{{ cotacao.fornecedor }}</td></tr>
+                <tr><th>Data da cotacao</th><td>{{ cotacao.data_cotacao|date:"d/m/Y" }}</td></tr>
+                <tr><th>Validade</th><td>{% if cotacao.validade_ate %}{{ cotacao.validade_ate|date:"d/m/Y" }}{% else %}-{% endif %}</td></tr>
+                <tr><th>Justificativa da escolha</th><td class="wrap-text">{{ cotacao.justificativa_escolha|default:"-" }}</td></tr>
+                <tr><th>Observacoes</th><td class="wrap-text">{{ cotacao.observacoes|default:"-" }}</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="panel">
+        <h3>Gerar Compras e Contratacoes</h3>
+        <p class="inline-note muted">Conforme o fluxo definido, a cotacao precisa comparar pelo menos 2 fornecedores antes de gerar contrato ou pedido de compra.</p>
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="acao" value="emitir_oc">
+            <div class="field">
+                <label for="{{ workflow_form.tipo_resultado.id_for_label }}">Tipo do resultado</label>
+                {{ workflow_form.tipo_resultado }}
+            </div>
+            <div class="field">
+                <label for="{{ workflow_form.descricao.id_for_label }}">Descricao do resultado</label>
+                {{ workflow_form.descricao }}
+            </div>
+            <div class="actions">
+                <button class="btn" type="submit">Gerar em Compras e Contratacoes</button>
+            </div>
+        </form>
+        {% if compromisso_resultante and compromisso_resultante.compromisso_relacionado %}
+        <p class="inline-note">
+            Resultado atual:
+            <a href="{% url 'contrato_detail' compromisso_resultante.compromisso_relacionado.pk %}">
+                {{ compromisso_resultante.compromisso_relacionado.numero }}
+            </a>
+        </p>
+        {% endif %}
+    </div>
+</section>
+
+<section class="panel">
+    <div class="toolbar">
+        <h3>Comparativo de Fornecedores</h3>
+        <span class="muted">{{ total_fornecedores_comparados }} fornecedor(es) comparado(s)</span>
+    </div>
+    <table class="compact-table">
+        <thead>
+            <tr>
+                <th>Numero</th>
+                <th>Fornecedor</th>
+                <th>Status</th>
+                <th>Data</th>
+                <th class="text-right">Valor Total</th>
+                <th>Resultado</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for comparativa in cotacoes_comparativas %}
+            <tr>
+                <td>{% if comparativa.pk == cotacao.pk %}<strong>{{ comparativa.numero }}</strong>{% else %}<a href="{% url 'cotacao_detail' comparativa.pk %}">{{ comparativa.numero }}</a>{% endif %}</td>
+                <td>{{ comparativa.fornecedor }}</td>
+                <td>{{ comparativa.get_status_display }}</td>
+                <td>{{ comparativa.data_cotacao|date:"d/m/Y" }}</td>
+                <td class="money">{{ comparativa.valor_total|money_br }}</td>
+                <td>
+                    {% with ordem=comparativa.ordens_compra.first %}
+                        {% if ordem and ordem.compromisso_relacionado %}
+                            <a href="{% url 'contrato_detail' ordem.compromisso_relacionado.pk %}">{{ ordem.compromisso_relacionado.numero }}</a>
+                        {% else %}
+                            -
+                        {% endif %}
+                    {% endwith %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+
+<section class="panel">
+    <h3>Itens cotados</h3>
+    {% if cotacao.itens.all %}
+    <table class="compact-table">
+        <thead>
+                <tr>
+                    <th>Centro de Custo</th>
+                    <th>Descricao Tecnica</th>
+                    <th>Unidade</th>
+                    <th class="text-right">Quantidade</th>
+                    <th class="text-right">Valor Unitario</th>
+                    <th class="text-right">Valor Total</th>
+                    <th class="text-right">Prazo (dias)</th>
+                </tr>
+        </thead>
+        <tbody>
+            {% for item in cotacao.itens.all %}
+            <tr>
+                <td>{{ item.item_solicitacao.plano_contas.codigo }} - {{ item.item_solicitacao.plano_contas.descricao }}</td>
+                <td class="wrap-text">{{ item.item_solicitacao.descricao_tecnica|default:"-" }}</td>
+                <td>{{ item.item_solicitacao.unidade|default:"-" }}</td>
+                <td class="money">{{ item.item_solicitacao.quantidade|trunc2 }}</td>
+                <td class="money">{{ item.valor_unitario|money_br }}</td>
+                <td class="money">{{ item.valor_total|money_br }}</td>
+                <td class="money">{{ item.prazo_entrega_dias }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="empty">Ainda nao ha itens nesta cotacao.</p>
+    {% endif %}
+</section>
+
+<section class="panel">
+    <h3>Anexos das Propostas</h3>
+    {% if cotacao.anexos.all %}
+    <table class="compact-table">
+        <thead>
+            <tr>
+                <th>Descricao</th>
+                <th>Arquivo</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for anexo in cotacao.anexos.all %}
+            <tr>
+                <td>{{ anexo.descricao|default:"-" }}</td>
+                <td>{% if anexo.arquivo %}<a href="{{ anexo.arquivo.url }}">abrir</a>{% else %}-{% endif %}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="empty">Nenhum anexo registrado para esta cotacao.</p>
+    {% endif %}
+</section>
+{% endblock %}

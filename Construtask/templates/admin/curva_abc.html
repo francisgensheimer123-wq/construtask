@@ -1,0 +1,29 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+<h1>Curva ABC</h1>
+
+<table border="1" cellpadding="5">
+    <tr>
+        <th>Código</th>
+        <th>Descrição</th>
+        <th>Valor Total</th>
+        <th>%</th>
+        <th>% Acumulado</th>
+        <th>Classe</th>
+    </tr>
+
+    {% for item in dados %}
+    <tr>
+        <td>{{ item.codigo }}</td>
+        <td>{{ item.descricao }}</td>
+        <td>{{ item.valor_total }}</td>
+        <td>{{ item.percentual }}%</td>
+        <td>{{ item.acumulado }}%</td>
+        <td>{{ item.classe }}</td>
+    </tr>
+    {% endfor %}
+
+</table>
+
+{% endblock %}

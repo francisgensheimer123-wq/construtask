@@ -1,0 +1,176 @@
+{% load static formatters %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Construtask{% endblock %}</title>
+    <style>
+        :root {
+            --black: #0b0b0c;
+            --red-dark: #651111;
+            --graphite: #2f343a;
+            --graphite-soft: #434a53;
+            --white: #ffffff;
+            --border: #c9cdd2;
+            --muted: #5e6772;
+        }
+        body { font-family: "Aptos", "Segoe UI", sans-serif; font-size: 15px; margin: 0; background: linear-gradient(180deg, #ededee 0%, #f7f7f7 100%); color: var(--black); }
+        header { background: linear-gradient(135deg, var(--black) 0%, var(--graphite) 60%, var(--red-dark) 100%); color: var(--white); padding: 18px 32px 20px; border-bottom: 4px solid var(--red-dark); }
+        .brand { display:flex; align-items:flex-end; justify-content:space-between; gap:24px; flex-wrap:wrap; }
+        .brand img { max-width: 460px; width: 100%; height: auto; display:block; }
+        .brand nav { padding-bottom: 10px; }
+        nav a { color: #e5e7eb; margin-right: 18px; text-decoration: none; font-weight: 600; }
+        nav a:hover { color: var(--white); }
+        main { max-width: 1180px; margin: 0 auto; padding: 28px 24px 48px; }
+        main.main-wide-left { max-width: none; margin: 0; padding-right: 24px; }
+        main.main-full { max-width: none; width: 100%; margin: 0; padding: 28px 18px 48px; box-sizing: border-box; }
+        .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin: 24px 0; }
+        .grid-2 { display:grid; grid-template-columns: 2fr 1fr; gap: 18px; margin: 24px 0; }
+        .card, .panel { background: var(--white); border-radius: 14px; padding: 18px; box-shadow: 0 12px 32px rgba(11, 11, 12, 0.08); border: 1px solid #d5d8dc; }
+        /* Painel: reduzir tamanho do card em ~2pt */
+        .card strong { display: block; font-size: 1.43rem; margin-top: 8px; color: var(--red-dark); text-align: right; }
+
+        .pie-wrap { display:flex; gap:18px; align-items:center; margin-top:6px; }
+        .pie {
+            width:160px;
+            height:160px;
+            border-radius:999px;
+            background: conic-gradient(var(--pie-c1) 0 calc(var(--pie-p1) * 1%), var(--pie-c2) calc(var(--pie-p1) * 1%) 100%);
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            border: 10px solid #f0f1f3;
+            box-sizing: content-box;
+        }
+        .pie-center {
+            width:60px;
+            height:60px;
+            border-radius:999px;
+            background: #ffffff;
+            border: 1px solid #d5d8dc;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            font-weight:700;
+            color: var(--graphite);
+        }
+        .pie-legend { display:grid; gap:8px; }
+        .pie-legend .legend-item { display:flex; justify-content:space-between; gap:12px; }
+        .legend-dot { width:10px; height:10px; border-radius:999px; display:inline-block; margin-right:8px; }
+        .toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 20px; }
+        .btn { display: inline-block; background: var(--red-dark); color: var(--white); padding: 10px 14px; border-radius: 10px; text-decoration: none; border: 0; cursor: pointer; }
+        .btn.secondary { background: var(--graphite); color: var(--white); }
+        table { width: 100%; border-collapse: collapse; background: var(--white); border-radius: 14px; overflow: hidden; }
+        th, td { padding: 14px 16px; border-bottom: 1px solid #e2e8f0; text-align: left; }
+        th { background: #f0f1f3; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--graphite); }
+        form .field { margin-bottom: 16px; }
+        form label { display: block; font-weight: 600; margin-bottom: 6px; }
+        form input, form select, form textarea { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); box-sizing: border-box; background: var(--white); color: var(--black); }
+        .actions { display: flex; gap: 12px; margin-top: 24px; }
+        .empty { color: var(--muted); }
+        .chart-row { margin-bottom: 16px; }
+        .chart-head { display:flex; justify-content:space-between; font-weight:600; margin-bottom:6px; }
+        .chart-track { width:100%; height:14px; border-radius:999px; background:#dddfe3; overflow:hidden; }
+        .chart-fill { height:100%; border-radius:999px; }
+        .tree-code { font-family: Consolas, monospace; color:var(--black); }
+        .selector-display { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 12px; border:1px solid var(--border); border-radius:10px; background:var(--white); }
+        .modal-backdrop { position:fixed; inset:0; background:rgba(11,11,12,.66); display:none; align-items:center; justify-content:center; padding:20px; }
+        .modal-backdrop.open { display:flex; }
+        .modal { width:min(920px, 100%); max-height:80vh; overflow:auto; background:var(--white); border-radius:16px; padding:20px; box-shadow:0 24px 60px rgba(11,11,12,.35); border-top: 5px solid var(--red-dark); }
+        .selector-list { border:1px solid #d8dbe0; border-radius:12px; overflow:hidden; margin-top:12px; }
+        .selector-item { display:grid; grid-template-columns:36px 180px 1fr; gap:12px; padding:12px 16px; border-bottom:1px solid #e2e8f0; align-items:center; background:var(--white); }
+        .selector-item:last-child { border-bottom:0; }
+        .muted { color:var(--muted); }
+        .synthetic td { font-weight: 700; color: var(--graphite); }
+        .text-right { text-align: right !important; }
+        .money { text-align: right !important; white-space: nowrap; }
+        .numeric-input { text-align: right; }
+        .wrap-text { white-space: normal; word-break: break-word; line-height: 1.35; }
+        .compact-table th, .compact-table td { padding: 12px 14px; vertical-align: top; }
+        .detail-toggle { color: var(--red-dark); font-weight: 700; cursor: pointer; }
+        .detail-list { margin: 8px 0 0; padding: 0; list-style: none; }
+        .detail-list li { display: grid; grid-template-columns: minmax(180px, 1.2fr) 80px 100px 120px; gap: 12px; padding: 6px 0; border-top: 1px solid #eceff3; }
+        .empty-row { display: none; }
+        .table-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 12px; }
+        .inline-note { margin-top: 10px; }
+        .item-table select { max-width: 340px; }
+        .messages { display:grid; gap:10px; margin-bottom:18px; }
+        .message { padding:12px 14px; border-radius:12px; border:1px solid #d7dbe0; background:#ffffff; }
+        .message.success { border-color:#8bb49a; background:#edf8f0; color:#1f5130; }
+        .message.error { border-color:#d7a0a0; background:#fff1f1; color:#7f1d1d; }
+        input[name$='quantidade'],
+        input[name$='valor_unitario'],
+        input[name='valor_total'],
+        input[name='valor_contratado'],
+        input[name='valor_medido'] { text-align: right; }
+        @media (max-width: 800px) {
+            .grid-2 { grid-template-columns: 1fr; }
+            .selector-item { grid-template-columns: 36px 1fr; }
+            .brand nav { padding-bottom: 0; }
+            .detail-list li { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="brand">
+            <img src="{% static 'app/logo-construtask.svg' %}" alt="Construtask">
+            <nav>
+                {% if user.is_authenticated %}
+                <form method="post" action="{% url 'selecionar_obra_contexto' %}" style="display:inline-flex; gap:8px; align-items:center; margin-right:18px;">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                    <select name="obra_contexto" style="min-width:220px; padding:6px 8px; border-radius:8px; border:1px solid #d1d5db;">
+                        {% if not obras_contexto %}
+                        <option value="">-- Selecione uma Obra --</option>
+                        {% else %}
+                        {% for obra_ctx in obras_contexto %}
+                        <option value="{{ obra_ctx.pk }}"{% if obra_contexto_atual and obra_contexto_atual.pk == obra_ctx.pk %} selected{% endif %}>
+                            {{ obra_ctx.codigo }} - {{ obra_ctx.nome }}
+                        </option>
+                        {% endfor %}
+                        {% endif %}
+                    </select>
+                    <button type="submit" class="btn secondary" style="padding:7px 10px;">Aplicar</button>
+                </form>
+                {% endif %}
+                <a href="{% url 'home' %}">Painel</a>
+                <a href="{% url 'obra_list' %}">Obras</a>
+                <a href="{% url 'plano_contas_list' %}">Plano de Contas</a>
+                <a href="{% url 'curva_abc' %}">Curva ABC</a>
+                <a href="{% url 'compromisso_list' %}">Compras e Contratacoes</a>
+                <a href="{% url 'medicao_list' %}">Medicoes</a>
+                <a href="{% url 'nota_fiscal_list' %}">Notas Fiscais</a>
+                <a href="{% url 'fechamento_mensal' %}">Fechamento</a>
+                <a href="{% url 'nao_conformidade_list' %}">Nao Conformidades</a>
+                <a href="{% url 'fornecedor_list' %}">Fornecedores</a>
+                <a href="{% url 'solicitacao_compra_list' %}">Solicitacoes</a>
+                <a href="{% url 'cotacao_list' %}">Cotacoes</a>
+                <a href="{% url 'projecao_financeira' %}">Projeção Financeira</a>
+                {% if is_admin_empresa or is_admin_sistema %}
+                <a href="{% url 'empresa_admin' %}">Gerenciar</a>
+                {% endif %}
+                {% if user.is_authenticated %}
+                <span style="color:#9ca3af; margin-right:8px;">|</span>
+                <span style="color:#9ca3af; margin-right:8px;">{{ user.username }}</span>
+                <form method="post" action="{% url 'logout' %}" style="display:inline;">
+                    {% csrf_token %}
+                    <button type="submit" style="background:none; border:none; color:#fca5a5; cursor:pointer; font-weight:600; padding:0;">Sair</button>
+                </form>
+                {% endif %}
+            </nav>
+        </div>
+    </header>
+    <main class="{% block main_class %}{% endblock %}">
+        {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+            <div class="message {{ message.tags }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>
