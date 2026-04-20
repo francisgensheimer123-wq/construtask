@@ -280,7 +280,7 @@ class JobAssincrono(models.Model):
     )
     tipo = models.CharField(max_length=40, choices=TIPO_CHOICES)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="PENDENTE")
-    descricao = models.CharField(max_length=255)
+    descricao = models.CharField(max_length=900)
     parametros = models.JSONField(default=dict, blank=True)
     resultado = models.JSONField(default=dict, blank=True)
     erro = models.TextField(blank=True)
@@ -581,7 +581,7 @@ class AlertaOperacional(models.Model):
     obra = models.ForeignKey("Obra", on_delete=models.CASCADE, related_name="alertas_operacionais")
     codigo_regra = models.CharField(max_length=40)
     titulo = models.CharField(max_length=180)
-    descricao = models.TextField()
+    descricao = models.TextField(max_length=900)
     severidade = models.CharField(max_length=20, choices=SEVERIDADE_CHOICES, default="MEDIA")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="ABERTO")
     entidade_tipo = models.CharField(max_length=80, blank=True)
@@ -707,7 +707,7 @@ class PlanoContas(MPTTModel):
 
     obra = models.ForeignKey("Obra", on_delete=models.CASCADE, null=True, blank=True, related_name="planos_contas")
     codigo = models.CharField(max_length=50, editable=False)
-    descricao = models.CharField(max_length=255)
+    descricao = models.CharField(max_length=900)
     parent = TreeForeignKey("self", on_delete=models.CASCADE, null=True, blank=True, related_name="filhos")
     unidade = models.CharField(max_length=20, null=True, blank=True)
     quantidade = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
@@ -796,7 +796,7 @@ class OrcamentoBaseline(models.Model):
         ordering = ["-criado_em"]
 
     obra = models.ForeignKey("Obra", on_delete=models.CASCADE, related_name="baselines_orcamento")
-    descricao = models.CharField(max_length=255)
+    descricao = models.CharField(max_length=900)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="RASCUNHO")
     criado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -841,7 +841,7 @@ class OrcamentoBaselineItem(models.Model):
 
     baseline = models.ForeignKey(OrcamentoBaseline, on_delete=models.CASCADE, related_name="itens")
     codigo = models.CharField(max_length=50)
-    descricao = models.CharField(max_length=255)
+    descricao = models.CharField(max_length=900)
     parent_codigo = models.CharField(max_length=50, blank=True)
     level = models.PositiveIntegerField(default=0)
     unidade = models.CharField(max_length=20, blank=True)
@@ -949,7 +949,7 @@ class Compromisso(models.Model):
         null=True,
         blank=True,
     )
-    descricao = models.CharField(max_length=500)
+    descricao = models.CharField(max_length=900)
     fornecedor = models.CharField(max_length=150)
     cnpj = models.CharField(max_length=18, validators=[cnpj_validator])
     responsavel = models.CharField(max_length=150)
@@ -1048,7 +1048,7 @@ class AditivoContrato(models.Model):
     contrato = models.ForeignKey(Compromisso, on_delete=models.CASCADE, related_name="aditivos")
     tipo = models.CharField(max_length=20, choices=TIPO_CHOICES)
     status = models.CharField(max_length=20, choices=STATUS_ADITIVO_CHOICES, default="RASCUNHO")
-    descricao = models.CharField(max_length=500, blank=True)
+    descricao = models.CharField(max_length=900, blank=True)
     motivo_mudanca = models.TextField(blank=True)
     impacto_resumido = models.CharField(max_length=255, blank=True)
     solicitado_por = models.ForeignKey(
@@ -1373,7 +1373,7 @@ class NotaFiscal(models.Model):
     data_vencimento = models.DateField(null=True, blank=True)
     fornecedor = models.CharField(max_length=150)
     cnpj = models.CharField(max_length=18, validators=[cnpj_validator])
-    descricao = models.CharField(max_length=500)
+    descricao = models.CharField(max_length=900)
     valor_total = models.DecimalField(max_digits=15, decimal_places=2)
     medicao = models.ForeignKey(Medicao, on_delete=models.PROTECT, null=True, blank=True, related_name="notas_fiscais")
     pedido_compra = models.ForeignKey(
@@ -1460,7 +1460,7 @@ class AnexoOperacional(models.Model):
     compromisso = models.ForeignKey(Compromisso, on_delete=models.CASCADE, null=True, blank=True, related_name="anexos")
     medicao = models.ForeignKey(Medicao, on_delete=models.CASCADE, null=True, blank=True, related_name="anexos")
     nota_fiscal = models.ForeignKey(NotaFiscal, on_delete=models.CASCADE, null=True, blank=True, related_name="anexos")
-    descricao = models.CharField(max_length=255)
+    descricao = models.CharField(max_length=900)
     arquivo = models.FileField(upload_to="anexos/%Y/%m", blank=True)
     criado_em = models.DateTimeField(auto_now_add=True)
 
@@ -1480,7 +1480,7 @@ class HistoricoOperacional(models.Model):
     nota_fiscal = models.ForeignKey(NotaFiscal, on_delete=models.CASCADE, null=True, blank=True, related_name="historicos")
     usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="historicos_operacionais")
     acao = models.CharField(max_length=40)
-    descricao = models.CharField(max_length=255)
+    descricao = models.CharField(max_length=900)
     criado_em = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
