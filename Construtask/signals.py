@@ -1,4 +1,4 @@
-from django.db.models.signals import post_delete, post_save
+from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch import receiver
 
 from .audit import get_current_request
@@ -48,11 +48,11 @@ def registrar_auditoria_save(sender, instance, created, **kwargs):
         if created:
             AuditService.log_create(request, instance)
         else:
-            AuditService.log_event(
+            AuditService.log_update(
                 request,
-                "UPDATE",
                 instance,
-                depois=AuditService.instance_to_dict(instance),
+                AuditService.pop_before_state(instance),
+                AuditService.instance_to_dict(instance),
             )
         return
 
@@ -65,6 +65,16 @@ def registrar_auditoria_save(sender, instance, created, **kwargs):
         objeto_id=instance.pk,
         depois={"status": "capturado_sem_request"},
     )
+
+
+@receiver(pre_save)
+def capturar_snapshot_antes_de_salvar(sender, instance, **kwargs):
+    if sender not in AUDITED_MODELS or not getattr(instance, "pk", None):
+        return
+
+    from .audit import AuditService
+
+    AuditService.capture_before_state(instance)
 
 
 @receiver(post_delete)

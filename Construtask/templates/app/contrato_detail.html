@@ -12,14 +12,45 @@
     </div>
     <div style="display:flex; gap:10px;">
         <a class="btn secondary" href="{% url 'compromisso_pdf' contrato.pk %}">Gerar PDF</a>
+        <a class="btn secondary" href="{% url 'compromisso_aprovacao_pdf' contrato.pk %}">Relatório Probatório</a>
+        <a class="btn secondary" href="{% url 'compromisso_aprovacao_excel' contrato.pk %}">Relatório Probatório Excel</a>
+        {% if contrato.status == "RASCUNHO" %}
         <a class="btn secondary" href="{% url 'compromisso_update' contrato.pk %}">Editar</a>
+        {% endif %}
         <a class="btn secondary" href="{% url 'compromisso_list' %}">Voltar</a>
     </div>
 </div>
 
+<section class="panel" style="margin-bottom:18px;">
+    <div style="display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap;">
+        <div>
+            <strong>Workflow de Aprovação</strong>
+            <p class="muted" style="margin:6px 0 0 0;">Funcao atual: {{ papel_aprovacao|default:"Nao configurada" }} | Alcada: {{ limite_aprovacao_label }}</p>
+        </div>
+        <div style="min-width:min(100%, 420px);">
+            <form method="post">
+                {% csrf_token %}
+                <div class="field" style="margin-bottom:10px;">
+                    <label for="id_parecer_aprovacao_contrato">Parecer</label>
+                    <textarea id="id_parecer_aprovacao_contrato" name="parecer_aprovacao" rows="3" placeholder="Opcional no envio/aprovacao e obrigatorio na devolucao para ajuste.">{{ contrato.parecer_aprovacao }}</textarea>
+                </div>
+                <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                    {% if pode_enviar_para_aprovacao and contrato.status == "RASCUNHO" %}
+                    <button type="submit" class="btn" name="acao" value="enviar_para_aprovacao">Enviar para Aprovação</button>
+                    {% endif %}
+                    {% if pode_aprovar and contrato.status == "EM_APROVACAO" %}
+                    <button type="submit" class="btn" name="acao" value="aprovar">Aprovar</button>
+                    <button type="submit" class="btn secondary" name="acao" value="retornar_para_ajuste">Retornar para Ajuste</button>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
+
 <section class="cards">
     <div class="card"><span>Obra</span><strong style="text-align:left;">{% if contrato.obra %}{{ contrato.obra.codigo }}{% else %}-{% endif %}</strong></div>
-    <div class="card"><span>Status</span><strong style="text-align:left;">{{ contrato.get_status_display }}</strong></div>
+    <div class="card"><span>Status</span><strong style="text-align:left;">{{ contrato.get_status_display }}</strong><small class="text-muted">{{ contrato|workflow_stage_display }}</small></div>
     <div class="card"><span>Valor Contratado</span><strong>{{ contrato.valor_contratado|money_br }}</strong></div>
     <div class="card"><span>Valor Executado</span><strong>{{ contrato.valor_executado|money_br }}</strong></div>
     <div class="card"><span>Saldo</span><strong>{{ contrato.saldo|money_br }}</strong></div>
@@ -37,6 +68,9 @@
                 <tr><td>Estrutura</td><td>{{ contrato.torre|default:"-" }} / {{ contrato.bloco|default:"-" }} / {{ contrato.etapa|default:"-" }}</td></tr>
                 <tr><td>Responsavel</td><td>{{ contrato.responsavel }}</td></tr>
                 <tr><td>Data</td><td>{{ contrato.data_assinatura|date:"d/m/Y" }}</td></tr>
+                <tr><td>Enviado para Aprovação</td><td>{% if contrato.enviado_para_aprovacao_por %}{{ contrato.enviado_para_aprovacao_por.username }} em {{ contrato.enviado_para_aprovacao_em|date:"d/m/Y H:i" }}{% else %}-{% endif %}</td></tr>
+                <tr><td>Aprovado por</td><td>{% if contrato.aprovado_por %}{{ contrato.aprovado_por.username }} em {{ contrato.aprovado_em|date:"d/m/Y H:i" }}{% else %}-{% endif %}</td></tr>
+                <tr><td>Último Parecer</td><td>{{ contrato.parecer_aprovacao|default:"-" }}</td></tr>
                 {% if origem_aquisicao %}
                 <tr><td>Solicitacao de Compra</td><td><a href="{% url 'solicitacao_compra_detail' origem_aquisicao.solicitacao.pk %}">{{ origem_aquisicao.solicitacao.numero }}</a></td></tr>
                 <tr><td>Cotacao de Origem</td><td><a href="{% url 'cotacao_detail' origem_aquisicao.cotacao_aprovada.pk %}">{{ origem_aquisicao.cotacao_aprovada.numero }}</a></td></tr>
@@ -102,11 +136,20 @@
         <h3>Historico</h3>
         {% if contrato.historicos.all %}
         <table class="compact-table">
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Ação</th>
+                    <th>Usuário</th>
+                    <th>Descrição</th>
+                </tr>
+            </thead>
             <tbody>
                 {% for item in contrato.historicos.all|slice:":12" %}
                 <tr>
                     <td>{{ item.criado_em|date:"d/m/Y" }}</td>
                     <td>{{ item.acao }}</td>
+                    <td>{{ item.usuario.username|default:"-" }}</td>
                     <td>{{ item.descricao }}</td>
                 </tr>
                 {% endfor %}
@@ -127,8 +170,11 @@
             <tr>
                 <th>Tipo</th>
                 <th>Descricao</th>
+                <th>Status</th>
+                <th>Motivo</th>
                 <th class="text-right">Delta/Valor</th>
                 <th>Data</th>
+                <th>Workflow</th>
             </tr>
         </thead>
         <tbody>
@@ -136,6 +182,11 @@
             <tr>
                 <td>{{ aditivo.get_tipo_display }}</td>
                 <td class="wrap-text">{{ aditivo.descricao|default:"-" }}</td>
+                <td>
+                    <span class="badge bg-{{ aditivo|workflow_badge_class }}">{{ aditivo.get_status_display }}</span>
+                    <div><small class="text-muted">{{ aditivo|workflow_stage_display }}</small></div>
+                </td>
+                <td class="wrap-text">{{ aditivo.motivo_mudanca|default:"-" }}</td>
                 <td class="money text-right">
                     {% if aditivo.tipo == "PRAZO" %}
                         {{ aditivo.delta_dias }}
@@ -145,10 +196,36 @@
                     {% endif %}
                 </td>
                 <td>{{ aditivo.criado_em|date:"d/m/Y" }}</td>
+                <td class="wrap-text">
+                    <div class="muted" style="margin-bottom:8px;">
+                        Enviado: {{ aditivo.enviado_para_aprovacao_por.username|default:"-" }} em {{ aditivo.enviado_para_aprovacao_em|date:"d/m/Y H:i"|default:"-" }}<br>
+                        Aprovado: {{ aditivo.aprovado_por.username|default:"-" }} em {{ aditivo.aprovado_em|date:"d/m/Y H:i"|default:"-" }}
+                        <br>Solicitado: {{ aditivo.solicitado_por.username|default:"-" }} em {{ aditivo.solicitado_em|date:"d/m/Y H:i"|default:"-" }}
+                        {% if aditivo.impacto_resumido %}
+                        <br>Impacto: {{ aditivo.impacto_resumido }}
+                        {% endif %}
+                        {% if aditivo.parecer_aprovacao %}
+                        <br>Parecer: {{ aditivo.parecer_aprovacao }}
+                        {% endif %}
+                    </div>
+                    <form method="post" action="{% url 'aditivo_contrato_workflow' aditivo.pk %}">
+                        {% csrf_token %}
+                        <input type="text" name="parecer_aprovacao" placeholder="Parecer da aprovação" style="width:100%; margin-bottom:6px;">
+                        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                            {% if aditivo.status == "RASCUNHO" and pode_enviar_para_aprovacao %}
+                            <button class="btn secondary" type="submit" name="acao" value="enviar_para_aprovacao">Enviar</button>
+                            {% endif %}
+                            {% if aditivo.status == "EM_APROVACAO" and pode_aprovar_aditivo_workflow %}
+                            <button class="btn" type="submit" name="acao" value="aprovar">Aprovar</button>
+                            <button class="btn secondary" type="submit" name="acao" value="retornar_para_ajuste">Devolver</button>
+                            {% endif %}
+                        </div>
+                    </form>
+                </td>
             </tr>
             {% if aditivo.tipo != "PRAZO" %}
             <tr>
-                <td colspan="4" class="muted">
+                <td colspan="6" class="muted">
                     {% for item in aditivo.itens.all %}
                         {{ item.centro_custo.codigo }} - {{ item.centro_custo.descricao }}: {{ item.valor|money_br }}{% if not forloop.last %} | {% endif %}
                     {% empty %}
@@ -180,6 +257,22 @@
             {{ aditivo_form.descricao }}
             {% if aditivo_form.descricao.errors %}
                 <div style="color:#b91c1c; margin-top:6px;">{{ aditivo_form.descricao.errors }}</div>
+            {% endif %}
+        </div>
+
+        <div class="field">
+            <label for="{{ aditivo_form.motivo_mudanca.id_for_label }}">Motivo da Mudanca</label>
+            {{ aditivo_form.motivo_mudanca }}
+            {% if aditivo_form.motivo_mudanca.errors %}
+                <div style="color:#b91c1c; margin-top:6px;">{{ aditivo_form.motivo_mudanca.errors }}</div>
+            {% endif %}
+        </div>
+
+        <div class="field">
+            <label for="{{ aditivo_form.impacto_resumido.id_for_label }}">Impacto Resumido</label>
+            {{ aditivo_form.impacto_resumido }}
+            {% if aditivo_form.impacto_resumido.errors %}
+                <div style="color:#b91c1c; margin-top:6px;">{{ aditivo_form.impacto_resumido.errors }}</div>
             {% endif %}
         </div>
 
@@ -256,7 +349,10 @@
                 {% for medicao in medicoes_contrato %}
                 <tr>
                     <td><a href="{% url 'medicao_detail' medicao.pk %}">{{ medicao.numero_da_medicao }}</a></td>
-                    <td>{{ medicao.get_status_display }}</td>
+                    <td>
+                        <span class="badge bg-{{ medicao|workflow_badge_class }}">{{ medicao.get_status_display }}</span>
+                        <div><small class="text-muted">{{ medicao|workflow_stage_display }}</small></div>
+                    </td>
                     <td>{{ medicao.descricao }}</td>
                     <td class="money">{{ medicao.valor_medido|money_br }}</td>
                 </tr>
@@ -284,7 +380,10 @@
                 {% for nota in notas_contrato %}
                 <tr>
                     <td>{{ nota.numero }}</td>
-                    <td>{{ nota.get_status_display }}</td>
+                    <td>
+                        <span class="badge bg-{{ nota|workflow_badge_class }}">{{ nota.get_status_display }}</span>
+                        <div><small class="text-muted">{{ nota|workflow_stage_display }}</small></div>
+                    </td>
                     <td>{{ nota.descricao }}</td>
                     <td class="money">{{ nota.valor_total|money_br }}</td>
                 </tr>

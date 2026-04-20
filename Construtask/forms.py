@@ -1,7 +1,8 @@
 from decimal import Decimal
+import unicodedata
 
 from django import forms
-from django.db.models import Sum
+from django.db.models import Q, Sum
 from django.forms import BaseInlineFormSet, BaseFormSet, formset_factory, inlineformset_factory
 
 from .domain import validar_itens_compromisso_orcamento, validar_itens_medicao_contrato
@@ -16,8 +17,12 @@ from .models import (
     NotaFiscal,
     NotaFiscalCentroCusto,
     Obra,
+    ParametroComunicacaoEmpresa,
     PlanoContas,
+    ReuniaoComunicacao,
+    ItemPautaReuniao,
 )
+from .models_planejamento import PlanoFisicoItem
 from .models_aquisicoes import (
     Cotacao,
     CotacaoAnexo,
@@ -29,6 +34,7 @@ from .models_aquisicoes import (
 )
 from .models_qualidade import NaoConformidade
 from .services import validar_rateio_nota
+from .text_normalization import normalizar_texto_cadastral
 
 
 def obter_plano_contas_completo(obra=None):
@@ -69,6 +75,30 @@ def obter_centros_da_origem_nota(nota=None, pedido=None, medicao=None, obra=None
     return PlanoContas.objects.none()
 
 
+class NormalizeTextFieldsMixin:
+    text_fields_to_normalize = ()
+
+    def clean(self):
+        cleaned_data = super().clean()
+        for field_name in self.text_fields_to_normalize:
+            value = cleaned_data.get(field_name)
+            if isinstance(value, str):
+                cleaned_data[field_name] = normalizar_texto_cadastral(value)
+        return cleaned_data
+
+
+def _normalizar_tipo_nota(valor):
+    if not valor:
+        return valor
+    valor_normalizado = unicodedata.normalize("NFKD", str(valor)).encode("ascii", "ignore").decode("ascii")
+    valor_normalizado = valor_normalizado.upper().strip()
+    if valor_normalizado in {"SERVICO", "NOTA DE SERVICO", "NOTA FISCAL DE SERVICO"}:
+        return "SERVICO"
+    if valor_normalizado in {"MATERIAL", "NOTA DE MATERIAL", "NOTA FISCAL DE MATERIAL"}:
+        return "MATERIAL"
+    return valor_normalizado
+
+
 class PlanoContasChoiceField(forms.ModelChoiceField):
     def label_from_instance(self, obj):
         prefixo = "   " * getattr(obj, "level", 0)
@@ -76,13 +106,88 @@ class PlanoContasChoiceField(forms.ModelChoiceField):
         return f"{prefixo}{obj.codigo} - {obj.descricao}{unidade}"
 
 
-class PlanoContasForm(forms.ModelForm):
+class PlanoFisicoItemForm(forms.ModelForm):
+    class Meta:
+        model = PlanoFisicoItem
+        fields = ["data_inicio_real", "data_fim_real", "percentual_concluido", "plano_contas"]
+        widgets = {
+            "data_inicio_real": forms.DateInput(attrs={"type": "date"}),
+            "data_fim_real": forms.DateInput(attrs={"type": "date"}),
+            "percentual_concluido": forms.NumberInput(attrs={"min": "0", "max": "100", "step": "0.01"}),
+        }
+        labels = {
+            "data_inicio_real": "Data Início Real",
+            "data_fim_real": "Data Fim Real",
+            "percentual_concluido": "% Concluído",
+            "plano_contas": "Vincular à EAP (Orçamento)",
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        obra = getattr(getattr(self.instance, "plano", None), "obra", None)
+        self.fields["data_inicio_real"].widget.attrs.update({"class": "form-control"})
+        self.fields["data_fim_real"].widget.attrs.update({"class": "form-control"})
+        self.fields["percentual_concluido"].widget.attrs.update({"class": "form-control"})
+        self.fields["plano_contas"].widget.attrs.update({"class": "form-control"})
+        self.fields["plano_contas"].required = False
+        if obra:
+            self.fields["plano_contas"].queryset = PlanoContas.objects.filter(
+                obra=obra,
+                filhos__isnull=True,
+            ).order_by("codigo")
+        else:
+            self.fields["plano_contas"].queryset = PlanoContas.objects.none()
+        if self.instance and self.instance.filhos.exists():
+            self.fields["data_inicio_real"].disabled = True
+            self.fields["data_fim_real"].disabled = True
+            self.fields["percentual_concluido"].disabled = True
+
+    def clean(self):
+        cleaned_data = super().clean()
+        inicio = cleaned_data.get("data_inicio_real")
+        fim = cleaned_data.get("data_fim_real")
+        percentual = cleaned_data.get("percentual_concluido")
+
+        if inicio and fim and fim < inicio:
+            self.add_error("data_fim_real", "A data de fim real não pode ser anterior à data de início real.")
+
+        if self.instance and self.instance.filhos.exists():
+            cleaned_data["data_inicio_real"] = self.instance.data_inicio_real
+            cleaned_data["data_fim_real"] = self.instance.data_fim_real
+            cleaned_data["percentual_concluido"] = self.instance.percentual_concluido
+            self.instance.data_inicio_real = self.instance.data_inicio_real
+            self.instance.data_fim_real = self.instance.data_fim_real
+            self.instance.percentual_concluido = self.instance.percentual_concluido
+        elif percentual is None:
+            cleaned_data["percentual_concluido"] = 0
+
+        return cleaned_data
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        if not instance.filhos.exists():
+            percentual = Decimal(str(instance.percentual_concluido or 0))
+            percentual = max(Decimal("0.00"), min(percentual, Decimal("100.00")))
+            valor_planejado = instance.valor_planejado or Decimal("0.00")
+            instance.valor_realizado = (valor_planejado * percentual / Decimal("100.00")).quantize(Decimal("0.01"))
+        else:
+            instance.valor_realizado = Decimal("0.00")
+        if commit:
+            instance.save()
+        return instance
+
+
+class PlanoContasForm(NormalizeTextFieldsMixin, forms.ModelForm):
+    text_fields_to_normalize = ("descricao", "unidade")
+
     class Meta:
         model = PlanoContas
         fields = ["descricao", "unidade", "quantidade", "valor_unitario"]
 
 
-class ObraForm(forms.ModelForm):
+class ObraForm(NormalizeTextFieldsMixin, forms.ModelForm):
+    text_fields_to_normalize = ("codigo", "nome", "cliente", "responsavel", "status", "descricao")
+
     class Meta:
         model = Obra
         fields = ["codigo", "nome", "cliente", "responsavel", "status", "data_inicio", "data_fim", "descricao"]
@@ -92,23 +197,151 @@ class ObraForm(forms.ModelForm):
         }
 
 
-class AnexoOperacionalForm(forms.ModelForm):
+class ParametroComunicacaoEmpresaForm(forms.ModelForm):
+    class Meta:
+        model = ParametroComunicacaoEmpresa
+        fields = [
+            "frequencia_curto_prazo_dias",
+            "frequencia_medio_prazo_dias",
+            "frequencia_longo_prazo_dias",
+        ]
+        labels = {
+            "frequencia_curto_prazo_dias": "Curto prazo (dias)",
+            "frequencia_medio_prazo_dias": "Medio prazo (dias)",
+            "frequencia_longo_prazo_dias": "Longo prazo (dias)",
+        }
+        help_texts = {
+            "frequencia_curto_prazo_dias": "Periodicidade padrao das reunioes de curto prazo.",
+            "frequencia_medio_prazo_dias": "Periodicidade padrao das reunioes de medio prazo.",
+            "frequencia_longo_prazo_dias": "Periodicidade padrao das reunioes de longo prazo.",
+        }
+        widgets = {
+            "frequencia_curto_prazo_dias": forms.NumberInput(attrs={"min": "1", "class": "form-control"}),
+            "frequencia_medio_prazo_dias": forms.NumberInput(attrs={"min": "1", "class": "form-control"}),
+            "frequencia_longo_prazo_dias": forms.NumberInput(attrs={"min": "1", "class": "form-control"}),
+        }
+
+
+class ReuniaoComunicacaoForm(NormalizeTextFieldsMixin, forms.ModelForm):
+    text_fields_to_normalize = ("titulo",)
+
+    class Meta:
+        model = ReuniaoComunicacao
+        fields = ["tipo_reuniao", "titulo", "data_prevista", "data_realizada"]
+        widgets = {
+            "data_prevista": forms.DateInput(attrs={"type": "date"}),
+            "data_realizada": forms.DateInput(attrs={"type": "date"}),
+        }
+
+
+class ItemPautaReuniaoForm(NormalizeTextFieldsMixin, forms.ModelForm):
+    text_fields_to_normalize = ("titulo", "descricao", "resposta_o_que", "resposta_quem")
+
+    class Meta:
+        model = ItemPautaReuniao
+        fields = [
+            "ativo",
+            "ordem",
+            "titulo",
+            "descricao",
+            "resposta_o_que",
+            "resposta_quem",
+            "resposta_quando",
+        ]
+        widgets = {
+            "descricao": forms.Textarea(attrs={"rows": 2, "class": "js-auto-expand", "data-min-rows": "2"}),
+            "resposta_o_que": forms.Textarea(attrs={"rows": 2, "class": "js-auto-expand", "data-min-rows": "2"}),
+            "resposta_quem": forms.TextInput(),
+            "resposta_quando": forms.DateInput(attrs={"type": "date"}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        reuniao = getattr(self.instance, "reuniao", None)
+        pauta_bloqueada = getattr(reuniao, "status", None) in {"PAUTA_VALIDADA", "EM_APROVACAO", "APROVADA"}
+        if pauta_bloqueada:
+            for field_name in ("ativo", "ordem", "titulo", "descricao"):
+                self.fields[field_name].disabled = True
+
+        for field_name in ("descricao", "resposta_o_que"):
+            css = self.fields[field_name].widget.attrs.get("class", "")
+            self.fields[field_name].widget.attrs["class"] = (css + " js-auto-expand").strip()
+
+
+class ItemPautaManualForm(NormalizeTextFieldsMixin, forms.Form):
+    text_fields_to_normalize = ("titulo", "descricao", "resposta_o_que", "resposta_quem")
+
+    categoria = forms.ChoiceField(choices=ItemPautaReuniao.CATEGORIA_CHOICES)
+    titulo = forms.CharField(max_length=255, required=False)
+    descricao = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={"rows": 2, "class": "js-auto-expand", "data-min-rows": "2"}),
+    )
+    resposta_o_que = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={"rows": 2, "class": "js-auto-expand", "data-min-rows": "2"}),
+    )
+    resposta_quem = forms.CharField(required=False, max_length=180)
+    resposta_quando = forms.DateField(required=False, widget=forms.DateInput(attrs={"type": "date"}))
+
+    def __init__(self, *args, **kwargs):
+        somente_resposta = kwargs.pop("somente_resposta", False)
+        super().__init__(*args, **kwargs)
+        if somente_resposta:
+            for field in self.fields.values():
+                field.disabled = True
+                field.required = False
+
+    def clean(self):
+        cleaned_data = super().clean()
+        titulo = (cleaned_data.get("titulo") or "").strip()
+        descricao = (cleaned_data.get("descricao") or "").strip()
+        resposta_o_que = (cleaned_data.get("resposta_o_que") or "").strip()
+        resposta_quem = (cleaned_data.get("resposta_quem") or "").strip()
+        if titulo:
+            cleaned_data["titulo"] = normalizar_texto_cadastral(titulo)
+        if descricao:
+            cleaned_data["descricao"] = normalizar_texto_cadastral(descricao)
+        if resposta_o_que:
+            cleaned_data["resposta_o_que"] = normalizar_texto_cadastral(resposta_o_que)
+        if resposta_quem:
+            cleaned_data["resposta_quem"] = normalizar_texto_cadastral(resposta_quem)
+        return cleaned_data
+
+    def has_payload(self):
+        if any(getattr(field, "disabled", False) for field in self.fields.values()):
+            return False
+        return bool((self.cleaned_data.get("titulo") or "").strip())
+
+
+ItemPautaReuniaoFormSet = inlineformset_factory(
+    ReuniaoComunicacao,
+    ItemPautaReuniao,
+    form=ItemPautaReuniaoForm,
+    extra=0,
+    can_delete=False,
+)
+
+
+class AnexoOperacionalForm(NormalizeTextFieldsMixin, forms.ModelForm):
+    text_fields_to_normalize = ("descricao",)
+
     class Meta:
         model = AnexoOperacional
         fields = ["descricao", "arquivo"]
 
 
-class CompromissoForm(forms.ModelForm):
+class CompromissoForm(NormalizeTextFieldsMixin, forms.ModelForm):
+    text_fields_to_normalize = ("torre", "bloco", "etapa", "descricao", "fornecedor", "cnpj", "responsavel", "telefone")
+
     def __init__(self, *args, **kwargs):
         obra_contexto = kwargs.pop("obra_contexto", None)
         super().__init__(*args, **kwargs)
         self.fields["centro_custo"].widget = forms.HiddenInput()
-        for field_name in ["obra", "torre", "bloco", "etapa", "status"]:
+        for field_name in ["obra", "torre", "bloco", "etapa"]:
             self.fields[field_name].required = False
-        if not self.instance.pk:
-            self.fields["status"].initial = "RASCUNHO"
-            if obra_contexto:
-                self.fields["obra"].initial = obra_contexto.pk
+        if not self.instance.pk and obra_contexto:
+            self.fields["obra"].initial = obra_contexto.pk
 
     class Meta:
         model = Compromisso
@@ -118,7 +351,6 @@ class CompromissoForm(forms.ModelForm):
             "torre",
             "bloco",
             "etapa",
-            "status",
             "centro_custo",
             "descricao",
             "fornecedor",
@@ -137,7 +369,6 @@ class CompromissoForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
-        cleaned_data["status"] = cleaned_data.get("status") or "RASCUNHO"
         return cleaned_data
 
 
@@ -193,12 +424,17 @@ CompromissoItemFormSet = inlineformset_factory(
 )
 
 
-class AditivoContratoForm(forms.ModelForm):
+class AditivoContratoForm(NormalizeTextFieldsMixin, forms.ModelForm):
+    text_fields_to_normalize = ("descricao", "motivo_mudanca", "impacto_resumido")
+
     class Meta:
         model = AditivoContrato
-        fields = ["tipo", "descricao", "delta_dias"]
+        fields = ["tipo", "descricao", "motivo_mudanca", "impacto_resumido", "delta_dias"]
 
         widgets = {
+            "descricao": forms.Textarea(attrs={"rows": 2}),
+            "motivo_mudanca": forms.Textarea(attrs={"rows": 3}),
+            "impacto_resumido": forms.TextInput(attrs={"placeholder": "Ex.: impacto financeiro, prazo ou escopo"}),
             "delta_dias": forms.NumberInput(attrs={"step": "1"}),
         }
 
@@ -307,7 +543,9 @@ AditivoContratoItemFormSet = inlineformset_factory(
 )
 
 
-class MedicaoForm(forms.ModelForm):
+class MedicaoForm(NormalizeTextFieldsMixin, forms.ModelForm):
+    text_fields_to_normalize = ("descricao",)
+
     fornecedor_info = forms.CharField(required=False, disabled=True, label="Fornecedor")
     cnpj_info = forms.CharField(required=False, disabled=True, label="CNPJ")
     responsavel_info = forms.CharField(required=False, disabled=True, label="Nome")
@@ -315,15 +553,19 @@ class MedicaoForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         obra_contexto = kwargs.pop("obra_contexto", None)
         super().__init__(*args, **kwargs)
-        self.fields["contrato"].queryset = Compromisso.objects.filter(tipo="CONTRATO").order_by("numero")
+        queryset = Compromisso.objects.filter(tipo="CONTRATO", status="APROVADO").order_by("numero")
+        if getattr(self.instance, "contrato_id", None):
+            queryset = Compromisso.objects.filter(
+                Q(tipo="CONTRATO", status="APROVADO") | Q(pk=self.instance.contrato_id)
+            ).order_by("numero")
+        contrato_postado = self.data.get("contrato") if self.is_bound else None
+        if contrato_postado:
+            queryset = Compromisso.objects.filter(Q(tipo="CONTRATO", status="APROVADO") | Q(pk=contrato_postado)).order_by(
+                "numero"
+            )
+        self.fields["contrato"].queryset = queryset
         if obra_contexto:
             self.fields["contrato"].queryset = self.fields["contrato"].queryset.filter(obra=obra_contexto)
-        for field_name in ["obra", "torre", "bloco", "etapa", "status"]:
-            self.fields[field_name].required = False
-        if not self.instance.pk:
-            self.fields["status"].initial = "EM_ELABORACAO"
-            if obra_contexto:
-                self.fields["obra"].initial = obra_contexto.pk
         contrato = self.instance.contrato if getattr(self.instance, "contrato_id", None) else None
         if contrato:
             self.fields["fornecedor_info"].initial = contrato.fornecedor
@@ -334,11 +576,6 @@ class MedicaoForm(forms.ModelForm):
         model = Medicao
         fields = [
             "contrato",
-            "obra",
-            "torre",
-            "bloco",
-            "etapa",
-            "status",
             "fornecedor_info",
             "cnpj_info",
             "responsavel_info",
@@ -352,10 +589,16 @@ class MedicaoForm(forms.ModelForm):
             "data_prevista_inicio": forms.DateInput(attrs={"type": "date"}),
             "data_prevista_fim": forms.DateInput(attrs={"type": "date"}),
         }
+        labels = {
+            "data_prevista_inicio": "Data de Início do Período",
+            "data_prevista_fim": "Data de Fim do Período",
+        }
 
     def clean(self):
         cleaned_data = super().clean()
-        cleaned_data["status"] = cleaned_data.get("status") or "EM_ELABORACAO"
+        contrato = cleaned_data.get("contrato")
+        if contrato and contrato.status != "APROVADO":
+            self.add_error("contrato", "Só é possível emitir medição para contratos aprovados.")
         return cleaned_data
 
 
@@ -456,23 +699,49 @@ MedicaoItemFormSet = inlineformset_factory(
 )
 
 
-class NotaFiscalForm(forms.ModelForm):
+class NotaFiscalForm(NormalizeTextFieldsMixin, forms.ModelForm):
+    text_fields_to_normalize = ("numero", "status", "fornecedor", "cnpj", "descricao")
+
     origem_info = forms.CharField(required=False, disabled=True, label="Origem Selecionada")
 
     def __init__(self, *args, **kwargs):
         obra_contexto = kwargs.pop("obra_contexto", None)
+        data = kwargs.get("data")
+        if data is not None:
+            data = data.copy()
+            data["tipo"] = _normalizar_tipo_nota(data.get("tipo"))
+            kwargs["data"] = data
         super().__init__(*args, **kwargs)
-        self.fields["medicao"].queryset = Medicao.objects.order_by("numero_da_medicao")
-        self.fields["pedido_compra"].queryset = Compromisso.objects.filter(tipo="PEDIDO_COMPRA").order_by("numero")
+        medicoes_queryset = Medicao.objects.filter(status="APROVADA").order_by("numero_da_medicao")
+        pedidos_queryset = Compromisso.objects.filter(tipo="PEDIDO_COMPRA", status="APROVADO").order_by("numero")
+        if getattr(self.instance, "medicao_id", None):
+            medicoes_queryset = Medicao.objects.filter(Q(status="APROVADA") | Q(pk=self.instance.medicao_id)).order_by(
+                "numero_da_medicao"
+            )
+        if getattr(self.instance, "pedido_compra_id", None):
+            pedidos_queryset = Compromisso.objects.filter(
+                Q(tipo="PEDIDO_COMPRA", status="APROVADO") | Q(pk=self.instance.pedido_compra_id)
+            ).order_by("numero")
+        medicao_postada = self.data.get("medicao") if self.is_bound else None
+        if medicao_postada:
+            medicoes_queryset = Medicao.objects.filter(Q(status="APROVADA") | Q(pk=medicao_postada)).order_by(
+                "numero_da_medicao"
+            )
+        pedido_postado = self.data.get("pedido_compra") if self.is_bound else None
+        if pedido_postado:
+            pedidos_queryset = Compromisso.objects.filter(
+                Q(tipo="PEDIDO_COMPRA", status="APROVADO") | Q(pk=pedido_postado)
+            ).order_by("numero")
+        self.fields["medicao"].queryset = medicoes_queryset
+        self.fields["pedido_compra"].queryset = pedidos_queryset
         if obra_contexto:
             self.fields["medicao"].queryset = self.fields["medicao"].queryset.filter(obra=obra_contexto)
             self.fields["pedido_compra"].queryset = self.fields["pedido_compra"].queryset.filter(obra=obra_contexto)
-        for field_name in ["obra", "torre", "bloco", "etapa", "status"]:
-            self.fields[field_name].required = False
+        for field_name in ["status"]:
+            if field_name in self.fields:
+                self.fields[field_name].required = False
         if not self.instance.pk:
             self.fields["status"].initial = "LANCADA"
-            if obra_contexto:
-                self.fields["obra"].initial = obra_contexto.pk
         if getattr(self.instance, "medicao_id", None):
             self.fields["origem_info"].initial = str(self.instance.medicao)
         elif getattr(self.instance, "pedido_compra_id", None):
@@ -482,14 +751,10 @@ class NotaFiscalForm(forms.ModelForm):
         model = NotaFiscal
         fields = [
             "numero",
-            "serie",
             "tipo",
-            "obra",
-            "torre",
-            "bloco",
-            "etapa",
             "status",
             "data_emissao",
+            "data_vencimento",
             "pedido_compra",
             "medicao",
             "origem_info",
@@ -500,11 +765,19 @@ class NotaFiscalForm(forms.ModelForm):
         ]
         widgets = {
             "data_emissao": forms.DateInput(attrs={"type": "date"}),
+            "data_vencimento": forms.DateInput(attrs={"type": "date"}),
         }
 
     def clean(self):
         cleaned_data = super().clean()
+        cleaned_data["tipo"] = _normalizar_tipo_nota(cleaned_data.get("tipo"))
         cleaned_data["status"] = cleaned_data.get("status") or "LANCADA"
+        medicao = cleaned_data.get("medicao")
+        pedido = cleaned_data.get("pedido_compra")
+        if medicao and medicao.status != "APROVADA":
+            self.add_error("medicao", "Só é possível emitir nota fiscal para medições aprovadas.")
+        if pedido and pedido.status != "APROVADO":
+            self.add_error("pedido_compra", "Só é possível emitir nota fiscal para pedidos aprovados.")
         return cleaned_data
 
 
@@ -573,7 +846,9 @@ NotaFiscalCentroCustoFormSet = inlineformset_factory(
 from .models import Documento, DocumentoRevisao
 
 
-class DocumentoForm(forms.ModelForm):
+class DocumentoForm(NormalizeTextFieldsMixin, forms.ModelForm):
+    text_fields_to_normalize = ("processo", "codigo_documento", "titulo")
+
     """Formulário para criação/edição de Documentos Controlados ISO 7.5."""
 
     class Meta:
@@ -602,7 +877,9 @@ class DocumentoForm(forms.ModelForm):
             self.fields['plano_contas'].queryset = PlanoContas.objects.none()
 
 
-class DocumentoRevisaoForm(forms.ModelForm):
+class DocumentoRevisaoForm(NormalizeTextFieldsMixin, forms.ModelForm):
+    text_fields_to_normalize = ("parecer",)
+
     """Formulário para upload de nova revisão de documento."""
 
     class Meta:
@@ -626,15 +903,24 @@ class DocumentoRevisaoForm(forms.ModelForm):
 class DocumentoWorkflowForm(forms.Form):
     """Formulário para ações de workflow."""
     acao = forms.ChoiceField(choices=[
-        ('ENVIAR_REVISAO', 'Enviar para Revisão'),
+        ('ENVIAR_REVISAO', 'Enviar para Validação'),
         ('APROVAR', 'Aprovar Documento'),
-        ('REJEITAR', 'Rejeitar'),
+        ('DEVOLVER_AJUSTE', 'Devolver para Ajuste'),
         ('TORNAR_OBSOLETO', 'Tornar Obsoleto'),
     ])
     parecer = forms.CharField(widget=forms.Textarea(attrs={'rows': '3'}), required=False)
 
 
-class NaoConformidadeForm(forms.ModelForm):
+class NaoConformidadeForm(NormalizeTextFieldsMixin, forms.ModelForm):
+    text_fields_to_normalize = (
+        "descricao",
+        "causa",
+        "acao_corretiva",
+        "evidencia_tratamento",
+        "evidencia_encerramento",
+        "eficacia_observacao",
+    )
+
     class Meta:
         model = NaoConformidade
         fields = [
@@ -643,6 +929,9 @@ class NaoConformidadeForm(forms.ModelForm):
             "descricao",
             "causa",
             "acao_corretiva",
+            "evidencia_tratamento",
+            "evidencia_encerramento",
+            "eficacia_observacao",
             "responsavel",
             "status",
         ]
@@ -662,13 +951,17 @@ class NaoConformidadeForm(forms.ModelForm):
             self.fields["plano_contas"].queryset = PlanoContas.objects.none()
 
 
-class FornecedorForm(forms.ModelForm):
+class FornecedorForm(NormalizeTextFieldsMixin, forms.ModelForm):
+    text_fields_to_normalize = ("razao_social", "nome_fantasia", "contato", "telefone", "email")
+
     class Meta:
         model = Fornecedor
         fields = ["razao_social", "nome_fantasia", "cnpj", "contato", "telefone", "email", "ativo"]
 
 
-class SolicitacaoCompraForm(forms.ModelForm):
+class SolicitacaoCompraForm(NormalizeTextFieldsMixin, forms.ModelForm):
+    text_fields_to_normalize = ("titulo", "descricao", "status", "observacoes")
+
     class Meta:
         model = SolicitacaoCompra
         fields = ["titulo", "descricao", "status", "data_solicitacao", "observacoes"]
@@ -682,7 +975,9 @@ class SolicitacaoCompraForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
  
 
-class SolicitacaoCompraItemForm(forms.ModelForm):
+class SolicitacaoCompraItemForm(NormalizeTextFieldsMixin, forms.ModelForm):
+    text_fields_to_normalize = ("descricao_tecnica", "unidade")
+
     plano_contas = PlanoContasChoiceField(queryset=PlanoContas.objects.none(), label="Centro de Custo")
 
     class Meta:
@@ -745,7 +1040,9 @@ SolicitacaoCompraItemFormSet = inlineformset_factory(
 )
 
 
-class CotacaoForm(forms.ModelForm):
+class CotacaoForm(NormalizeTextFieldsMixin, forms.ModelForm):
+    text_fields_to_normalize = ("status", "observacoes", "justificativa_escolha")
+
     class Meta:
         model = Cotacao
         fields = [
@@ -784,7 +1081,9 @@ class CotacaoForm(forms.ModelForm):
         return justificativa
 
 
-class CotacaoComparativaForm(forms.Form):
+class CotacaoComparativaForm(NormalizeTextFieldsMixin, forms.Form):
+    text_fields_to_normalize = ("observacoes", "justificativa_escolha")
+
     solicitacao = forms.ModelChoiceField(queryset=SolicitacaoCompra.objects.none())
     data_cotacao = forms.DateField(widget=forms.DateInput(attrs={"type": "date"}))
     validade_ate = forms.DateField(required=False, widget=forms.DateInput(attrs={"type": "date"}))
@@ -915,7 +1214,9 @@ CotacaoFornecedorComparativoFormSet = formset_factory(
 )
 
 
-class CotacaoAnexoForm(forms.ModelForm):
+class CotacaoAnexoForm(NormalizeTextFieldsMixin, forms.ModelForm):
+    text_fields_to_normalize = ("descricao",)
+
     class Meta:
         model = CotacaoAnexo
         fields = ["descricao", "arquivo"]

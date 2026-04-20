@@ -1,4 +1,5 @@
 {% extends "app/base.html" %}
+{% load formatters %}
 
 {% block main_class %}main-full{% endblock %}
 {% block title %}Solicitacoes de Compra | Construtask{% endblock %}
@@ -9,8 +10,12 @@
         <h2>Solicitacoes de Compra</h2>
         <p>Primeira etapa do fluxo estruturado de aquisicoes.</p>
     </div>
-    <a class="btn" href="{% url 'solicitacao_compra_create' %}">Nova Solicitacao</a>
-</div>
+    <div style="display:flex; gap:8px;">
+        <a class="btn secondary" href="{% url 'solicitacao_compra_export' %}">Exportar Excel</a>
+        <a class="btn secondary" href="{% url 'solicitacao_compra_lista_pdf' %}">Exportar PDF</a>
+        <a class="btn" href="{% url 'solicitacao_compra_create' %}">Nova Solicitacao</a>
+    </div>
+  </div>
 
 <div class="panel">
     {% if solicitacoes %}
@@ -34,7 +39,9 @@
                 <td>{{ solicitacao.titulo }}</td>
                 <td>{% if solicitacao.plano_contas %}{{ solicitacao.plano_contas.codigo }} - {{ solicitacao.plano_contas.descricao }}{% else %}-{% endif %}</td>
                 <td>{{ solicitacao.solicitante }}</td>
-                <td>{{ solicitacao.get_status_display }}</td>
+                <td>
+                    <span class="badge bg-{{ solicitacao|workflow_badge_class }}">{{ solicitacao.get_status_display }}</span>
+                </td>
                 <td>{{ solicitacao.data_solicitacao|date:"d/m/Y" }}</td>
             </tr>
             {% endfor %}

@@ -3,7 +3,8 @@
 {% block title %}Solicitacao de Compra | Construtask{% endblock %}
 
 {% block content %}
-<div class="panel" style="max-width:1200px;">
+<div class="form-page-shell">
+<div class="panel">
     <h2>Nova Solicitacao de Compra</h2>
     <p>Registre a demanda inicial com os centros de custo e os itens tecnicos que serao enviados para cotacao.</p>
     <form method="post">
@@ -75,6 +76,7 @@
             <a class="btn secondary" href="{% url 'solicitacao_compra_list' %}">Voltar</a>
         </div>
     </form>
+</div>
 </div>
 
 <template id="solicitacao-item-empty-row">

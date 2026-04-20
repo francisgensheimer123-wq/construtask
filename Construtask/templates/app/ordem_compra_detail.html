@@ -8,12 +8,39 @@
 <div class="toolbar">
     <div>
         <h2>{{ ordem_compra.numero }}</h2>
-        <p>{{ ordem_compra.fornecedor }} | {{ ordem_compra.get_status_display }}</p>
+        <p>{{ ordem_compra.fornecedor }} | <span class="badge bg-{{ ordem_compra|workflow_badge_class }}">{{ ordem_compra.get_status_display }}</span> <small class="text-muted">{{ ordem_compra|workflow_stage_display }}</small></p>
     </div>
     <div style="display:flex; gap:10px;">
         <a class="btn secondary" href="{% url 'ordem_compra_list' %}">Voltar</a>
     </div>
 </div>
+
+<section class="panel" style="margin-bottom:16px;">
+    <div style="display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap;">
+        <div>
+            <strong>Workflow de Aprovação</strong>
+            <p class="muted" style="margin:6px 0 0 0;">Funcao atual: {{ papel_aprovacao|default:"Nao configurada" }} | Alcada: {{ limite_aprovacao_label }}</p>
+        </div>
+        <div style="min-width:min(100%, 420px);">
+            <form method="post">
+                {% csrf_token %}
+                <div class="field" style="margin-bottom:10px;">
+                    <label for="id_parecer_aprovacao_ordem">Parecer</label>
+                    <textarea id="id_parecer_aprovacao_ordem" name="parecer_aprovacao" rows="3" placeholder="Opcional no envio/aprovacao e obrigatorio na devolucao para ajuste.">{{ ordem_compra.parecer_aprovacao }}</textarea>
+                </div>
+                <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                    {% if pode_enviar_para_aprovacao and ordem_compra.status == "RASCUNHO" %}
+                    <button type="submit" class="btn" name="acao" value="enviar_para_aprovacao">Enviar para Aprovação</button>
+                    {% endif %}
+                    {% if pode_aprovar and ordem_compra.status == "EM_APROVACAO" %}
+                    <button type="submit" class="btn" name="acao" value="aprovar">Aprovar</button>
+                    <button type="submit" class="btn secondary" name="acao" value="retornar_para_ajuste">Retornar para Ajuste</button>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
 
 <section class="grid-2">
     <div class="panel">
@@ -25,6 +52,9 @@
                 <tr><th>Fornecedor</th><td>{{ ordem_compra.fornecedor }}</td></tr>
                 <tr><th>Data de emissao</th><td>{{ ordem_compra.data_emissao|date:"d/m/Y" }}</td></tr>
                 <tr><th>Compromisso integrado</th><td>{% if ordem_compra.compromisso_relacionado %}<a href="{% url 'contrato_detail' ordem_compra.compromisso_relacionado.pk %}">{{ ordem_compra.compromisso_relacionado.numero }}</a>{% else %}-{% endif %}</td></tr>
+                <tr><th>Enviado para aprovacao</th><td>{% if ordem_compra.enviado_para_aprovacao_por %}{{ ordem_compra.enviado_para_aprovacao_por.username }} em {{ ordem_compra.enviado_para_aprovacao_em|date:"d/m/Y H:i" }}{% else %}-{% endif %}</td></tr>
+                <tr><th>Aprovado por</th><td>{% if ordem_compra.aprovado_por %}{{ ordem_compra.aprovado_por.username }} em {{ ordem_compra.aprovado_em|date:"d/m/Y H:i" }}{% else %}-{% endif %}</td></tr>
+                <tr><th>Ultimo parecer</th><td>{{ ordem_compra.parecer_aprovacao|default:"-" }}</td></tr>
                 <tr><th>Descricao</th><td class="wrap-text">{{ ordem_compra.descricao|default:"-" }}</td></tr>
             </tbody>
         </table>

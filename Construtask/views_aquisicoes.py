@@ -1,9 +1,11 @@
 from django.contrib import messages
+from django.core.exceptions import PermissionDenied
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import CreateView, DetailView, ListView
+from django.utils import timezone
 
 from .forms import (
     CotacaoAnexoFormSet,
@@ -16,10 +18,26 @@ from .forms import (
     SolicitacaoCompraForm,
     SolicitacaoCompraItemFormSet,
 )
-from .models import Obra
+from .models import AuditEvent, Obra
 from .models_aquisicoes import Cotacao, CotacaoItem, Fornecedor, OrdemCompra, SolicitacaoCompra
-from .permissions import get_empresa_do_usuario, get_empresa_operacional, get_obra_do_contexto
+from .permissions import (
+    get_empresa_do_usuario,
+    get_empresa_operacional,
+    get_obra_do_contexto,
+    usuario_tem_permissao_modulo,
+)
 from .services_aquisicoes import AquisicoesService
+from .services_lgpd import registrar_acesso_dado_pessoal
+from .views import (
+    _aprovar_documento,
+    _datahora_local,
+    _enviar_documento_para_aprovacao,
+    _exportar_excel_response,
+    _obter_alcada_contexto,
+    _pdf_relatorio_probatorio_response,
+    _retornar_documento_para_ajuste,
+    money_br,
+)
 
 
 def _obra_contexto(request):
@@ -28,44 +46,6 @@ def _obra_contexto(request):
 
 def _empresa_contexto(request):
     return get_empresa_operacional(request)
-
-
-def _pdf_escape(texto):
-    return str(texto).replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
-
-
-def _pdf_simples_response(nome_arquivo, titulo, linhas):
-    conteudo = ["BT", "/F1 12 Tf", "50 800 Td", "14 TL"]
-    for linha in [titulo, ""] + list(linhas):
-        conteudo.append(f"({_pdf_escape(linha)}) Tj")
-        conteudo.append("T*")
-    conteudo.append("ET")
-    stream = "\n".join(conteudo).encode("latin-1", "replace")
-
-    objetos = [
-        b"1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj\n",
-        b"2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj\n",
-        b"3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >> endobj\n",
-        b"4 0 obj << /Length " + str(len(stream)).encode("ascii") + b" >> stream\n" + stream + b"\nendstream endobj\n",
-        b"5 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj\n",
-    ]
-    pdf = b"%PDF-1.4\n"
-    offsets = [0]
-    for obj in objetos:
-        offsets.append(len(pdf))
-        pdf += obj
-    xref = len(pdf)
-    pdf += f"xref\n0 {len(offsets)}\n".encode("ascii")
-    pdf += b"0000000000 65535 f \n"
-    for offset in offsets[1:]:
-        pdf += f"{offset:010d} 00000 n \n".encode("ascii")
-    pdf += (
-        f"trailer << /Size {len(offsets)} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF".encode("ascii")
-    )
-
-    response = HttpResponse(pdf, content_type="application/pdf")
-    response["Content-Disposition"] = f'attachment; filename="{nome_arquivo}"'
-    return response
 
 
 def _get_queryset_solicitacao(request):
@@ -88,6 +68,45 @@ def _get_queryset_cotacao(request):
     if obra:
         queryset = queryset.filter(obra=obra)
     return queryset
+
+
+def _get_queryset_ordem_compra(request):
+    empresa = _empresa_contexto(request)
+    queryset = OrdemCompra.objects.select_related(
+        "obra",
+        "fornecedor",
+        "solicitacao",
+        "cotacao_aprovada",
+        "compromisso_relacionado",
+    )
+    if empresa:
+        queryset = queryset.filter(empresa=empresa)
+    obra = _obra_contexto(request)
+    if obra:
+        queryset = queryset.filter(obra=obra)
+    return queryset
+
+
+def _auditoria_fluxo(objeto):
+    entidade_app = f"{objeto._meta.app_label}.{objeto.__class__.__name__}"
+    return AuditEvent.objects.filter(entidade_app=entidade_app, objeto_id=objeto.pk).order_by("-timestamp")[:12]
+
+
+def _exigir_permissao_aquisicoes(request, acao):
+    if not usuario_tem_permissao_modulo(request.user, "compras", acao):
+        raise PermissionDenied("Usuario sem permissao para a acao de compras solicitada.")
+
+
+def _historico_pdf(objeto):
+    return [
+        {
+            "Data": _datahora_local(evento.timestamp).strftime("%d/%m/%Y %H:%M"),
+            "Acao": evento.get_acao_display(),
+            "Usuario": str(evento.usuario) if evento.usuario else "Nao informado",
+            "Descricao": evento.entidade_label,
+        }
+        for evento in _auditoria_fluxo(objeto)
+    ]
 
 
 def _get_solicitacao_formset(request, *, instance=None, data=None):
@@ -136,7 +155,21 @@ class FornecedorListView(LoginRequiredMixin, ListView):
     template_name = "app/fornecedor_list.html"
     context_object_name = "fornecedores"
 
+    def get(self, request, *args, **kwargs):
+        response = super().get(request, *args, **kwargs)
+        registrar_acesso_dado_pessoal(
+            request,
+            categoria_titular="FORNECEDOR",
+            entidade="Fornecedor",
+            identificador="Lista de fornecedores",
+            acao="ADMIN_LIST",
+            finalidade="Gestao comercial e operacional de fornecedores homologados",
+            detalhes="Consulta administrativa ao cadastro consolidado de fornecedores.",
+        )
+        return response
+
     def get_queryset(self):
+        _exigir_permissao_aquisicoes(self.request, "view")
         empresa = get_empresa_do_usuario(self.request.user)
         queryset = Fornecedor.objects.all()
         if empresa:
@@ -151,6 +184,7 @@ class FornecedorCreateView(LoginRequiredMixin, CreateView):
     success_url = reverse_lazy("fornecedor_list")
 
     def form_valid(self, form):
+        _exigir_permissao_aquisicoes(self.request, "create")
         fornecedor = form.save(commit=False)
         fornecedor.empresa = get_empresa_do_usuario(self.request.user)
         fornecedor.save()
@@ -164,6 +198,7 @@ class SolicitacaoCompraListView(LoginRequiredMixin, ListView):
     context_object_name = "solicitacoes"
 
     def get_queryset(self):
+        _exigir_permissao_aquisicoes(self.request, "view")
         return _get_queryset_solicitacao(self.request).order_by("-data_solicitacao", "-id")
 
 
@@ -174,6 +209,7 @@ class SolicitacaoCompraCreateView(LoginRequiredMixin, CreateView):
     success_url = reverse_lazy("solicitacao_compra_list")
 
     def get_form_kwargs(self):
+        _exigir_permissao_aquisicoes(self.request, "create")
         kwargs = super().get_form_kwargs()
         kwargs["empresa"] = _empresa_contexto(self.request)
         kwargs["obra_contexto"] = _obra_contexto(self.request)
@@ -185,6 +221,7 @@ class SolicitacaoCompraCreateView(LoginRequiredMixin, CreateView):
         return context
 
     def post(self, request, *args, **kwargs):
+        _exigir_permissao_aquisicoes(request, "create")
         self.object = None
         form = self.get_form()
         item_formset = _get_solicitacao_formset(request, data=request.POST)
@@ -217,9 +254,11 @@ class SolicitacaoCompraDetailView(LoginRequiredMixin, DetailView):
     context_object_name = "solicitacao"
 
     def get_queryset(self):
+        _exigir_permissao_aquisicoes(self.request, "view")
         return _get_queryset_solicitacao(self.request).prefetch_related(
             "itens__plano_contas",
             "cotacoes__fornecedor",
+            "ordens_compra",
             "ordens_compra__compromisso_relacionado",
         )
 
@@ -230,7 +269,42 @@ class SolicitacaoCompraDetailView(LoginRequiredMixin, DetailView):
             for ordem in self.object.ordens_compra.select_related("compromisso_relacionado")
             if ordem.compromisso_relacionado_id
         ]
+        context.update(_obter_alcada_contexto(self.request.user, self.object.valor_estimado_total))
+        context["workflow_events"] = _auditoria_fluxo(self.object)
+        context["pode_enviar_para_aprovacao"] = usuario_tem_permissao_modulo(self.request.user, "compras", "create")
+        context["pode_aprovar"] = usuario_tem_permissao_modulo(self.request.user, "compras", "approve")
         return context
+
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        acao = request.POST.get("acao")
+        if acao == "enviar_para_aprovacao":
+            _exigir_permissao_aquisicoes(request, "create")
+            _enviar_documento_para_aprovacao(
+                request,
+                self.object,
+                status_em_aprovacao="EM_APROVACAO",
+                descricao=f"{self.object.numero} enviada para aprovacao.",
+            )
+        elif acao == "aprovar":
+            _exigir_permissao_aquisicoes(request, "approve")
+            _aprovar_documento(
+                request,
+                self.object,
+                valor=self.object.valor_estimado_total,
+                status_aprovado="APROVADA",
+                descricao=f"{self.object.numero} aprovada.",
+            )
+        elif acao == "retornar_para_ajuste":
+            _exigir_permissao_aquisicoes(request, "approve")
+            _retornar_documento_para_ajuste(
+                request,
+                self.object,
+                valor=self.object.valor_estimado_total,
+                status_ajuste="RASCUNHO",
+                descricao=f"{self.object.numero} devolvida para ajuste.",
+            )
+        return redirect("solicitacao_compra_detail", pk=self.object.pk)
 
 
 class CotacaoListView(LoginRequiredMixin, ListView):
@@ -239,6 +313,7 @@ class CotacaoListView(LoginRequiredMixin, ListView):
     context_object_name = "cotacoes"
 
     def get_queryset(self):
+        _exigir_permissao_aquisicoes(self.request, "view")
         return _get_queryset_cotacao(self.request).order_by("-data_cotacao", "-id")
 
 
@@ -249,6 +324,7 @@ class CotacaoCreateView(LoginRequiredMixin, CreateView):
     success_url = reverse_lazy("cotacao_list")
 
     def get_form_kwargs(self):
+        _exigir_permissao_aquisicoes(self.request, "create")
         kwargs = super().get_form_kwargs()
         kwargs.pop("instance", None)
         kwargs["empresa"] = _empresa_contexto(self.request)
@@ -288,6 +364,7 @@ class CotacaoCreateView(LoginRequiredMixin, CreateView):
         return context
 
     def post(self, request, *args, **kwargs):
+        _exigir_permissao_aquisicoes(request, "create")
         self.object = None
         form = self.get_form()
         solicitacao = _obter_solicitacao_para_cotacao(request, form=form)
@@ -320,7 +397,7 @@ class CotacaoCreateView(LoginRequiredMixin, CreateView):
                         solicitacao=solicitacao,
                         fornecedor=fornecedor,
                         numero="",
-                        status="APROVADA" if escolhido else "REJEITADA",
+                        status="EM_ANALISE" if escolhido else "REJEITADA",
                         data_cotacao=form.cleaned_data["data_cotacao"],
                         validade_ate=form.cleaned_data.get("validade_ate"),
                         observacoes=form.cleaned_data.get("observacoes", ""),
@@ -360,6 +437,7 @@ class CotacaoDetailView(LoginRequiredMixin, DetailView):
     context_object_name = "cotacao"
 
     def get_queryset(self):
+        _exigir_permissao_aquisicoes(self.request, "view")
         return _get_queryset_cotacao(self.request).prefetch_related(
             "itens__item_solicitacao__plano_contas",
             "anexos",
@@ -376,11 +454,46 @@ class CotacaoDetailView(LoginRequiredMixin, DetailView):
         context["total_fornecedores_comparados"] = comparativas.values_list("fornecedor_id", flat=True).distinct().count()
         context["compromisso_resultante"] = self.object.ordens_compra.select_related("compromisso_relacionado").first()
         context["workflow_form"] = OrdemCompraWorkflowForm(initial={"descricao": self.object.solicitacao.titulo})
+        context.update(_obter_alcada_contexto(self.request.user, self.object.valor_total))
+        context["workflow_events"] = _auditoria_fluxo(self.object)
+        context["pode_enviar_para_aprovacao"] = usuario_tem_permissao_modulo(self.request.user, "compras", "create")
+        context["pode_aprovar"] = usuario_tem_permissao_modulo(self.request.user, "compras", "approve")
         return context
 
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
-        if request.POST.get("acao") == "emitir_oc":
+        acao = request.POST.get("acao")
+        if acao == "enviar_para_aprovacao":
+            _exigir_permissao_aquisicoes(request, "create")
+            _enviar_documento_para_aprovacao(
+                request,
+                self.object,
+                status_em_aprovacao="EM_APROVACAO",
+                descricao=f"{self.object.numero} enviada para aprovacao.",
+            )
+            return redirect("cotacao_detail", pk=self.object.pk)
+        if acao == "aprovar":
+            _exigir_permissao_aquisicoes(request, "approve")
+            _aprovar_documento(
+                request,
+                self.object,
+                valor=self.object.valor_total,
+                status_aprovado="APROVADA",
+                descricao=f"{self.object.numero} aprovada.",
+            )
+            return redirect("cotacao_detail", pk=self.object.pk)
+        if acao == "retornar_para_ajuste":
+            _exigir_permissao_aquisicoes(request, "approve")
+            _retornar_documento_para_ajuste(
+                request,
+                self.object,
+                valor=self.object.valor_total,
+                status_ajuste="RASCUNHO",
+                descricao=f"{self.object.numero} devolvida para ajuste.",
+            )
+            return redirect("cotacao_detail", pk=self.object.pk)
+        if acao == "emitir_oc":
+            _exigir_permissao_aquisicoes(request, "approve")
             form = OrdemCompraWorkflowForm(request.POST)
             if form.is_valid():
                 try:
@@ -393,9 +506,8 @@ class CotacaoDetailView(LoginRequiredMixin, DetailView):
                 except ValueError as exc:
                     messages.error(request, str(exc))
                     return redirect("cotacao_detail", pk=self.object.pk)
-                tipo_label = ordem.compromisso_relacionado.get_tipo_display() if ordem.compromisso_relacionado_id else "registro"
-                messages.success(request, f"{tipo_label} gerado com sucesso a partir da cotacao.")
-                return redirect("contrato_detail", pk=ordem.compromisso_relacionado.pk)
+                messages.success(request, "Ordem de compra gerada com sucesso a partir da cotacao.")
+                return redirect("ordem_compra_detail", pk=ordem.pk)
         return redirect("cotacao_detail", pk=self.object.pk)
 
 
@@ -405,14 +517,8 @@ class OrdemCompraListView(LoginRequiredMixin, ListView):
     context_object_name = "ordens_compra"
 
     def get_queryset(self):
-        empresa = get_empresa_do_usuario(self.request.user)
-        queryset = OrdemCompra.objects.select_related("obra", "fornecedor", "solicitacao", "cotacao_aprovada", "compromisso_relacionado")
-        if empresa:
-            queryset = queryset.filter(empresa=empresa)
-        obra = _obra_contexto(self.request)
-        if obra:
-            queryset = queryset.filter(obra=obra)
-        return queryset.order_by("-data_emissao", "-id")
+        _exigir_permissao_aquisicoes(self.request, "view")
+        return _get_queryset_ordem_compra(self.request).order_by("-data_emissao", "-id")
 
 
 class OrdemCompraDetailView(LoginRequiredMixin, DetailView):
@@ -421,62 +527,213 @@ class OrdemCompraDetailView(LoginRequiredMixin, DetailView):
     context_object_name = "ordem_compra"
 
     def get_queryset(self):
-        empresa = get_empresa_do_usuario(self.request.user)
-        queryset = OrdemCompra.objects.select_related("obra", "fornecedor", "solicitacao", "cotacao_aprovada", "compromisso_relacionado")
-        if empresa:
-            queryset = queryset.filter(empresa=empresa)
-        return queryset.prefetch_related("itens__plano_contas")
+        _exigir_permissao_aquisicoes(self.request, "view")
+        return _get_queryset_ordem_compra(self.request).prefetch_related("itens__plano_contas")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update(_obter_alcada_contexto(self.request.user, self.object.valor_total))
+        context["workflow_events"] = _auditoria_fluxo(self.object)
+        return context
+
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        acao = request.POST.get("acao")
+        if acao == "enviar_para_aprovacao":
+            _exigir_permissao_aquisicoes(request, "create")
+            _enviar_documento_para_aprovacao(
+                request,
+                self.object,
+                status_em_aprovacao="EM_APROVACAO",
+                descricao=f"{self.object.numero} enviada para aprovacao.",
+            )
+            return redirect("ordem_compra_detail", pk=self.object.pk)
+        if acao == "aprovar":
+            _exigir_permissao_aquisicoes(request, "approve")
+            _aprovar_documento(
+                request,
+                self.object,
+                valor=self.object.valor_total,
+                status_aprovado="APROVADA",
+                descricao=f"{self.object.numero} aprovada.",
+            )
+            return redirect("ordem_compra_detail", pk=self.object.pk)
+        if acao == "retornar_para_ajuste":
+            _exigir_permissao_aquisicoes(request, "approve")
+            _retornar_documento_para_ajuste(
+                request,
+                self.object,
+                valor=self.object.valor_total,
+                status_ajuste="RASCUNHO",
+                descricao=f"{self.object.numero} devolvida para ajuste.",
+            )
+            return redirect("ordem_compra_detail", pk=self.object.pk)
+        return redirect("ordem_compra_detail", pk=self.object.pk)
 
 
 def solicitacao_compra_pdf_view(request, pk):
     if not request.user.is_authenticated:
         raise Http404()
-    solicitacao = get_object_or_404(_get_queryset_solicitacao(request).prefetch_related("itens", "cotacoes__fornecedor", "ordens_compra__compromisso_relacionado"), pk=pk)
-    linhas = [
-        f"Obra: {solicitacao.obra.codigo} - {solicitacao.obra.nome}",
-        f"Status: {solicitacao.get_status_display()}",
-        f"Solicitante: {solicitacao.solicitante}",
-        f"Data: {solicitacao.data_solicitacao:%d/%m/%Y}",
-        f"Descricao: {solicitacao.descricao or '-'}",
-        "",
-        "Itens:",
+    solicitacao = get_object_or_404(
+        _get_queryset_solicitacao(request).prefetch_related("itens__plano_contas", "cotacoes__fornecedor", "ordens_compra__compromisso_relacionado"),
+        pk=pk,
+    )
+    resumo = {
+        "Numero": solicitacao.numero,
+        "Obra": f"{solicitacao.obra.codigo} - {solicitacao.obra.nome}",
+        "Status": solicitacao.get_status_display(),
+        "Solicitante": solicitacao.solicitante,
+        "Data": solicitacao.data_solicitacao.strftime("%d/%m/%Y"),
+        "Titulo": solicitacao.titulo,
+        "Descricao": solicitacao.descricao or "-",
+        "Enviado para aprovacao": str(solicitacao.enviado_para_aprovacao_por) if solicitacao.enviado_para_aprovacao_por else "-",
+        "Aprovado por": str(solicitacao.aprovado_por) if solicitacao.aprovado_por else "-",
+        "Parecer": solicitacao.parecer_aprovacao or "-",
+    }
+    extras = [
+        {
+            "Centro de Custo": f"{item.plano_contas.codigo} - {item.plano_contas.descricao}",
+            "Descricao Tecnica": item.descricao_tecnica or "-",
+            "Unidade": item.unidade or "-",
+            "Quantidade": item.quantidade,
+        }
+        for item in solicitacao.itens.all()
     ]
-    for item in solicitacao.itens.all():
-        linhas.append(
-            f"- {item.plano_contas.codigo} | {item.plano_contas.descricao} | {item.descricao_tecnica or '-'} | {item.quantidade} {item.unidade or '-'}"
-        )
-    linhas.append("")
-    linhas.append("Cotacoes vinculadas:")
-    for cotacao in solicitacao.cotacoes.all():
-        linhas.append(f"- {cotacao.numero} | {cotacao.fornecedor} | {cotacao.get_status_display()}")
-    return _pdf_simples_response(f"{solicitacao.numero}.pdf", f"Solicitacao de Compra {solicitacao.numero}", linhas)
+    return _pdf_relatorio_probatorio_response(
+        f"{solicitacao.numero}.pdf",
+        f"Solicitacao de Compra {solicitacao.numero}",
+        resumo,
+        _historico_pdf(solicitacao),
+        extras,
+        extras_titulo="Itens da Solicitacao",
+        extras_colunas=[("Centro de Custo", 170), ("Descricao Tecnica", 210), ("Unidade", 45), ("Quantidade", 70)],
+        incluir_historico=True,
+    )
 
 
 def cotacao_pdf_view(request, pk):
     if not request.user.is_authenticated:
         raise Http404()
-    cotacao = get_object_or_404(_get_queryset_cotacao(request).prefetch_related("itens__item_solicitacao__plano_contas", "solicitacao__cotacoes__fornecedor", "ordens_compra__compromisso_relacionado"), pk=pk)
-    linhas = [
-        f"Solicitacao: {cotacao.solicitacao.numero}",
-        f"Fornecedor: {cotacao.fornecedor}",
-        f"Status: {cotacao.get_status_display()}",
-        f"Data: {cotacao.data_cotacao:%d/%m/%Y}",
-        f"Validade: {cotacao.validade_ate.strftime('%d/%m/%Y') if cotacao.validade_ate else '-'}",
-        f"Justificativa: {cotacao.justificativa_escolha or '-'}",
-        "",
-        "Comparativo de fornecedores:",
+    cotacao = get_object_or_404(
+        _get_queryset_cotacao(request).prefetch_related("itens__item_solicitacao__plano_contas", "solicitacao__cotacoes__fornecedor", "anexos"),
+        pk=pk,
+    )
+    resumo = {
+        "Numero": cotacao.numero,
+        "Solicitacao": cotacao.solicitacao.numero,
+        "Fornecedor": cotacao.fornecedor,
+        "Status": cotacao.get_status_display(),
+        "Data": cotacao.data_cotacao.strftime("%d/%m/%Y"),
+        "Validade": cotacao.validade_ate.strftime("%d/%m/%Y") if cotacao.validade_ate else "-",
+        "Justificativa": cotacao.justificativa_escolha or "-",
+        "Enviado para aprovacao": str(cotacao.enviado_para_aprovacao_por) if cotacao.enviado_para_aprovacao_por else "-",
+        "Aprovado por": str(cotacao.aprovado_por) if cotacao.aprovado_por else "-",
+        "Parecer": cotacao.parecer_aprovacao or "-",
+    }
+    extras = [
+        {
+            "Centro de Custo": f"{item.item_solicitacao.plano_contas.codigo} - {item.item_solicitacao.plano_contas.descricao}",
+            "Descricao Tecnica": item.item_solicitacao.descricao_tecnica or "-",
+            "Quantidade": item.item_solicitacao.quantidade,
+            "Valor Unitario": money_br(item.valor_unitario),
+            "Valor Total": money_br(item.valor_total),
+        }
+        for item in cotacao.itens.all()
     ]
-    for comparativa in cotacao.solicitacao.cotacoes.select_related("fornecedor").all():
-        linhas.append(f"- {comparativa.numero} | {comparativa.fornecedor} | {comparativa.get_status_display()}")
-    linhas.append("")
-    linhas.append("Itens cotados:")
-    for item in cotacao.itens.all():
-        linhas.append(
-            f"- {item.item_solicitacao.plano_contas.codigo} | {item.item_solicitacao.plano_contas.descricao} | {item.item_solicitacao.descricao_tecnica or '-'} | {item.item_solicitacao.quantidade} | {item.valor_unitario} | {item.valor_total}"
-        )
-    if cotacao.anexos.exists():
-        linhas.append("")
-        linhas.append("Anexos:")
-        for anexo in cotacao.anexos.all():
-            linhas.append(f"- {anexo.descricao or '-'}")
-    return _pdf_simples_response(f"{cotacao.numero}.pdf", f"Cotacao {cotacao.numero}", linhas)
+    return _pdf_relatorio_probatorio_response(
+        f"{cotacao.numero}.pdf",
+        f"Cotacao {cotacao.numero}",
+        resumo,
+        _historico_pdf(cotacao),
+        extras,
+        extras_titulo="Itens Cotados",
+        extras_colunas=[("Centro de Custo", 150), ("Descricao Tecnica", 165), ("Quantidade", 55), ("Valor Unitario", 60), ("Valor Total", 65)],
+        incluir_historico=True,
+    )
+
+
+def solicitacao_compra_export_view(request):
+    queryset = _get_queryset_solicitacao(request).prefetch_related("itens__plano_contas").order_by("-data_solicitacao", "-id")
+    linhas = [
+        {
+            "Numero": solicitacao.numero,
+            "Obra": solicitacao.obra.codigo,
+            "Titulo": solicitacao.titulo,
+            "Solicitante": solicitacao.solicitante,
+            "Status": solicitacao.get_status_display(),
+            "Data": solicitacao.data_solicitacao.strftime("%d/%m/%Y"),
+            "Aprovador": solicitacao.aprovado_por.username if solicitacao.aprovado_por else "",
+            "Parecer": solicitacao.parecer_aprovacao,
+            "Itens": " | ".join(f"{item.plano_contas.codigo} - {item.descricao_tecnica}" for item in solicitacao.itens.all()),
+        }
+        for solicitacao in queryset
+    ]
+    return _exportar_excel_response("solicitacoes_compra.xlsx", "Solicitacoes", linhas)
+
+
+def solicitacao_compra_lista_pdf_view(request):
+    queryset = _get_queryset_solicitacao(request).order_by("-data_solicitacao", "-id")
+    resumo = {"Quantidade de Registros": queryset.count(), "Emitido em": _datahora_local(timezone.now()).strftime("%d/%m/%Y %H:%M")}
+    extras = [
+        {
+            "Numero": solicitacao.numero,
+            "Obra": solicitacao.obra.codigo,
+            "Titulo": solicitacao.titulo,
+            "Status": solicitacao.get_status_display(),
+            "Data": solicitacao.data_solicitacao.strftime("%d/%m/%Y"),
+        }
+        for solicitacao in queryset
+    ]
+    return _pdf_relatorio_probatorio_response(
+        "solicitacoes_compra_lista.pdf",
+        "Lista de Solicitacoes de Compra",
+        resumo,
+        [],
+        extras,
+        extras_titulo="Lista de Solicitacoes",
+        extras_colunas=[("Numero", 75), ("Obra", 55), ("Titulo", 200), ("Status", 80), ("Data", 85)],
+        incluir_historico=False,
+    )
+
+
+def cotacao_export_view(request):
+    queryset = _get_queryset_cotacao(request).order_by("-data_cotacao", "-id")
+    linhas = [
+        {
+            "Numero": cotacao.numero,
+            "Solicitacao": cotacao.solicitacao.numero,
+            "Fornecedor": cotacao.fornecedor,
+            "Status": cotacao.get_status_display(),
+            "Data": cotacao.data_cotacao.strftime("%d/%m/%Y"),
+            "Valor Total": cotacao.valor_total,
+            "Aprovador": cotacao.aprovado_por.username if cotacao.aprovado_por else "",
+            "Parecer": cotacao.parecer_aprovacao,
+        }
+        for cotacao in queryset
+    ]
+    return _exportar_excel_response("cotacoes.xlsx", "Cotacoes", linhas)
+
+
+def cotacao_lista_pdf_view(request):
+    queryset = _get_queryset_cotacao(request).order_by("-data_cotacao", "-id")
+    resumo = {"Quantidade de Registros": queryset.count(), "Emitido em": _datahora_local(timezone.now()).strftime("%d/%m/%Y %H:%M")}
+    extras = [
+        {
+            "Numero": cotacao.numero,
+            "Solicitacao": cotacao.solicitacao.numero,
+            "Fornecedor": cotacao.fornecedor,
+            "Status": cotacao.get_status_display(),
+            "Valor Total": money_br(cotacao.valor_total),
+        }
+        for cotacao in queryset
+    ]
+    return _pdf_relatorio_probatorio_response(
+        "cotacoes_lista.pdf",
+        "Lista de Cotacoes",
+        resumo,
+        [],
+        extras,
+        extras_titulo="Lista de Cotacoes",
+        extras_colunas=[("Numero", 80), ("Solicitacao", 80), ("Fornecedor", 190), ("Status", 75), ("Valor Total", 70)],
+        incluir_historico=False,
+    )

@@ -14,22 +14,38 @@
             <h5>{{ item.codigo_atividade }} - {{ item.atividade }}</h5>
         </div>
         <div class="card-body">
+            {% if item_eh_pai %}
+            <div class="alert alert-warning mb-3">
+                Este item possui filhos. Datas reais e percentual realizado são consolidados automaticamente pelas atividades filhas.
+            </div>
+            {% endif %}
+
             <form method="post">
                 {% csrf_token %}
-                
+
+                {% if form.non_field_errors %}
+                <div class="alert alert-danger mb-3">
+                    {{ form.non_field_errors }}
+                </div>
+                {% endif %}
+
                 <div class="row">
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label for="id_data_inicio_real" class="form-label">Data Início Real</label>
-                            <input type="date" name="data_inicio_real" id="id_data_inicio_real" 
-                                   class="form-control" value="{{ item.data_inicio_real|date:'Y-m-d' }}">
+                            <label for="{{ form.data_inicio_real.id_for_label }}" class="form-label">{{ form.data_inicio_real.label }}</label>
+                            {{ form.data_inicio_real }}
+                            {% if form.data_inicio_real.errors %}
+                            <div class="text-danger small mt-1">{{ form.data_inicio_real.errors|join:", " }}</div>
+                            {% endif %}
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label for="id_data_fim_real" class="form-label">Data Fim Real</label>
-                            <input type="date" name="data_fim_real" id="id_data_fim_real" 
-                                   class="form-control" value="{{ item.data_fim_real|date:'Y-m-d' }}">
+                            <label for="{{ form.data_fim_real.id_for_label }}" class="form-label">{{ form.data_fim_real.label }}</label>
+                            {{ form.data_fim_real }}
+                            {% if form.data_fim_real.errors %}
+                            <div class="text-danger small mt-1">{{ form.data_fim_real.errors|join:", " }}</div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -37,30 +53,28 @@
                 <div class="row">
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label for="id_percentual_concluido" class="form-label">% Concluído</label>
-                            <input type="number" name="percentual_concluido" id="id_percentual_concluido" 
-                                   class="form-control" value="{{ item.percentual_concluido }}" min="0" max="100">
+                            <label for="{{ form.percentual_concluido.id_for_label }}" class="form-label">{{ form.percentual_concluido.label }}</label>
+                            {{ form.percentual_concluido }}
+                            {% if form.percentual_concluido.errors %}
+                            <div class="text-danger small mt-1">{{ form.percentual_concluido.errors|join:", " }}</div>
+                            {% endif %}
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="mb-3">
                             <label for="id_valor_realizado" class="form-label">Valor Realizado</label>
-                            <input type="number" name="valor_realizado" id="id_valor_realizado" 
-                                   class="form-control" value="{{ item.valor_realizado }}" step="0.01">
+                            <input type="text" id="id_valor_realizado" class="form-control" value="{{ item.valor_realizado|default:0 }}" readonly>
+                            <small class="form-text text-muted">Calculado automaticamente a partir do percentual concluído e do valor planejado.</small>
                         </div>
                     </div>
                 </div>
 
                 <div class="mb-3">
-                    <label for="id_plano_contas" class="form-label">Vincular à EAP (Orçamento)</label>
-                    <select name="plano_contas" id="id_plano_contas" class="form-control">
-                        <option value="">-- Selecione --</option>
-                        {% for pc in plano_contas_list %}
-                        <option value="{{ pc.id }}" {% if item.plano_contas_id == pc.id %}selected{% endif %}>
-                            {{ pc.codigo }} - {{ pc.descricao }}
-                        </option>
-                        {% endfor %}
-                    </select>
+                    <label for="{{ form.plano_contas.id_for_label }}" class="form-label">{{ form.plano_contas.label }}</label>
+                    {{ form.plano_contas }}
+                    {% if form.plano_contas.errors %}
+                    <div class="text-danger small mt-1">{{ form.plano_contas.errors|join:", " }}</div>
+                    {% endif %}
                 </div>
 
                 <div class="mb-3">

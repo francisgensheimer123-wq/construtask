@@ -12,6 +12,7 @@
     </div>
     <div>
         <a class="btn secondary" href="{% url 'plano_contas_list' %}">Voltar</a>
+        <a class="btn secondary" href="{% url 'jobs_assincronos' %}">Ver Jobs</a>
     </div>
 </div>
 
@@ -25,18 +26,48 @@
 
 <section class="panel">
     <h3>Selecionar Arquivo Excel</h3>
-    <p class="muted">O arquivo deve conter as colunas: ITEM, DESCRIÇÃO, UN, QTD, VALOR UNIT.</p>
-    
+    <p class="muted">O arquivo deve conter as colunas: ITEM, DESCRICAO, UN, QTD, VALOR UNIT.</p>
+
     <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
         <div class="field">
             <label for="id_arquivo">Arquivo Excel *</label>
             <input type="file" name="arquivo" id="id_arquivo" accept=".xlsx,.xls" required>
         </div>
-        
+
         <div class="actions">
-            <button type="submit" class="btn">Importar</button>
+            <button type="submit" class="btn">Importar por Job</button>
         </div>
     </form>
+</section>
+
+<section class="panel">
+    <h3>Jobs Recentes de Importacao</h3>
+    {% if jobs_recentes %}
+    <div class="table-scroll">
+    <table class="compact-table" style="min-width:780px;">
+        <thead>
+            <tr>
+                <th>Criado em</th>
+                <th>Status</th>
+                <th>Descricao</th>
+                <th>Resultado</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for job in jobs_recentes %}
+            <tr>
+                <td>{{ job.criado_em|date:"d/m/Y H:i" }}</td>
+                <td>{{ job.get_status_display }}</td>
+                <td>{{ job.descricao }}</td>
+                <td>{% if job.erro %}{{ job.erro }}{% else %}{{ job.resultado.total_planos|default:"-" }}{% endif %}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% else %}
+    <p class="empty">Nenhum job de importacao recente para esta obra.</p>
+    {% endif %}
 </section>
 {% endblock %}

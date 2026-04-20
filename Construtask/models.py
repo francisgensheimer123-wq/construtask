@@ -1,10 +1,11 @@
-from decimal import Decimal, ROUND_HALF_UP
+﻿from decimal import Decimal, ROUND_HALF_UP
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 from django.db import models
 from django.db.models import Sum
+from django.utils import timezone
 from mptt.managers import TreeManager
 from mptt.models import MPTTModel, TreeForeignKey
 
@@ -28,8 +29,8 @@ cnpj_validator = RegexValidator(
 
 class Empresa(models.Model):
     """
-    Modelo Tenant para suportar múltiplas empresas (Multi-tenant).
-    Cada empresa pode ter suas próprias obras e usuários.
+    Modelo Tenant para suportar mÃºltiplas empresas (Multi-tenant).
+    Cada empresa pode ter suas prÃ³prias obras e usuÃ¡rios.
     """
     class Meta:
         verbose_name = "Empresa"
@@ -49,13 +50,67 @@ class Empresa(models.Model):
         return self.nome
 
 
+class ParametroAlertaEmpresa(models.Model):
+    class Meta:
+        verbose_name = "Parametro de Alerta da Empresa"
+        verbose_name_plural = "Parametros de Alertas da Empresa"
+
+    empresa = models.OneToOneField(Empresa, on_delete=models.CASCADE, related_name="parametros_alerta")
+    planejamento_suprimentos_janela_dias = models.PositiveIntegerField(default=60)
+    contrato_sem_medicao_dias = models.PositiveIntegerField(default=15)
+    medicao_sem_nota_dias = models.PositiveIntegerField(default=7)
+    nota_sem_rateio_percentual_minimo = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal("0.01"))
+    risco_vencido_tolerancia_dias = models.PositiveIntegerField(default=0)
+    nao_conformidade_sem_evolucao_dias = models.PositiveIntegerField(default=15)
+    atividade_sem_avanco_tolerancia_dias = models.PositiveIntegerField(default=0)
+    desvio_prazo_percentual_minimo_previsto = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal("10.00"))
+    desvio_prazo_tolerancia_percentual = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal("10.00"))
+    estouro_prazo_tolerancia_dias = models.PositiveIntegerField(default=0)
+    desvio_custo_tolerancia_percentual = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal("10.00"))
+    custo_sem_avanco_valor_minimo = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0.00"))
+    compromisso_acima_orcado_tolerancia_percentual = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal("0.00"))
+    acumulo_riscos_quantidade_minima = models.PositiveIntegerField(default=5)
+    acumulo_riscos_quantidade_critica = models.PositiveIntegerField(default=8)
+    alerta_sem_workflow_dias = models.PositiveIntegerField(default=7)
+    alerta_prazo_solucao_dias = models.PositiveIntegerField(default=14)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Parametros de alerta - {self.empresa.nome}"
+
+    @classmethod
+    def obter_ou_criar(cls, empresa):
+        if not empresa:
+            return cls(
+                planejamento_suprimentos_janela_dias=60,
+                contrato_sem_medicao_dias=15,
+                medicao_sem_nota_dias=7,
+                nota_sem_rateio_percentual_minimo=Decimal("0.01"),
+                risco_vencido_tolerancia_dias=0,
+                nao_conformidade_sem_evolucao_dias=15,
+                atividade_sem_avanco_tolerancia_dias=0,
+                desvio_prazo_percentual_minimo_previsto=Decimal("10.00"),
+                desvio_prazo_tolerancia_percentual=Decimal("10.00"),
+                estouro_prazo_tolerancia_dias=0,
+                desvio_custo_tolerancia_percentual=Decimal("10.00"),
+                custo_sem_avanco_valor_minimo=Decimal("0.00"),
+                compromisso_acima_orcado_tolerancia_percentual=Decimal("0.00"),
+                acumulo_riscos_quantidade_minima=5,
+                acumulo_riscos_quantidade_critica=8,
+                alerta_sem_workflow_dias=7,
+                alerta_prazo_solucao_dias=14,
+            )
+        parametros, _ = cls.objects.get_or_create(empresa=empresa)
+        return parametros
+
+
 class UserProfile(models.Model):
     """
-    Perfil estendido do usuário com empresa (tenant) e papel.
+    Perfil estendido do usuÃ¡rio com empresa (tenant) e papel.
     """
     class Meta:
-        verbose_name = "Perfil de Usuário"
-        verbose_name_plural = "Perfis de Usuário"
+        verbose_name = "Perfil de UsuÃ¡rio"
+        verbose_name_plural = "Perfis de UsuÃ¡rio"
 
     usuario = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="perfil")
     empresa = models.ForeignKey(Empresa, on_delete=models.PROTECT, null=True, blank=True, related_name="usuarios")
@@ -70,25 +125,42 @@ class UserProfile(models.Model):
 
 class UsuarioEmpresa(models.Model):
     """
-    Modelo para vincular usuários a empresas com permissões específicas.
-    Cada usuário pertence a uma empresa e pode ser admin dessa empresa.
+    Modelo para vincular usuÃ¡rios a empresas com permissÃµes especÃ­ficas.
+    Cada usuÃ¡rio pertence a uma empresa e pode ser admin dessa empresa.
     """
     class Meta:
-        verbose_name = "Usuário de Empresa"
-        verbose_name_plural = "Usuários de Empresa"
+        verbose_name = "UsuÃ¡rio de Empresa"
+        verbose_name_plural = "UsuÃ¡rios de Empresa"
         unique_together = ("usuario", "empresa")
+        indexes = [
+            models.Index(fields=["empresa", "is_admin_empresa"]),
+            models.Index(fields=["empresa", "papel_aprovacao"]),
+        ]
+
+    PAPEL_APROVACAO_CHOICES = (
+        ("GERENTE_OBRAS", "Gerente de Obras"),
+        ("COORDENADOR_OBRAS", "Coordenador de Obras"),
+        ("ENGENHEIRO_OBRAS", "Engenheiro de Obras"),
+        ("TECNICO_OBRAS", "Tecnico de Obras"),
+    )
 
     usuario = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="usuario_empresa")
     empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="usuarios_empresa")
     is_admin_empresa = models.BooleanField(
         default=False,
-        help_text="Se marcado, este usuário pode gerenciar usuários e liberar obras da empresa."
+        help_text="Se marcado, este usuÃ¡rio pode gerenciar usuÃ¡rios e liberar obras da empresa."
+    )
+    papel_aprovacao = models.CharField(
+        max_length=30,
+        choices=PAPEL_APROVACAO_CHOICES,
+        default="TECNICO_OBRAS",
+        help_text="Define a alcada de aprovacao operacional do usuario.",
     )
     obras_permitidas = models.ManyToManyField(
         "Obra",
         related_name="usuarios_permitidos",
         blank=True,
-        help_text="Obras que este usuário pode acessar. Se vazio e não for admin, não terá acesso a nenhuma obra."
+        help_text="Obras que este usuÃ¡rio pode acessar. Se vazio e nÃ£o for admin, nÃ£o terÃ¡ acesso a nenhuma obra."
     )
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)
@@ -100,15 +172,44 @@ class UsuarioEmpresa(models.Model):
     def save(self, *args, **kwargs):
         # Admin da empresa automaticamente tem acesso a todas as obras da empresa
         if self.is_admin_empresa:
-            # Não precisa salvar obras_permitidas para admin, pois ele vê todas
+            # NÃ£o precisa salvar obras_permitidas para admin, pois ele vÃª todas
             pass
         super().save(*args, **kwargs)
+
+
+class PermissaoModuloAcao(models.Model):
+    class Meta:
+        verbose_name = "Permissao por Modulo"
+        verbose_name_plural = "Permissoes por Modulo"
+        unique_together = ("usuario_empresa", "modulo", "acao")
+        ordering = ["modulo", "acao"]
+
+    usuario_empresa = models.ForeignKey(
+        UsuarioEmpresa,
+        on_delete=models.CASCADE,
+        related_name="permissoes_modulo",
+    )
+    modulo = models.CharField(max_length=50)
+    acao = models.CharField(max_length=50)
+    permitido = models.BooleanField(default=True)
+    concedido_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="permissoes_modulo_concedidas",
+    )
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.usuario_empresa} | {self.modulo}:{self.acao}"
 
 
 class AuditEvent(models.Model):
     """
     Modelo de auditoria para conformidade ISO 9.2.
-    Registra todas as operações Create/Update/Delete com diff.
+    Registra todas as operaÃ§Ãµes Create/Update/Delete com diff.
     """
     class Meta:
         verbose_name = "Evento de Auditoria"
@@ -121,11 +222,11 @@ class AuditEvent(models.Model):
         ]
 
     ACAO_CHOICES = (
-        ("CREATE", "Criação"),
-        ("UPDATE", "Atualização"),
-        ("DELETE", "Exclusão"),
-        ("APPROVE", "Aprovação"),
-        ("REJECT", "Rejeição"),
+        ("CREATE", "CriaÃ§Ã£o"),
+        ("UPDATE", "AtualizaÃ§Ã£o"),
+        ("DELETE", "ExclusÃ£o"),
+        ("APPROVE", "AprovaÃ§Ã£o"),
+        ("REJECT", "RejeiÃ§Ã£o"),
         ("UPLOAD", "Upload de arquivo"),
     )
 
@@ -144,6 +245,454 @@ class AuditEvent(models.Model):
 
     def __str__(self):
         return f"{self.acao} - {self.entidade_label} por {self.usuario} em {self.timestamp:%d/%m/%Y %H:%M}"
+
+
+class JobAssincrono(models.Model):
+    class Meta:
+        verbose_name = "Job Assincrono"
+        verbose_name_plural = "Jobs Assincronos"
+        ordering = ["-criado_em"]
+        indexes = [
+            models.Index(fields=["status", "tipo", "criado_em"]),
+            models.Index(fields=["empresa", "obra", "criado_em"]),
+        ]
+
+    TIPO_CHOICES = (
+        ("SINCRONIZAR_ALERTAS_OBRA", "Sincronizar alertas da obra"),
+        ("IMPORTAR_PLANO_CONTAS", "Importar plano de contas"),
+        ("GERAR_RELATORIO_FINANCEIRO", "Gerar relatorio financeiro"),
+    )
+    STATUS_CHOICES = (
+        ("PENDENTE", "Pendente"),
+        ("EM_EXECUCAO", "Em execucao"),
+        ("CONCLUIDO", "Concluido"),
+        ("FALHOU", "Falhou"),
+    )
+
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, null=True, blank=True, related_name="jobs")
+    obra = models.ForeignKey("Obra", on_delete=models.CASCADE, null=True, blank=True, related_name="jobs")
+    solicitado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="jobs_assincronos",
+    )
+    tipo = models.CharField(max_length=40, choices=TIPO_CHOICES)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="PENDENTE")
+    descricao = models.CharField(max_length=255)
+    parametros = models.JSONField(default=dict, blank=True)
+    resultado = models.JSONField(default=dict, blank=True)
+    erro = models.TextField(blank=True)
+    tentativas = models.PositiveIntegerField(default=0)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    iniciado_em = models.DateTimeField(null=True, blank=True)
+    concluido_em = models.DateTimeField(null=True, blank=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+    arquivo_entrada = models.FileField(upload_to="jobs/input/", blank=True, null=True)
+    arquivo_resultado = models.FileField(upload_to="jobs/output/", blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.get_tipo_display()} [{self.get_status_display()}]"
+
+
+class OperacaoBackupSaaS(models.Model):
+    class Meta:
+        verbose_name = "Operacao de Backup SaaS"
+        verbose_name_plural = "Operacoes de Backup SaaS"
+        ordering = ["-executado_em"]
+        indexes = [
+            models.Index(fields=["tipo", "status", "executado_em"]),
+            models.Index(fields=["ambiente", "executado_em"]),
+            models.Index(fields=["provedor", "executado_em"]),
+        ]
+
+    TIPO_CHOICES = (
+        ("BACKUP", "Backup"),
+        ("TESTE_RESTAURACAO", "Teste de recuperacao"),
+    )
+    STATUS_CHOICES = (
+        ("SUCESSO", "Sucesso"),
+        ("FALHOU", "Falhou"),
+        ("PARCIAL", "Parcial"),
+    )
+
+    tipo = models.CharField(max_length=30, choices=TIPO_CHOICES)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="SUCESSO")
+    ambiente = models.CharField(max_length=30, default="development")
+    provedor = models.CharField(max_length=80, blank=True)
+    identificador_artefato = models.CharField(max_length=255, blank=True)
+    checksum = models.CharField(max_length=128, blank=True)
+    tamanho_bytes = models.BigIntegerField(default=0)
+    detalhes = models.JSONField(default=dict, blank=True)
+    observacao = models.TextField(blank=True)
+    solicitado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="operacoes_backup_saas",
+    )
+    backup_referencia = models.ForeignKey(
+        "self",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="testes_restauracao",
+    )
+    executado_em = models.DateTimeField(default=timezone.now)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.tipo} - {self.status} - {self.executado_em:%d/%m/%Y %H:%M}"
+
+
+class MetricaRequisicao(models.Model):
+    class Meta:
+        verbose_name = "Metrica de Requisicao"
+        verbose_name_plural = "Metricas de Requisicao"
+        ordering = ["-criado_em"]
+        indexes = [
+            models.Index(fields=["metodo", "status_code", "criado_em"]),
+            models.Index(fields=["empresa", "obra", "criado_em"]),
+            models.Index(fields=["request_id"]),
+            models.Index(fields=["path", "criado_em"]),
+        ]
+
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, null=True, blank=True, related_name="metricas_requisicao")
+    obra = models.ForeignKey("Obra", on_delete=models.CASCADE, null=True, blank=True, related_name="metricas_requisicao")
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="metricas_requisicao",
+    )
+    request_id = models.CharField(max_length=50, blank=True)
+    metodo = models.CharField(max_length=10)
+    path = models.CharField(max_length=255)
+    status_code = models.PositiveIntegerField()
+    duracao_ms = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.metodo} {self.path} [{self.status_code}]"
+
+
+class RastroErroAplicacao(models.Model):
+    class Meta:
+        verbose_name = "Rastro de Erro da Aplicacao"
+        verbose_name_plural = "Rastros de Erro da Aplicacao"
+        ordering = ["-criado_em"]
+        indexes = [
+            models.Index(fields=["classe_erro", "criado_em"]),
+            models.Index(fields=["empresa", "obra", "criado_em"]),
+            models.Index(fields=["request_id"]),
+            models.Index(fields=["resolvido", "criado_em"]),
+            models.Index(fields=["path", "criado_em"]),
+        ]
+
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, null=True, blank=True, related_name="rastros_erro")
+    obra = models.ForeignKey("Obra", on_delete=models.CASCADE, null=True, blank=True, related_name="rastros_erro")
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="rastros_erro",
+    )
+    request_id = models.CharField(max_length=50, blank=True)
+    metodo = models.CharField(max_length=10)
+    path = models.CharField(max_length=255)
+    status_code = models.PositiveIntegerField(default=500)
+    classe_erro = models.CharField(max_length=120)
+    mensagem = models.TextField()
+    stacktrace = models.TextField(blank=True)
+    resolvido = models.BooleanField(default=False)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    resolvido_em = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.classe_erro} em {self.path}"
+
+
+class RegistroAcessoDadoPessoal(models.Model):
+    """
+    Registro minimo de acesso administrativo a dados pessoais para governanca LGPD.
+    """
+    class Meta:
+        verbose_name = "Registro de Acesso a Dado Pessoal"
+        verbose_name_plural = "Registros de Acesso a Dados Pessoais"
+        ordering = ["-criado_em"]
+        indexes = [
+            models.Index(fields=["empresa", "criado_em"]),
+            models.Index(fields=["usuario", "criado_em"]),
+            models.Index(fields=["categoria_titular", "acao"]),
+        ]
+
+    CATEGORIA_TITULAR_CHOICES = (
+        ("USUARIO", "Usuario"),
+        ("COLABORADOR", "Colaborador"),
+        ("FORNECEDOR", "Fornecedor"),
+        ("CLIENTE", "Cliente"),
+        ("TERCEIRO", "Terceiro"),
+    )
+
+    ACAO_CHOICES = (
+        ("VIEW", "Visualizacao"),
+        ("EXPORT", "Exportacao"),
+        ("DOWNLOAD", "Download"),
+        ("ADMIN_LIST", "Consulta Administrativa"),
+    )
+
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, null=True, blank=True, related_name="logs_dados_pessoais")
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="acessos_dados_pessoais",
+    )
+    categoria_titular = models.CharField(max_length=20, choices=CATEGORIA_TITULAR_CHOICES)
+    entidade = models.CharField(max_length=120)
+    objeto_id = models.PositiveIntegerField(null=True, blank=True)
+    identificador = models.CharField(max_length=255, blank=True)
+    acao = models.CharField(max_length=20, choices=ACAO_CHOICES, default="VIEW")
+    finalidade = models.CharField(max_length=255)
+    detalhes = models.TextField(blank=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.get_acao_display()} - {self.entidade} - {self.identificador or self.objeto_id or '-'}"
+
+
+class RegistroTratamentoDadoPessoal(models.Model):
+    class Meta:
+        verbose_name = "Registro de Tratamento LGPD"
+        verbose_name_plural = "Registros de Tratamento LGPD"
+        ordering = ["-criado_em"]
+        indexes = [
+            models.Index(fields=["empresa", "criado_em"]),
+            models.Index(fields=["categoria_titular", "acao"]),
+            models.Index(fields=["entidade", "objeto_id"]),
+        ]
+
+    ACAO_CHOICES = (
+        ("CONSULTA", "Consulta"),
+        ("ANONIMIZACAO", "Anonimizacao"),
+        ("EXCLUSAO_LOGICA", "Exclusao logica"),
+        ("DESCARTE", "Descarte"),
+        ("CONSENTIMENTO", "Consentimento"),
+        ("REVOGACAO_CONSENTIMENTO", "Revogacao de consentimento"),
+    )
+
+    CATEGORIA_TITULAR_CHOICES = RegistroAcessoDadoPessoal.CATEGORIA_TITULAR_CHOICES
+
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, null=True, blank=True, related_name="tratamentos_lgpd")
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="tratamentos_lgpd_executados",
+    )
+    categoria_titular = models.CharField(max_length=20, choices=CATEGORIA_TITULAR_CHOICES)
+    entidade = models.CharField(max_length=120)
+    objeto_id = models.PositiveIntegerField(null=True, blank=True)
+    identificador = models.CharField(max_length=255, blank=True)
+    acao = models.CharField(max_length=30, choices=ACAO_CHOICES)
+    finalidade = models.CharField(max_length=255)
+    base_legal = models.CharField(max_length=255, blank=True)
+    detalhes = models.TextField(blank=True)
+    evidencia = models.TextField(blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.get_acao_display()} - {self.entidade} - {self.identificador or self.objeto_id or '-'}"
+
+
+class ConsentimentoLGPD(models.Model):
+    class Meta:
+        verbose_name = "Consentimento LGPD"
+        verbose_name_plural = "Consentimentos LGPD"
+        ordering = ["-criado_em"]
+        indexes = [
+            models.Index(fields=["empresa", "categoria_titular"]),
+            models.Index(fields=["email_referencia", "revogado_em"]),
+        ]
+
+    CATEGORIA_TITULAR_CHOICES = RegistroAcessoDadoPessoal.CATEGORIA_TITULAR_CHOICES
+
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, null=True, blank=True, related_name="consentimentos_lgpd")
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="consentimentos_lgpd",
+    )
+    categoria_titular = models.CharField(max_length=20, choices=CATEGORIA_TITULAR_CHOICES)
+    email_referencia = models.EmailField(blank=True)
+    finalidade = models.CharField(max_length=255)
+    texto_aceito = models.TextField()
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    revogado_em = models.DateTimeField(null=True, blank=True)
+
+    @property
+    def ativo(self):
+        return self.revogado_em is None
+
+
+class AlertaOperacional(models.Model):
+    """
+    Registro persistente de alertas operacionais e preventivos da obra.
+    """
+    class Meta:
+        verbose_name = "Alerta Operacional"
+        verbose_name_plural = "Alertas Operacionais"
+        ordering = ["-criado_em"]
+        indexes = [
+            models.Index(fields=["obra", "codigo_regra", "status"]),
+            models.Index(fields=["obra", "severidade", "status"]),
+        ]
+        constraints = [
+            models.UniqueConstraint(fields=["obra", "codigo_regra", "referencia"], name="uq_alerta_operacional_regra_ref")
+        ]
+
+    SEVERIDADE_CHOICES = (
+        ("BAIXA", "Baixa"),
+        ("MEDIA", "Media"),
+        ("ALTA", "Alta"),
+        ("CRITICA", "Critica"),
+    )
+
+    STATUS_CHOICES = (
+        ("ABERTO", "Aberto"),
+        ("EM_TRATAMENTO", "Em Tratamento"),
+        ("JUSTIFICADO", "Justificado"),
+        ("ENCERRADO", "Encerrado"),
+    )
+
+    obra = models.ForeignKey("Obra", on_delete=models.CASCADE, related_name="alertas_operacionais")
+    codigo_regra = models.CharField(max_length=40)
+    titulo = models.CharField(max_length=180)
+    descricao = models.TextField()
+    severidade = models.CharField(max_length=20, choices=SEVERIDADE_CHOICES, default="MEDIA")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="ABERTO")
+    entidade_tipo = models.CharField(max_length=80, blank=True)
+    entidade_id = models.PositiveIntegerField(null=True, blank=True)
+    referencia = models.CharField(max_length=120)
+    evidencias = models.JSONField(default=dict, blank=True)
+    data_referencia = models.DateField(null=True, blank=True)
+    responsavel = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="alertas_operacionais_responsavel",
+    )
+    observacao_status = models.TextField(blank=True)
+    prazo_solucao_em = models.DateField(null=True, blank=True)
+    ultima_acao_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="alertas_operacionais_movimentados",
+    )
+    ultima_acao_em = models.DateTimeField(null=True, blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+    encerrado_em = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.codigo_regra} - {self.obra.codigo} - {self.referencia}"
+
+
+class AlertaOperacionalHistorico(models.Model):
+    class Meta:
+        verbose_name = "Historico de Alerta Operacional"
+        verbose_name_plural = "Historicos de Alertas Operacionais"
+        ordering = ["-criado_em"]
+        indexes = [
+            models.Index(fields=["alerta", "criado_em"]),
+            models.Index(fields=["acao"]),
+        ]
+
+    ACAO_CHOICES = (
+        ("CRIACAO", "Criacao"),
+        ("TRATAMENTO", "Em Tratamento"),
+        ("JUSTIFICATIVA", "Justificativa"),
+        ("ENCERRAMENTO", "Encerramento"),
+        ("REABERTURA", "Reabertura"),
+    )
+
+    alerta = models.ForeignKey(
+        AlertaOperacional,
+        on_delete=models.CASCADE,
+        related_name="historico",
+    )
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="historicos_alertas_operacionais",
+    )
+    acao = models.CharField(max_length=20, choices=ACAO_CHOICES)
+    status_anterior = models.CharField(max_length=20, blank=True)
+    status_novo = models.CharField(max_length=20, blank=True)
+    observacao = models.TextField(blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.alerta.codigo_regra} - {self.get_acao_display()}"
+
+
+class ExecucaoRegraOperacional(models.Model):
+    class Meta:
+        verbose_name = "Execucao de Regra Operacional"
+        verbose_name_plural = "Execucoes de Regras Operacionais"
+        ordering = ["-executado_em"]
+        indexes = [
+            models.Index(fields=["obra", "codigo_regra", "executado_em"]),
+            models.Index(fields=["resultado", "executado_em"]),
+            models.Index(fields=["alerta", "executado_em"]),
+        ]
+
+    RESULTADO_CHOICES = (
+        ("CRIADO", "Criado"),
+        ("ATUALIZADO", "Atualizado"),
+        ("ENCERRADO", "Encerrado"),
+        ("REATIVADO", "Reativado"),
+    )
+
+    obra = models.ForeignKey("Obra", on_delete=models.CASCADE, related_name="execucoes_regras_operacionais")
+    alerta = models.ForeignKey(
+        AlertaOperacional,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="execucoes_automacao",
+    )
+    codigo_regra = models.CharField(max_length=40)
+    referencia = models.CharField(max_length=120, blank=True)
+    entidade_tipo = models.CharField(max_length=80, blank=True)
+    entidade_id = models.PositiveIntegerField(null=True, blank=True)
+    severidade = models.CharField(max_length=20, blank=True)
+    status_alerta = models.CharField(max_length=20, blank=True)
+    resultado = models.CharField(max_length=20, choices=RESULTADO_CHOICES)
+    contexto = models.JSONField(default=dict, blank=True)
+    executado_em = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        referencia = f" - {self.referencia}" if self.referencia else ""
+        return f"{self.codigo_regra} - {self.get_resultado_display()}{referencia}"
 
 
 class PlanoContas(MPTTModel):
@@ -196,7 +745,7 @@ class PlanoContas(MPTTModel):
             raise ValidationError("O centro de custo filho deve pertencer a mesma obra do pai.")
         nivel = self.level if self.pk else (self.parent.level + 1 if self.parent else 0)
         if nivel < 5 and (self.unidade or self.quantidade or self.valor_unitario):
-            raise ValidationError("Unidade, quantidade e valor unitário só podem existir no nível 6.")
+            raise ValidationError("Unidade, quantidade e valor unitÃ¡rio sÃ³ podem existir no nÃ­vel 6.")
 
     def save(self, *args, **kwargs):
         if self.parent and not self.obra_id:
@@ -234,6 +783,77 @@ class PlanoContas(MPTTModel):
         return arredondar_moeda(self.valor_comprometido - self.valor_medido)
 
 
+class OrcamentoBaseline(models.Model):
+    STATUS_CHOICES = (
+        ("RASCUNHO", "Rascunho"),
+        ("EM_APROVACAO", "Em Aprovacao"),
+        ("APROVADA", "Aprovada"),
+    )
+
+    class Meta:
+        verbose_name = "Baseline de Orcamento"
+        verbose_name_plural = "Baselines de Orcamento"
+        ordering = ["-criado_em"]
+
+    obra = models.ForeignKey("Obra", on_delete=models.CASCADE, related_name="baselines_orcamento")
+    descricao = models.CharField(max_length=255)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="RASCUNHO")
+    criado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="baselines_orcamento_criadas",
+    )
+    enviado_para_aprovacao_em = models.DateTimeField(null=True, blank=True)
+    enviado_para_aprovacao_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="baselines_orcamento_enviadas_para_aprovacao",
+    )
+    parecer_aprovacao = models.TextField(blank=True)
+    aprovado_em = models.DateTimeField(null=True, blank=True)
+    aprovado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="baselines_orcamento_aprovadas",
+    )
+    is_ativa = models.BooleanField(default=False)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.obra.codigo} - {self.descricao}"
+
+    @property
+    def valor_total(self):
+        return self.itens.filter(level=0).aggregate(total=Sum("valor_total_consolidado"))["total"] or Decimal("0.00")
+
+
+class OrcamentoBaselineItem(models.Model):
+    class Meta:
+        verbose_name = "Item da Baseline de Orcamento"
+        verbose_name_plural = "Itens da Baseline de Orcamento"
+        ordering = ["codigo"]
+
+    baseline = models.ForeignKey(OrcamentoBaseline, on_delete=models.CASCADE, related_name="itens")
+    codigo = models.CharField(max_length=50)
+    descricao = models.CharField(max_length=255)
+    parent_codigo = models.CharField(max_length=50, blank=True)
+    level = models.PositiveIntegerField(default=0)
+    unidade = models.CharField(max_length=20, blank=True)
+    quantidade = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
+    valor_unitario = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
+    valor_total = models.DecimalField(max_digits=18, decimal_places=2, default=Decimal("0.00"))
+    valor_total_consolidado = models.DecimalField(max_digits=18, decimal_places=2, default=Decimal("0.00"))
+
+    def __str__(self):
+        return f"{self.baseline} - {self.codigo}"
+
+
 STATUS_OBRA_CHOICES = (
     ("PLANEJADA", "Planejada"),
     ("EM_ANDAMENTO", "Em Andamento"),
@@ -244,6 +864,7 @@ STATUS_OBRA_CHOICES = (
 
 STATUS_COMPROMISSO_CHOICES = (
     ("RASCUNHO", "Rascunho"),
+    ("EM_APROVACAO", "Em Aprovacao"),
     ("APROVADO", "Aprovado"),
     ("EM_EXECUCAO", "Em Execucao"),
     ("ENCERRADO", "Encerrado"),
@@ -253,9 +874,17 @@ STATUS_COMPROMISSO_CHOICES = (
 
 STATUS_MEDICAO_CHOICES = (
     ("EM_ELABORACAO", "Em Elaboracao"),
+    ("EM_APROVACAO", "Em Aprovacao"),
     ("CONFERIDA", "Conferida"),
     ("APROVADA", "Aprovada"),
     ("FATURADA", "Faturada"),
+)
+
+
+STATUS_ADITIVO_CHOICES = (
+    ("RASCUNHO", "Rascunho"),
+    ("EM_APROVACAO", "Em Aprovacao"),
+    ("APROVADO", "Aprovado"),
 )
 
 
@@ -271,6 +900,9 @@ class Obra(models.Model):
     class Meta:
         verbose_name = "Obra"
         verbose_name_plural = "Obras"
+        indexes = [
+            models.Index(fields=["empresa", "status"]),
+        ]
 
     empresa = models.ForeignKey(Empresa, on_delete=models.PROTECT, null=True, blank=True, related_name="obras")
     codigo = models.CharField(max_length=30, unique=True)
@@ -289,11 +921,17 @@ class Obra(models.Model):
 
 class Compromisso(models.Model):
     class Meta:
-        verbose_name = "Compras e Contratações"
-        verbose_name_plural = "Compras e Contratações"
+        verbose_name = "Compras e ContrataÃ§Ãµes"
+        verbose_name_plural = "Compras e ContrataÃ§Ãµes"
+        indexes = [
+            models.Index(fields=["obra", "tipo", "status"]),
+            models.Index(fields=["obra", "data_assinatura"]),
+            models.Index(fields=["obra", "fornecedor"]),
+            models.Index(fields=["obra", "cnpj"]),
+        ]
 
     TIPO_CHOICES = (
-        ("CONTRATO", "Contrato (Serviço)"),
+        ("CONTRATO", "Contrato (ServiÃ§o)"),
         ("PEDIDO_COMPRA", "Pedido de Compra (Material)"),
     )
 
@@ -320,10 +958,30 @@ class Compromisso(models.Model):
     data_assinatura = models.DateField()
     data_prevista_inicio = models.DateField(null=True, blank=True)
     data_prevista_fim = models.DateField(null=True, blank=True)
+    enviado_para_aprovacao_em = models.DateTimeField(null=True, blank=True)
+    enviado_para_aprovacao_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="compromissos_enviados_para_aprovacao",
+    )
+    parecer_aprovacao = models.TextField(blank=True)
+    aprovado_em = models.DateTimeField(null=True, blank=True)
+    aprovado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="compromissos_aprovados",
+    )
     criado_em = models.DateTimeField(auto_now_add=True)
 
     @property
     def valor_executado(self):
+        valor_anotado = getattr(self, "valor_executado_anotado", None)
+        if valor_anotado is not None:
+            return valor_anotado or Decimal("0.00")
         if self.tipo == "CONTRATO":
             total = self.medicoes.aggregate(total=Sum("valor_medido"))["total"]
         else:
@@ -332,6 +990,9 @@ class Compromisso(models.Model):
 
     @property
     def saldo(self):
+        saldo_anotado = getattr(self, "saldo_anotado", None)
+        if saldo_anotado is not None:
+            return arredondar_moeda(saldo_anotado)
         return arredondar_moeda(self.valor_contratado - self.valor_executado)
 
     @property
@@ -386,20 +1047,48 @@ class AditivoContrato(models.Model):
 
     contrato = models.ForeignKey(Compromisso, on_delete=models.CASCADE, related_name="aditivos")
     tipo = models.CharField(max_length=20, choices=TIPO_CHOICES)
+    status = models.CharField(max_length=20, choices=STATUS_ADITIVO_CHOICES, default="RASCUNHO")
     descricao = models.CharField(max_length=500, blank=True)
+    motivo_mudanca = models.TextField(blank=True)
+    impacto_resumido = models.CharField(max_length=255, blank=True)
+    solicitado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="aditivos_solicitados",
+    )
+    solicitado_em = models.DateTimeField(null=True, blank=True)
     # Para PRAZO: incremento em dias.
     delta_dias = models.IntegerField(null=True, blank=True)
+    enviado_para_aprovacao_em = models.DateTimeField(null=True, blank=True)
+    enviado_para_aprovacao_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="aditivos_enviados_para_aprovacao",
+    )
+    parecer_aprovacao = models.TextField(blank=True)
+    aprovado_em = models.DateTimeField(null=True, blank=True)
+    aprovado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="aditivos_aprovados",
+    )
     criado_em = models.DateTimeField(auto_now_add=True)
 
     def clean(self):
         if self.contrato_id and self.contrato.tipo != "CONTRATO":
-            raise ValidationError("Aditivos contratuais só podem ser vinculados a contratos.")
+            raise ValidationError("Aditivos contratuais sÃ³ podem ser vinculados a contratos.")
 
         if self.tipo == "PRAZO":
             if self.delta_dias in (None, ""):
                 raise ValidationError("Para aditivo de prazo, informe delta de dias.")
         else:
-            # VALOR/ESCOPO não usam delta_dias.
+            # VALOR/ESCOPO nÃ£o usam delta_dias.
             if self.delta_dias not in (None, 0, ""):
                 raise ValidationError("delta de dias deve ficar vazio apenas para aditivo de prazo.")
 
@@ -467,8 +1156,8 @@ class CompromissoItem(models.Model):
     valor_total = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal("0.00"))
 
     class Meta:
-        verbose_name = "Item da Compra/Contratação"
-        verbose_name_plural = "Itens da Compra/Contratação"
+        verbose_name = "Item da Compra/ContrataÃ§Ã£o"
+        verbose_name_plural = "Itens da Compra/ContrataÃ§Ã£o"
 
     def __str__(self):
         return f"{self.compromisso.numero} - {self.centro_custo.codigo}"
@@ -486,7 +1175,7 @@ class CompromissoItem(models.Model):
         if quantidade <= 0:
             raise ValidationError("A quantidade do item deve ser maior que zero.")
         if valor_unitario < 0:
-            raise ValidationError("O valor unitário do item não pode ser negativo.")
+            raise ValidationError("O valor unitÃ¡rio do item nÃ£o pode ser negativo.")
         self.quantidade = quantidade
         self.valor_unitario = valor_unitario
 
@@ -508,9 +1197,14 @@ class CompromissoItem(models.Model):
 
 class Medicao(models.Model):
     class Meta:
-        verbose_name = "Medição"
-        verbose_name_plural = "Medições"
+        verbose_name = "MediÃ§Ã£o"
+        verbose_name_plural = "MediÃ§Ãµes"
         ordering = ["-data_medicao"]
+        indexes = [
+            models.Index(fields=["obra", "status", "data_medicao"]),
+            models.Index(fields=["contrato", "data_medicao"]),
+            models.Index(fields=["obra", "fornecedor"]),
+        ]
 
     contrato = models.ForeignKey(Compromisso, on_delete=models.PROTECT, related_name="medicoes")
     obra = models.ForeignKey(Obra, on_delete=models.PROTECT, null=True, blank=True, related_name="medicoes")
@@ -535,6 +1229,23 @@ class Medicao(models.Model):
     data_prevista_fim = models.DateField(null=True, blank=True)
     descricao = models.CharField(max_length=900)
     valor_medido = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal("0.00"))
+    enviado_para_aprovacao_em = models.DateTimeField(null=True, blank=True)
+    enviado_para_aprovacao_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="medicoes_enviadas_para_aprovacao",
+    )
+    parecer_aprovacao = models.TextField(blank=True)
+    aprovado_em = models.DateTimeField(null=True, blank=True)
+    aprovado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="medicoes_aprovadas",
+    )
     criado_em = models.DateTimeField(auto_now_add=True)
 
     @property
@@ -585,8 +1296,8 @@ class MedicaoItem(models.Model):
     valor_total = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal("0.00"))
 
     class Meta:
-        verbose_name = "Item da Medição"
-        verbose_name_plural = "Itens da Medição"
+        verbose_name = "Item da MediÃ§Ã£o"
+        verbose_name_plural = "Itens da MediÃ§Ã£o"
 
     def __str__(self):
         return f"{self.medicao.numero_da_medicao} - {self.centro_custo.codigo}"
@@ -604,16 +1315,16 @@ class MedicaoItem(models.Model):
         if quantidade <= 0:
             raise ValidationError("A quantidade do item medido deve ser maior que zero.")
         if valor_unitario < 0:
-            raise ValidationError("O valor unitário do item medido não pode ser negativo.")
+            raise ValidationError("O valor unitÃ¡rio do item medido nÃ£o pode ser negativo.")
         self.quantidade = quantidade
         self.valor_unitario = valor_unitario
         if self.medicao_id and self.medicao.contrato_id:
             item_contrato = self.medicao.contrato.itens.filter(centro_custo=self.centro_custo).first()
             if item_contrato:
                 if self.unidade and self.unidade != item_contrato.unidade:
-                    raise ValidationError("A unidade da medição deve ser igual à unidade definida no contrato.")
+                    raise ValidationError("A unidade da mediÃ§Ã£o deve ser igual Ã  unidade definida no contrato.")
                 if self.valor_unitario and self.valor_unitario != item_contrato.valor_unitario:
-                    raise ValidationError("O valor unitário da medição deve ser igual ao valor unitário definido no contrato.")
+                    raise ValidationError("O valor unitÃ¡rio da mediÃ§Ã£o deve ser igual ao valor unitÃ¡rio definido no contrato.")
 
     def save(self, *args, **kwargs):
         if self.medicao_id and self.medicao.contrato_id:
@@ -638,9 +1349,15 @@ class NotaFiscal(models.Model):
         verbose_name = "Nota Fiscal"
         verbose_name_plural = "Notas Fiscais"
         ordering = ["-data_emissao"]
+        indexes = [
+            models.Index(fields=["obra", "status", "data_emissao"]),
+            models.Index(fields=["medicao", "data_emissao"]),
+            models.Index(fields=["pedido_compra", "data_emissao"]),
+            models.Index(fields=["obra", "fornecedor"]),
+        ]
 
     TIPO_CHOICES = (
-        ("SERVICO", "Nota de Serviço"),
+        ("SERVICO", "Nota de ServiÃ§o"),
         ("MATERIAL", "Nota de Material"),
     )
 
@@ -653,6 +1370,7 @@ class NotaFiscal(models.Model):
     etapa = models.CharField(max_length=120, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_NOTA_CHOICES, default="LANCADA")
     data_emissao = models.DateField()
+    data_vencimento = models.DateField(null=True, blank=True)
     fornecedor = models.CharField(max_length=150)
     cnpj = models.CharField(max_length=18, validators=[cnpj_validator])
     descricao = models.CharField(max_length=500)
@@ -718,7 +1436,7 @@ class NotaFiscalCentroCusto(models.Model):
                 permitidos_ids = {self.nota_fiscal.medicao.centro_custo_id}
 
         if permitidos_ids is not None and self.centro_custo_id not in permitidos_ids:
-            raise ValidationError("Centro de custo não pertence à origem desta nota fiscal.")
+            raise ValidationError("Centro de custo nÃ£o pertence Ã  origem desta nota fiscal.")
 
         if self.valor:
             total_rateado = (
@@ -760,6 +1478,7 @@ class HistoricoOperacional(models.Model):
     compromisso = models.ForeignKey(Compromisso, on_delete=models.CASCADE, null=True, blank=True, related_name="historicos")
     medicao = models.ForeignKey(Medicao, on_delete=models.CASCADE, null=True, blank=True, related_name="historicos")
     nota_fiscal = models.ForeignKey(NotaFiscal, on_delete=models.CASCADE, null=True, blank=True, related_name="historicos")
+    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="historicos_operacionais")
     acao = models.CharField(max_length=40)
     descricao = models.CharField(max_length=255)
     criado_em = models.DateTimeField(auto_now_add=True)
@@ -794,7 +1513,7 @@ class FechamentoMensal(models.Model):
 class Documento(models.Model):
     """
     Modelo para controle documental ISO 7.5.
-    Documentos controlados com workflow de aprovação e versionamento.
+    Documentos controlados com workflow de aprovaÃ§Ã£o e versionamento.
     """
     class Meta:
         verbose_name = "Documento Controlado"
@@ -807,19 +1526,26 @@ class Documento(models.Model):
 
     STATUS_CHOICES = (
         ("RASCUNHO", "Rascunho"),
-        ("EM_REVISAO", "Em Revisão"),
+        ("EM_REVISAO", "Em RevisÃ£o"),
         ("APROVADO", "Aprovado"),
         ("OBSOLETO", "Obsoleto"),
     )
 
+    STATUS_SEMANTICO = {
+        "RASCUNHO": ("EM_ELABORACAO", "Em elaboraÃ§Ã£o", "secondary"),
+        "EM_REVISAO": ("SUBMETIDO_VALIDACAO", "Submetido para validaÃ§Ã£o", "warning"),
+        "APROVADO": ("VALIDADO", "Validado", "success"),
+        "OBSOLETO": ("ENCERRADO", "Encerrado", "dark"),
+    }
+
     TIPO_CHOICES = (
         ("PROCEDIMENTO", "Procedimento"),
-        ("INSTRUCAO", "Instrução de Trabalho"),
+        ("INSTRUCAO", "InstruÃ§Ã£o de Trabalho"),
         ("REGISTRO", "Registro de Qualidade"),
         ("MANUAL", "Manual"),
-        ("POLITICA", "Política"),
+        ("POLITICA", "PolÃ­tica"),
         ("ROTEIRO", "Roteiro/Checklist"),
-        ("FORMULARIO", "Formulário"),
+        ("FORMULARIO", "FormulÃ¡rio"),
         ("OUTRO", "Outro"),
     )
 
@@ -832,11 +1558,11 @@ class Documento(models.Model):
         null=True,
         blank=True,
         related_name="documentos",
-        help_text="Vincular à EAP nível 5"
+        help_text="Vincular Ã  EAP nÃ­vel 5"
     )
     
     tipo_documento = models.CharField(max_length=20, choices=TIPO_CHOICES)
-    codigo_documento = models.CharField(max_length=30, help_text="Código único do documento")
+    codigo_documento = models.CharField(max_length=30, help_text="CÃ³digo Ãºnico do documento")
     titulo = models.CharField(max_length=255)
     
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="RASCUNHO")
@@ -855,7 +1581,7 @@ class Documento(models.Model):
         super().save(*args, **kwargs)
 
     def gerar_codigo(self):
-        """Gera código único para o documento."""
+        """Gera cÃ³digo Ãºnico para o documento."""
         from datetime import datetime
         prefixos = {
             "PROCEDIMENTO": "PRO",
@@ -885,7 +1611,7 @@ class Documento(models.Model):
         return f"{prefixo}-{ano}-0001"
 
     def pode_revisar(self):
-        return self.status in ["RASCUNHO", "EM_REVISAO"]
+        return self.status == "RASCUNHO"
 
     def pode_aprovar(self):
         return self.status == "EM_REVISAO" and self.revisoes.exists()
@@ -896,15 +1622,31 @@ class Documento(models.Model):
     def get_versao_aprovada(self):
         return self.revisoes.filter(status="APROVADO").order_by("-versao").first()
 
+    @property
+    def ultima_revisao(self):
+        return self.revisoes.order_by("-versao").first()
+
+    @property
+    def status_semantico(self):
+        return self.STATUS_SEMANTICO.get(self.status, ("OUTRO", self.get_status_display(), "secondary"))[0]
+
+    @property
+    def status_semantico_display(self):
+        return self.STATUS_SEMANTICO.get(self.status, ("OUTRO", self.get_status_display(), "secondary"))[1]
+
+    @property
+    def status_badge_class(self):
+        return self.STATUS_SEMANTICO.get(self.status, ("OUTRO", self.get_status_display(), "secondary"))[2]
+
 
 class DocumentoRevisao(models.Model):
     """
-    Modelo para revisões de documentos (imutáveis após aprovação).
-    ISO 7.5 - Controle de versões de documentos.
+    Modelo para revisÃµes de documentos (imutÃ¡veis apÃ³s aprovaÃ§Ã£o).
+    ISO 7.5 - Controle de versÃµes de documentos.
     """
     class Meta:
-        verbose_name = "Revisão de Documento"
-        verbose_name_plural = "Revisões de Documentos"
+        verbose_name = "RevisÃ£o de Documento"
+        verbose_name_plural = "RevisÃµes de Documentos"
         ordering = ["-versao"]
         unique_together = ("documento", "versao")
         indexes = [
@@ -912,10 +1654,16 @@ class DocumentoRevisao(models.Model):
         ]
 
     STATUS_CHOICES = (
-        ("ELABORACAO", "Em Elaboração"),
-        ("REVISAO", "Em Revisão"),
+        ("ELABORACAO", "Em ElaboraÃ§Ã£o"),
+        ("REVISAO", "Em RevisÃ£o"),
         ("APROVADO", "Aprovado"),
     )
+
+    STATUS_SEMANTICO = {
+        "ELABORACAO": ("EM_ELABORACAO", "Em elaboraÃ§Ã£o", "secondary"),
+        "REVISAO": ("SUBMETIDO_VALIDACAO", "Submetido para validaÃ§Ã£o", "warning"),
+        "APROVADO": ("VALIDADO", "Validado", "success"),
+    }
 
     documento = models.ForeignKey(Documento, on_delete=models.CASCADE, related_name="revisoes")
     versao = models.PositiveIntegerField()
@@ -946,11 +1694,11 @@ class DocumentoRevisao(models.Model):
     )
     data_aprovacao = models.DateTimeField(null=True, blank=True)
     
-    parecer = models.TextField(blank=True, help_text="Parecer sobre a revisão")
+    parecer = models.TextField(blank=True, help_text="Parecer sobre a revisÃ£o")
     arquivo_aprovado = models.FileField(
         upload_to="documentos/aprovados/%Y/%m",
         blank=True,
-        help_text="Cópia imutável do arquivo aprovado"
+        help_text="CÃ³pia imutÃ¡vel do arquivo aprovado"
     )
 
     def __str__(self):
@@ -963,6 +1711,14 @@ class DocumentoRevisao(models.Model):
 
     def pode_aprovar(self):
         return self.status == "REVISAO"
+
+    @property
+    def status_semantico_display(self):
+        return self.STATUS_SEMANTICO.get(self.status, ("OUTRO", self.get_status_display(), "secondary"))[1]
+
+    @property
+    def status_badge_class(self):
+        return self.STATUS_SEMANTICO.get(self.status, ("OUTRO", self.get_status_display(), "secondary"))[2]
 
 
 # Reexports incrementais para manter compatibilidade de imports centralizados.
@@ -978,3 +1734,11 @@ from .models_aquisicoes import (  # noqa: E402,F401
     SolicitacaoCompra,
     SolicitacaoCompraItem,
 )
+from .models_comunicacoes import (  # noqa: E402,F401
+    HistoricoReuniaoComunicacao,
+    ItemPautaReuniao,
+    ParametroComunicacaoEmpresa,
+    ReuniaoComunicacao,
+)
+
+

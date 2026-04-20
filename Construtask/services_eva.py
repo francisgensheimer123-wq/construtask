@@ -1,7 +1,10 @@
 from datetime import date
 from decimal import Decimal
 
-from .models_planejamento import PlanoFisicoItem
+from django.db.models import Count, Sum
+
+from .models import PlanoContas
+from .models_planejamento import PlanoFisico, PlanoFisicoItem
 from .services_integracao import IntegracaoService
 
 
@@ -9,17 +12,40 @@ class EVAService:
     @classmethod
     def calcular(cls, obra, data_referencia=None):
         data_referencia = data_referencia or date.today()
-        baseline = IntegracaoService.obter_baseline_ativo(obra)
-        pv = IntegracaoService.calcular_valor_planejado_ate_data(obra, data_referencia)
-        ev = cls._calcular_earned_value(baseline)
-        ac = IntegracaoService.consolidar_obra(obra, data_referencia)["executado"]
+        zero = Decimal("0.00")
+
+        bac = (
+            PlanoContas.objects
+            .filter(obra=obra)
+            .annotate(filhos_count=Count("filhos"))
+            .filter(filhos_count=0)
+            .aggregate(total=Sum("valor_total"))["total"] or zero
+        )
+
+        if bac == zero:
+            bac = (
+                PlanoContas.objects
+                .filter(obra=obra)
+                .annotate(n_filhos=Count("filhos"))
+                .filter(n_filhos=0)
+                .aggregate(total=Sum("valor_total"))["total"] or zero
+            )
+
+        pv = cls._calcular_pv(obra, data_referencia)
+        ev = IntegracaoService.calcular_valor_agregado_operacional(obra, data_referencia)
+        ac = IntegracaoService.calcular_custo_real_operacional(obra, data_referencia)
 
         cv = ev - ac
         sv = ev - pv
         cpi = cls._safe_div(ev, ac)
         spi = cls._safe_div(ev, pv)
+        eac = cls._safe_div(bac, cpi) if cpi > zero else bac
+        etc = eac - ac
+        vac = bac - eac
+        tcpi = cls._safe_div(bac - ev, bac - ac)
 
         return {
+            "BAC": bac,
             "PV": pv,
             "EV": ev,
             "AC": ac,
@@ -27,21 +53,84 @@ class EVAService:
             "SV": sv.quantize(Decimal("0.01")),
             "CPI": cpi,
             "SPI": spi,
+            "EAC": eac,
+            "ETC": etc,
+            "VAC": vac,
+            "TCPI": tcpi,
+            "percentual_planejado": cls._safe_div(pv, bac) * Decimal("100"),
+            "percentual_executado": cls._safe_div(ev, bac) * Decimal("100"),
+            "percentual_pago": cls._safe_div(ac, bac) * Decimal("100"),
+            "status_semaforo": cls._semaforo(cpi, spi),
+            "data_corte": data_referencia.isoformat(),
         }
 
-    @staticmethod
-    def _calcular_earned_value(baseline):
-        if not baseline:
-            return Decimal("0.00")
+    @classmethod
+    def _calcular_pv(cls, obra, data_referencia):
+        zero = Decimal("0.00")
+        plano = (
+            PlanoFisico.objects
+            .filter(obra=obra)
+            .order_by("-is_baseline", "-created_at")
+            .first()
+        )
+        if not plano:
+            return cls._pv_linear_legado(obra, data_referencia)
 
-        total = Decimal("0.00")
-        for item in baseline.itens.all():
-            percentual = Decimal(item.percentual_concluido or 0) / Decimal("100")
-            total += (item.valor_planejado or Decimal("0.00")) * percentual
-        return total.quantize(Decimal("0.01"))
+        itens_ate_corte = PlanoFisicoItem.objects.filter(
+            plano=plano,
+            filhos__isnull=True,
+            data_fim_prevista__lte=data_referencia,
+        )
+        itens_em_andamento = PlanoFisicoItem.objects.filter(
+            plano=plano,
+            filhos__isnull=True,
+            data_inicio_prevista__lte=data_referencia,
+            data_fim_prevista__gt=data_referencia,
+        )
+
+        pv = itens_ate_corte.aggregate(total=Sum("valor_planejado"))["total"] or zero
+
+        for item in itens_em_andamento:
+            if item.data_inicio_prevista and item.data_fim_prevista and item.valor_planejado:
+                total_dias = (item.data_fim_prevista - item.data_inicio_prevista).days or 1
+                dias_decorridos = (data_referencia - item.data_inicio_prevista).days
+                proporcao = Decimal(str(min(dias_decorridos / total_dias, 1.0)))
+                pv += item.valor_planejado * proporcao
+
+        return pv
+
+    @classmethod
+    def _pv_linear_legado(cls, obra, data_referencia):
+        zero = Decimal("0.00")
+        if not obra.data_inicio or not obra.data_fim:
+            return zero
+
+        bac = (
+            PlanoContas.objects
+            .filter(obra=obra)
+            .annotate(n_filhos=Count("filhos"))
+            .filter(n_filhos=0)
+            .aggregate(total=Sum("valor_total"))["total"] or zero
+        )
+
+        total_dias = (obra.data_fim - obra.data_inicio).days or 1
+        dias_decorridos = max(0, (data_referencia - obra.data_inicio).days)
+        proporcao = Decimal(str(min(dias_decorridos / total_dias, 1.0)))
+        return bac * proporcao
 
     @staticmethod
     def _safe_div(numerador, denominador):
-        if not denominador:
-            return Decimal("0.00")
-        return (Decimal(numerador) / Decimal(denominador)).quantize(Decimal("0.01"))
+        zero = Decimal("0.00")
+        if not denominador or denominador == zero:
+            return zero
+        return (Decimal(str(numerador)) / Decimal(str(denominador))).quantize(Decimal("0.0001"))
+
+    @staticmethod
+    def _semaforo(cpi, spi):
+        limite_vermelho = Decimal("0.85")
+        limite_amarelo = Decimal("0.95")
+        if cpi < limite_vermelho or spi < limite_vermelho:
+            return "VERMELHO"
+        if cpi < limite_amarelo or spi < limite_amarelo:
+            return "AMARELO"
+        return "VERDE"

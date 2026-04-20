@@ -1,5 +1,6 @@
 {% extends "app/base.html" %}
 {% load formatters %}
+{% load formatters %}
 
 {% block main_class %}main-full{% endblock %}
 {% block title %}Obras | Construtask{% endblock %}
@@ -46,7 +47,9 @@
             <td>{{ obra.nome }}</td>
             <td>{{ obra.cliente|default:"-" }}</td>
             <td>{{ obra.responsavel|default:"-" }}</td>
-            <td>{{ obra.get_status_display }}</td>
+            <td>
+                <span class="badge bg-{{ obra|workflow_badge_class }}">{{ obra.get_status_display }}</span>
+            </td>
             <td>{% if obra.data_inicio %}{{ obra.data_inicio|date:"d/m/Y" }}{% else %}-{% endif %} a {% if obra.data_fim %}{{ obra.data_fim|date:"d/m/Y" }}{% else %}-{% endif %}</td>
             <td><a href="{% url 'obra_update' obra.pk %}">Editar</a></td>
         </tr>

@@ -1,0 +1,233 @@
+{% extends "app/base.html" %}
+{% load formatters %}
+
+{% block title %}{{ reuniao.numero }} | Comunicacoes{% endblock %}
+
+{% block content %}
+<style>
+    .pauta-secao + .pauta-secao {
+        margin-top: 18px;
+    }
+    .pauta-secao h4 {
+        margin-bottom: 10px;
+    }
+    textarea.js-auto-expand {
+        min-height: 52px;
+        resize: vertical;
+        overflow: hidden;
+    }
+</style>
+<div class="toolbar">
+    <div>
+        <h2>{{ reuniao.numero }}</h2>
+        <p>{{ reuniao.titulo }} | <span class="badge bg-{{ reuniao|workflow_badge_class }}">{{ reuniao.get_status_display }}</span></p>
+    </div>
+    <div style="display:flex; gap:10px;">
+        <a class="btn secondary" href="{% url 'reuniao_comunicacao_pauta_excel' reuniao.pk %}">Pauta Excel</a>
+        <a class="btn secondary" href="{% url 'reuniao_comunicacao_pauta_pdf' reuniao.pk %}">Pauta PDF</a>
+        <a class="btn secondary" href="{% url 'reuniao_comunicacao_ata_excel' reuniao.pk %}">Ata Excel</a>
+        <a class="btn secondary" href="{% url 'reuniao_comunicacao_ata_pdf' reuniao.pk %}">Ata PDF</a>
+        <a class="btn secondary" href="{% url 'reuniao_comunicacao_list' %}">Voltar</a>
+    </div>
+</div>
+
+{% if messages %}
+<div class="messages">
+    {% for message in messages %}
+    <div class="message {{ message.tags }}">{{ message }}</div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<section class="grid-2">
+    <div class="panel">
+        <h3>Cabecalho da reuniao</h3>
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="acao" value="salvar_reuniao">
+            <div class="grid-2">
+                {% for field in reuniao_form %}
+                <div class="field">
+                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    {% for error in field.errors %}<small style="color:#7f1d1d;">{{ error }}</small>{% endfor %}
+                </div>
+                {% endfor %}
+            </div>
+            <div class="actions">
+                {% if pode_atualizar %}
+                <button type="submit" class="btn secondary">Salvar cabecalho</button>
+                {% endif %}
+            </div>
+        </form>
+        <table class="compact-table" style="margin-top:12px;">
+            <tbody>
+                <tr><th>Obra</th><td>{{ reuniao.obra.codigo }} - {{ reuniao.obra.nome }}</td></tr>
+                <tr><th>Periodicidade</th><td>{{ reuniao.periodicidade_dias }} dia(s)</td></tr>
+                <tr><th>Pauta validada por</th><td>{% if reuniao.pauta_validada_por %}{{ reuniao.pauta_validada_por.username }} em {{ reuniao.pauta_validada_em|date:"d/m/Y H:i" }}{% else %}-{% endif %}</td></tr>
+                <tr><th>Proxima data sugerida</th><td>{{ proxima_data_sugerida|date:"d/m/Y" }}</td></tr>
+                <tr><th>Enviado para aprovacao</th><td>{% if reuniao.enviado_para_aprovacao_por %}{{ reuniao.enviado_para_aprovacao_por.username }} em {{ reuniao.enviado_para_aprovacao_em|date:"d/m/Y H:i" }}{% else %}-{% endif %}</td></tr>
+                <tr><th>Aprovado por</th><td>{% if reuniao.aprovado_por %}{{ reuniao.aprovado_por.username }} em {{ reuniao.aprovado_em|date:"d/m/Y H:i" }}{% else %}-{% endif %}</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="panel">
+        <h3>Ata compilada</h3>
+        <pre style="white-space:pre-wrap; background:#111827; color:#f9fafb; padding:16px; border-radius:12px; min-height:220px;">{{ reuniao.ata_texto|default:"Ata ainda nao compilada." }}</pre>
+        <form method="post" action="{% url 'reuniao_comunicacao_compilar_ata' reuniao.pk %}">
+            {% csrf_token %}
+            <div class="actions">
+                {% if pode_atualizar %}
+                <button type="submit" class="btn secondary">Recompilar ata</button>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</section>
+
+<section class="panel" style="margin-top:20px;">
+    <div class="toolbar">
+        <div>
+            <h3>Pauta semi automatica</h3>
+            <p class="muted">
+                {% if estrutura_pauta_bloqueada %}
+                Estrutura da pauta bloqueada apos a validacao. Agora so e possivel atualizar o que sera feito, por quem e quando.
+                {% else %}
+                Revise os itens gerados automaticamente, remova os que nao se aplicam e complemente com itens manuais.
+                {% endif %}
+            </p>
+        </div>
+    </div>
+    <form method="post">
+        {% csrf_token %}
+        {{ item_formset.management_form }}
+        {% if secoes_pauta %}
+            {% for secao in secoes_pauta %}
+            <div class="pauta-secao">
+                <h4>{{ secao.rotulo }}</h4>
+                <div class="table-responsive">
+                    <table class="compact-table">
+                        <thead>
+                            <tr>
+                                <th>Ativo</th>
+                                <th>Ordem</th>
+                                <th>Item</th>
+                                <th>Contexto</th>
+                                <th>O que sera feito</th>
+                                <th>Quem fara</th>
+                                <th>Quando</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for form in secao.forms %}
+                            <tr>
+                                <td>{{ form.ativo }}</td>
+                                <td style="width:90px;">{{ form.ordem }}</td>
+                                <td style="min-width:260px;">
+                                    {{ form.titulo }}
+                                    <div class="muted" style="margin-top:8px;">{{ form.instance.get_categoria_display }} | {{ form.instance.get_origem_tipo_display }}</div>
+                                </td>
+                                <td style="min-width:260px;">{{ form.descricao }}</td>
+                                <td style="min-width:260px;">{{ form.resposta_o_que }}</td>
+                                <td style="min-width:180px;">{{ form.resposta_quem }}</td>
+                                <td style="width:160px;">{{ form.resposta_quando }}</td>
+                            </tr>
+                            {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+        <p class="empty">Nenhum item ativo na pauta.</p>
+        {% endif %}
+
+        {% if not estrutura_pauta_bloqueada %}
+        <h4 style="margin-top:18px;">Adicionar item manual</h4>
+        <div class="grid-3">
+            {% for field in item_manual_form %}
+            <div class="field">
+                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+                {% for error in field.errors %}<small style="color:#7f1d1d;">{{ error }}</small>{% endfor %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="actions">
+            {% if pode_atualizar %}
+            <button type="submit" class="btn secondary" name="acao" value="salvar_pauta">Salvar pauta</button>
+            {% if not estrutura_pauta_bloqueada %}
+            <button type="submit" class="btn" name="acao" value="validar_pauta">Validar pauta</button>
+            {% endif %}
+            <button type="submit" class="btn secondary" name="acao" value="enviar_para_aprovacao">Enviar ata para aprovacao</button>
+            {% endif %}
+        </div>
+    </form>
+</section>
+
+<section class="grid-2" style="margin-top:20px;">
+    <div class="panel">
+        <h3>Workflow da ata</h3>
+        <form method="post">
+            {% csrf_token %}
+            <div class="field">
+                <label for="id_parecer_aprovacao">Parecer</label>
+                <textarea id="id_parecer_aprovacao" name="parecer_aprovacao" rows="4" class="js-auto-expand" data-min-rows="4">{{ reuniao.parecer_aprovacao }}</textarea>
+            </div>
+            <div class="actions">
+                {% if pode_aprovar and reuniao.status == "EM_APROVACAO" %}
+                <button type="submit" class="btn" name="acao" value="aprovar">Aprovar ata</button>
+                <button type="submit" class="btn secondary" name="acao" value="retornar_para_ajuste">Retornar para ajuste</button>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
+    <div class="panel">
+        <h3>Linha do tempo</h3>
+        {% if historicos %}
+        <table class="compact-table">
+            <thead>
+                <tr>
+                    <th>Data/Hora</th>
+                    <th>Acao</th>
+                    <th>Usuario</th>
+                    <th>Observacao</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for evento in historicos %}
+                <tr>
+                    <td>{{ evento.criado_em|date:"d/m/Y H:i" }}</td>
+                    <td>{{ evento.get_acao_display }}</td>
+                    <td>{{ evento.usuario|default:"-" }}</td>
+                    <td>{{ evento.observacao|default:"-" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="empty">Nenhum evento registrado.</p>
+        {% endif %}
+    </div>
+</section>
+<script>
+    (function () {
+        function autoResize(textarea) {
+            textarea.style.height = "auto";
+            textarea.style.height = textarea.scrollHeight + "px";
+        }
+
+        document.querySelectorAll("textarea.js-auto-expand").forEach(function (textarea) {
+            autoResize(textarea);
+            textarea.addEventListener("input", function () {
+                autoResize(textarea);
+            });
+        });
+    })();
+</script>
+{% endblock %}

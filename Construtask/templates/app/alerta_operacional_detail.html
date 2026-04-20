@@ -1,0 +1,225 @@
+{% extends "app/base.html" %}
+{% load formatters %}
+
+{% block content %}
+<section class="page-shell">
+    <div class="page-header">
+        <div>
+            <h1>{{ alerta.titulo }}</h1>
+            <p>{{ alerta.codigo_regra }} - {{ alerta.referencia }}</p>
+        </div>
+        <div class="page-actions">
+            <a class="btn btn-secondary" href="{% url 'alerta_operacional_list' %}">Voltar para a Central</a>
+        </div>
+    </div>
+
+    <section class="dashboard-grid dashboard-grid-2">
+        <article class="card">
+            <div class="card-header">
+                <h3>Resumo do Alerta</h3>
+            </div>
+            <div class="card-body">
+                <table class="compact-table">
+                    <tbody>
+                        <tr><th>Obra</th><td>{{ alerta.obra }}</td></tr>
+                        <tr><th>Regra</th><td class="code-cell">{{ alerta.codigo_regra }}</td></tr>
+                        <tr><th>Severidade</th><td>{{ alerta.get_severidade_display }}</td></tr>
+                        <tr>
+                            <th>Status</th>
+                            <td>
+                                <span class="badge bg-{{ alerta|workflow_badge_class }}">{{ alerta.get_status_display }}</span>
+                                <div><small class="text-muted">{{ alerta|workflow_stage_display }}</small></div>
+                            </td>
+                        </tr>
+                        <tr><th>Responsavel</th><td>{{ alerta.responsavel|default:"Nao informado" }}</td></tr>
+                        <tr><th>Prazo para solucao</th><td>{% if alerta.prazo_solucao_em %}{{ alerta.prazo_solucao_em|date:"d/m/Y" }}{% else %}Nao informado{% endif %}</td></tr>
+                        <tr><th>Ultima acao</th><td>{% if alerta.ultima_acao_em %}{{ alerta.ultima_acao_em|date:"d/m/Y H:i" }}{% else %}Nao informado{% endif %}</td></tr>
+                        <tr><th>Ultima acao por</th><td>{{ alerta.ultima_acao_por|default:"Nao informado" }}</td></tr>
+                        <tr><th>Data de referencia</th><td>{% if alerta.data_referencia %}{{ alerta.data_referencia|date:"d/m/Y" }}{% else %}Nao informado{% endif %}</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </article>
+        <article class="card">
+            <div class="card-header">
+                <h3>Descricao e Evidencias</h3>
+            </div>
+            <div class="card-body">
+                <p>{{ alerta.descricao }}</p>
+                {% if alerta.observacao_status %}
+                <div class="info-box">
+                    <strong>Observacao atual</strong>
+                    <p>{{ alerta.observacao_status }}</p>
+                </div>
+                {% endif %}
+                {% if alerta.evidencias %}
+                <table class="compact-table">
+                    <thead>
+                        <tr>
+                            <th>Campo</th>
+                            <th>Valor</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for chave, valor in alerta.evidencias.items %}
+                        <tr>
+                            <td class="code-cell">{{ chave }}</td>
+                            <td class="wrap-text">{{ valor }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p class="empty">Nenhuma evidencia complementar registrada.</p>
+                {% endif %}
+            </div>
+        </article>
+    </section>
+
+    {% if regra_catalogo %}
+    <section class="dashboard-grid dashboard-grid-2">
+        <article class="card">
+            <div class="card-header">
+                <h3>Regra Operacional</h3>
+            </div>
+            <div class="card-body">
+                <table class="compact-table">
+                    <tbody>
+                        <tr><th>Frente</th><td>{{ regra_catalogo.frente }}</td></tr>
+                        <tr><th>Gatilho</th><td class="wrap-text">{{ regra_catalogo.gatilho }}</td></tr>
+                        <tr><th>Impacto</th><td class="wrap-text">{{ regra_catalogo.impacto }}</td></tr>
+                        <tr><th>Parametro atual</th><td>{{ regra_catalogo.valor_atual }}</td></tr>
+                        <tr><th>Acao recomendada</th><td class="wrap-text">{{ regra_catalogo.acao_recomendada }}</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </article>
+        <article class="card">
+            <div class="card-header">
+                <h3>Execucao Automatica</h3>
+            </div>
+            <div class="card-body">
+                {% if execucoes_regra %}
+                <table class="compact-table">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Resultado</th>
+                            <th>Referencia</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for execucao in execucoes_regra %}
+                        <tr>
+                            <td class="no-break-data">{{ execucao.executado_em|date:"d/m/Y H:i" }}</td>
+                            <td>{{ execucao.get_resultado_display }}</td>
+                            <td class="wrap-text">{{ execucao.referencia|default:"-" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p class="empty">Nenhuma execucao automatica relevante registrada.</p>
+                {% endif %}
+            </div>
+        </article>
+    </section>
+    {% endif %}
+
+    <section class="dashboard-grid dashboard-grid-3">
+        {% if pode_assumir_alerta %}
+        <article class="card">
+            <div class="card-header">
+                <h3>Assumir Tratamento</h3>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{% url 'alerta_operacional_workflow' alerta.pk %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="acao" value="assumir">
+                    <input type="hidden" name="next" value="{{ request.path }}">
+                    <label for="prazo-solucao">Prazo para solucao</label>
+                    <input id="prazo-solucao" type="date" name="prazo_solucao_em" min="{{ today|date:'Y-m-d' }}" required>
+                    <label for="obs-assumir">Comentario</label>
+                    <textarea id="obs-assumir" name="observacao" rows="4" placeholder="Ex.: Alerta assumido pela coordenacao para apuracao imediata."></textarea>
+                    <button type="submit" class="btn btn-primary">Assumir</button>
+                </form>
+            </div>
+        </article>
+        {% endif %}
+        {% if pode_justificar_alerta %}
+        <article class="card">
+            <div class="card-header">
+                <h3>Justificar</h3>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{% url 'alerta_operacional_workflow' alerta.pk %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="acao" value="justificar">
+                    <input type="hidden" name="next" value="{{ request.path }}">
+                    <label for="obs-justificar">Justificativa</label>
+                    <textarea id="obs-justificar" name="observacao" rows="4" placeholder="Explique por que o alerta nao exige acao imediata."></textarea>
+                    <button type="submit" class="btn btn-secondary">Registrar Justificativa</button>
+                </form>
+            </div>
+        </article>
+        {% endif %}
+        {% if pode_encerrar_alerta or pode_reabrir_alerta %}
+        <article class="card">
+            <div class="card-header">
+                <h3>Encerrar ou Reabrir</h3>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{% url 'alerta_operacional_workflow' alerta.pk %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="acao" value="{% if alerta.status == 'ENCERRADO' %}reabrir{% else %}encerrar{% endif %}">
+                    <input type="hidden" name="next" value="{{ request.path }}">
+                    <label for="obs-encerrar">{% if alerta.status == 'ENCERRADO' %}Comentario de reabertura{% else %}Comentario de encerramento{% endif %}</label>
+                    <textarea id="obs-encerrar" name="observacao" rows="4" placeholder="{% if alerta.status == 'ENCERRADO' %}Informe por que o alerta voltou para acompanhamento.{% else %}Informe a evidencia utilizada para o encerramento.{% endif %}"></textarea>
+                    <button type="submit" class="btn {% if alerta.status == 'ENCERRADO' %}btn-secondary{% else %}btn-primary{% endif %}">
+                        {% if alerta.status == 'ENCERRADO' %}Reabrir Alerta{% else %}Encerrar Alerta{% endif %}
+                    </button>
+                </form>
+            </div>
+        </article>
+        {% endif %}
+    </section>
+
+    <section class="card">
+        <div class="card-header">
+            <h3>Histórico do Alerta</h3>
+        </div>
+        <div class="card-body">
+            {% if historico %}
+            <div class="table-responsive">
+                <table class="compact-table">
+                    <thead>
+                        <tr>
+                            <th class="no-break-data">Data</th>
+                            <th class="no-break-data">Acao</th>
+                            <th class="no-break-data">Status</th>
+                            <th class="no-break-data">Usuario</th>
+                            <th>Observacao</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in historico %}
+                        <tr>
+                            <td class="no-break-data">{{ item.criado_em|date:"d/m/Y H:i" }}</td>
+                            <td class="no-break-data">{{ item.get_acao_display }}</td>
+                            <td class="no-break-data">
+                                {% if item.status_anterior %}{{ item.status_anterior }} -> {% endif %}{{ item.status_novo|default:"-" }}
+                            </td>
+                            <td class="no-break-data">{{ item.usuario|default:"Sistema" }}</td>
+                            <td class="wrap-text">{{ item.observacao|default:"Nao informado" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="empty">Nenhum historico registrado para este alerta.</p>
+            {% endif %}
+        </div>
+    </section>
+</section>
+{% endblock %}

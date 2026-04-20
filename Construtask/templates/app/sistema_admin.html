@@ -1,0 +1,169 @@
+{% extends "app/base.html" %}
+
+{% block main_class %}main-full{% endblock %}
+{% block title %}Gerenciamento do Sistema | Construtask{% endblock %}
+
+{% block content %}
+<div class="empresa-admin-page">
+    <div class="toolbar">
+        <div>
+            <h2>Gerenciamento do Sistema</h2>
+            <p>Area exclusiva do superuser tecnico Construtask para sustentacao da plataforma e criacao do admin de cada empresa.</p>
+        </div>
+        <div>
+            <a class="btn secondary" href="{% url 'home' %}">Voltar</a>
+        </div>
+    </div>
+
+    {% if messages %}
+    <div class="messages">
+        {% for message in messages %}
+        <div class="message {{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <section class="panel" style="margin-bottom: 24px;">
+        <div class="toolbar">
+            <div>
+                <h3>Empresa em Gestao</h3>
+                <p class="muted">Selecione a empresa para consultar a base SaaS e administrar o usuario admin da empresa.</p>
+            </div>
+        </div>
+        <form method="get" style="display:flex; gap:12px; align-items:end; flex-wrap:wrap;">
+            <div class="field" style="min-width:320px;">
+                <label for="empresa">Empresa</label>
+                <select name="empresa" id="empresa">
+                    {% for emp in empresas %}
+                    <option value="{{ emp.pk }}"{% if empresa and emp.pk == empresa.pk %} selected{% endif %}>{{ emp.nome }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="btn secondary">Carregar Empresa</button>
+        </form>
+    </section>
+
+    {% if empresa %}
+    <section class="panel" style="margin-bottom: 24px;">
+        <h3>{{ empresa.nome }}</h3>
+        <p>CNPJ: {{ empresa.cnpj }}</p>
+        <p class="muted">A partir desta area a Construtask cria o admin principal da empresa. A gestao diaria da empresa ocorre no ambiente do admin da propria empresa.</p>
+    </section>
+
+    <section class="panel" style="margin-bottom: 24px;">
+        <div class="toolbar">
+            <div>
+                <h3>Base Operacional SaaS</h3>
+                <p class="muted">Diagnostico de banco, storage, backup e configuracao segura para sustentacao da plataforma.</p>
+            </div>
+            <div>
+                <span class="badge bg-{% if base_saas.status == 'ok' %}success{% elif base_saas.status == 'degraded' %}warning{% else %}danger{% endif %}">
+                    {{ base_saas.status|upper }}
+                </span>
+            </div>
+        </div>
+        <div class="cards" style="margin-bottom: 16px;">
+            <div class="card"><span>Ambiente</span><strong>{{ base_saas.ambiente }}</strong></div>
+            <div class="card"><span>Banco</span><strong>{{ base_saas.checks.database.vendor }}</strong></div>
+            <div class="card"><span>Storage</span><strong>{{ base_saas.checks.storage.backend }}</strong></div>
+            <div class="card"><span>Backup</span><strong>{{ base_saas.checks.backup.provedor|default:"-" }}</strong></div>
+        </div>
+        <table class="compact-table">
+            <thead>
+                <tr>
+                    <th>Frente</th>
+                    <th>Status</th>
+                    <th>Leitura Operacional</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in base_saas_checks %}
+                <tr>
+                    <td>{{ item.titulo }}</td>
+                    <td>
+                        <span class="badge bg-{% if item.status == 'ok' %}success{% elif item.status == 'warning' %}warning{% else %}danger{% endif %}">
+                            {{ item.status|upper }}
+                        </span>
+                    </td>
+                    <td>{{ item.detalhe }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <div class="cards" style="margin-top: 16px;">
+            <div class="card">
+                <span>Ultimo Backup</span>
+                <strong>{% if base_saas_backup.ultimo_backup %}{{ base_saas_backup.ultimo_backup.executado_em|date:"d/m/Y H:i" }}{% else %}-{% endif %}</strong>
+            </div>
+            <div class="card">
+                <span>Teste de Recuperacao</span>
+                <strong>{% if base_saas_backup.ultimo_teste_recuperacao %}{{ base_saas_backup.ultimo_teste_recuperacao.executado_em|date:"d/m/Y H:i" }}{% else %}-{% endif %}</strong>
+            </div>
+            <div class="card">
+                <span>Provider</span>
+                <strong>{{ base_saas_backup.provedor|default:"-" }}</strong>
+            </div>
+            <div class="card">
+                <span>Retencao</span>
+                <strong>{{ base_saas_backup.retencao_dias }} dia(s)</strong>
+            </div>
+        </div>
+    </section>
+
+    <section class="panel" style="margin-bottom: 24px;">
+        <div class="toolbar">
+            <div>
+                <h3>Admin da Empresa</h3>
+                <p class="muted">A Construtask cria aqui o usuario administrador principal da empresa. Os demais usuarios ficam sob responsabilidade desse admin.</p>
+            </div>
+        </div>
+
+        {% if admins_empresa %}
+        <table class="compact-table" style="margin-bottom:16px;">
+            <thead>
+                <tr>
+                    <th>Usuario</th>
+                    <th>Email</th>
+                    <th>Funcao</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for admin_empresa in admins_empresa %}
+                <tr>
+                    <td>{{ admin_empresa.usuario.username }}</td>
+                    <td>{{ admin_empresa.usuario.email|default:"-" }}</td>
+                    <td>{{ admin_empresa.get_papel_aprovacao_display }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="muted">Nenhum admin da empresa cadastrado ate o momento.</p>
+        {% endif %}
+
+        <form method="post" class="panel admin-subpanel">
+            {% csrf_token %}
+            <input type="hidden" name="acao" value="criar_admin_empresa">
+            <input type="hidden" name="empresa_id" value="{{ empresa.pk }}">
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:16px;">
+                <div class="field">
+                    <label for="id_username">Username *</label>
+                    <input type="text" name="username" id="id_username" required>
+                </div>
+                <div class="field">
+                    <label for="id_email">Email</label>
+                    <input type="email" name="email" id="id_email">
+                </div>
+                <div class="field">
+                    <label for="id_password">Senha *</label>
+                    <input type="password" name="password" id="id_password" required>
+                </div>
+            </div>
+            <div class="actions">
+                <button type="submit" class="btn">Criar Admin da Empresa</button>
+            </div>
+        </form>
+    </section>
+    {% endif %}
+</div>
+{% endblock %}

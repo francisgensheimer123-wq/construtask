@@ -1,4 +1,4 @@
-from decimal import Decimal
+﻿from decimal import Decimal
 
 from django.conf import settings
 from django.db import models
@@ -21,6 +21,9 @@ class Fornecedor(models.Model):
     telefone = models.CharField(max_length=20, blank=True)
     email = models.EmailField(blank=True)
     ativo = models.BooleanField(default=True)
+    exclusao_logica_em = models.DateTimeField(null=True, blank=True)
+    anonimizado_em = models.DateTimeField(null=True, blank=True)
+    descartado_em = models.DateTimeField(null=True, blank=True)
     criado_em = models.DateTimeField(auto_now_add=True)
 
     @property
@@ -37,8 +40,8 @@ class Fornecedor(models.Model):
 
 class FornecedorAvaliacao(models.Model):
     class Meta:
-        verbose_name = "Avaliação de Fornecedor"
-        verbose_name_plural = "Avaliações de Fornecedor"
+        verbose_name = "AvaliaÃ§Ã£o de Fornecedor"
+        verbose_name_plural = "AvaliaÃ§Ãµes de Fornecedor"
         ordering = ["-avaliado_em"]
 
     fornecedor = models.ForeignKey(Fornecedor, on_delete=models.CASCADE, related_name="avaliacoes")
@@ -57,8 +60,8 @@ class FornecedorAvaliacao(models.Model):
 
 class SolicitacaoCompra(models.Model):
     class Meta:
-        verbose_name = "Solicitação de Compra"
-        verbose_name_plural = "Solicitações de Compra"
+        verbose_name = "SolicitaÃ§Ã£o de Compra"
+        verbose_name_plural = "SolicitaÃ§Ãµes de Compra"
         ordering = ["-data_solicitacao", "-id"]
         indexes = [
             models.Index(fields=["empresa", "obra", "status"]),
@@ -66,8 +69,9 @@ class SolicitacaoCompra(models.Model):
 
     STATUS_CHOICES = (
         ("RASCUNHO", "Rascunho"),
+        ("EM_APROVACAO", "Em Aprovacao"),
         ("APROVADA", "Aprovada"),
-        ("COTANDO", "Em Cotação"),
+        ("COTANDO", "Em CotaÃ§Ã£o"),
         ("ENCERRADA", "Encerrada"),
         ("CANCELADA", "Cancelada"),
     )
@@ -88,6 +92,23 @@ class SolicitacaoCompra(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="RASCUNHO")
     data_solicitacao = models.DateField()
     observacoes = models.TextField(blank=True)
+    enviado_para_aprovacao_em = models.DateTimeField(null=True, blank=True)
+    enviado_para_aprovacao_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="solicitacoes_compra_enviadas_para_aprovacao",
+    )
+    parecer_aprovacao = models.TextField(blank=True)
+    aprovado_em = models.DateTimeField(null=True, blank=True)
+    aprovado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="solicitacoes_compra_aprovadas",
+    )
     criado_em = models.DateTimeField(auto_now_add=True)
 
     def save(self, *args, **kwargs):
@@ -121,12 +142,14 @@ class SolicitacaoCompraItem(models.Model):
 
 class Cotacao(models.Model):
     class Meta:
-        verbose_name = "Cotação"
-        verbose_name_plural = "Cotações"
+        verbose_name = "CotaÃ§Ã£o"
+        verbose_name_plural = "CotaÃ§Ãµes"
         ordering = ["-data_cotacao", "-id"]
 
     STATUS_CHOICES = (
-        ("EM_ANALISE", "Em Análise"),
+        ("RASCUNHO", "Rascunho"),
+        ("EM_APROVACAO", "Em Aprovacao"),
+        ("EM_ANALISE", "Em AnÃ¡lise"),
         ("APROVADA", "Aprovada"),
         ("REJEITADA", "Rejeitada"),
         ("CANCELADA", "Cancelada"),
@@ -137,12 +160,29 @@ class Cotacao(models.Model):
     solicitacao = models.ForeignKey(SolicitacaoCompra, on_delete=models.CASCADE, related_name="cotacoes")
     fornecedor = models.ForeignKey(Fornecedor, on_delete=models.PROTECT, related_name="cotacoes")
     numero = models.CharField(max_length=30, unique=True)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="EM_ANALISE")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="RASCUNHO")
     data_cotacao = models.DateField()
     validade_ate = models.DateField(null=True, blank=True)
     observacoes = models.TextField(blank=True)
     justificativa_escolha = models.TextField(blank=True)
     criado_por = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="cotacoes_criadas")
+    enviado_para_aprovacao_em = models.DateTimeField(null=True, blank=True)
+    enviado_para_aprovacao_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="cotacoes_enviadas_para_aprovacao",
+    )
+    parecer_aprovacao = models.TextField(blank=True)
+    aprovado_em = models.DateTimeField(null=True, blank=True)
+    aprovado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="cotacoes_aprovadas",
+    )
     criado_em = models.DateTimeField(auto_now_add=True)
 
     def save(self, *args, **kwargs):
@@ -176,8 +216,8 @@ class CotacaoItem(models.Model):
 
 class CotacaoAnexo(models.Model):
     class Meta:
-        verbose_name = "Anexo da Cotação"
-        verbose_name_plural = "Anexos das Cotações"
+        verbose_name = "Anexo da CotaÃ§Ã£o"
+        verbose_name_plural = "Anexos das CotaÃ§Ãµes"
         ordering = ["id"]
 
     cotacao = models.ForeignKey(Cotacao, on_delete=models.CASCADE, related_name="anexos")
@@ -198,9 +238,11 @@ class OrdemCompra(models.Model):
         ordering = ["-data_emissao", "-id"]
 
     STATUS_CHOICES = (
-        ("EMITIDA", "Emitida"),
+        ("RASCUNHO", "Rascunho"),
+        ("EM_APROVACAO", "Em Aprovação"),
+        ("APROVADA", "Aprovada"),
         ("PARCIAL", "Parcial"),
-        ("CONCLUIDA", "Concluída"),
+        ("CONCLUIDA", "ConcluÃ­da"),
         ("CANCELADA", "Cancelada"),
     )
 
@@ -217,11 +259,28 @@ class OrdemCompra(models.Model):
         related_name="ordens_compra_estruturadas",
     )
     numero = models.CharField(max_length=30, unique=True)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="EMITIDA")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="RASCUNHO")
     data_emissao = models.DateField()
     descricao = models.TextField(blank=True)
     emitido_por = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="ordens_compra_emitidas")
     valor_total = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal("0.00"))
+    enviado_para_aprovacao_em = models.DateTimeField(null=True, blank=True)
+    enviado_para_aprovacao_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="ordens_compra_enviadas_aprovacao",
+    )
+    parecer_aprovacao = models.TextField(blank=True)
+    aprovado_em = models.DateTimeField(null=True, blank=True)
+    aprovado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="ordens_compra_aprovadas",
+    )
     criado_em = models.DateTimeField(auto_now_add=True)
 
     def save(self, *args, **kwargs):
@@ -250,3 +309,4 @@ class OrdemCompraItem(models.Model):
             self.unidade = self.plano_contas.unidade or ""
         self.valor_total = calcular_total_item(self.quantidade, self.valor_unitario)
         super().save(*args, **kwargs)
+

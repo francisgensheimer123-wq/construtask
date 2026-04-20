@@ -12,6 +12,7 @@
     </div>
     <div style="display:flex; gap:10px;">
         <a class="btn secondary" href="{% url 'compromisso_export' %}?q={{ busca|urlencode }}">Exportar Excel</a>
+        <a class="btn secondary" href="{% url 'compromisso_lista_pdf' %}?q={{ busca|urlencode }}">Exportar PDF</a>
         <a class="btn" href="{% url 'compromisso_create' %}">Nova Compra ou Contratacao</a>
     </div>
 </div>
@@ -66,14 +67,12 @@
         {% for compromisso in compromissos %}
         <tr>
             <td>
-                {% if compromisso.tipo == "CONTRATO" %}
                 <a href="{% url 'contrato_detail' compromisso.pk %}">{{ compromisso.numero }}</a>
-                {% else %}
-                {{ compromisso.numero }}
-                {% endif %}
-            </td>
+              </td>
             <td>{% if compromisso.obra %}{{ compromisso.obra.codigo }}{% else %}-{% endif %}</td>
-            <td>{{ compromisso.get_status_display }}</td>
+            <td>
+              <span class="badge bg-{{ compromisso|workflow_badge_class }}">{{ compromisso.get_status_display }}</span>
+            </td>
             <td>{{ compromisso.get_tipo_display }}</td>
             <td>{{ compromisso.cnpj }}</td>
             <td>{{ compromisso.fornecedor }}</td>
@@ -95,6 +94,23 @@
         {% endfor %}
     </tbody>
 </table>
+{% if is_paginated %}
+<div class="panel" style="margin-top:16px;">
+    <div class="toolbar" style="justify-content:space-between; gap:12px; flex-wrap:wrap;">
+        <span class="muted">Pagina {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            {% if page_obj.has_previous %}
+            <a class="btn secondary" href="?{% if querystring_sem_pagina %}{{ querystring_sem_pagina }}&{% endif %}page=1">Primeira</a>
+            <a class="btn secondary" href="?{% if querystring_sem_pagina %}{{ querystring_sem_pagina }}&{% endif %}page={{ page_obj.previous_page_number }}">Anterior</a>
+            {% endif %}
+            {% if page_obj.has_next %}
+            <a class="btn secondary" href="?{% if querystring_sem_pagina %}{{ querystring_sem_pagina }}&{% endif %}page={{ page_obj.next_page_number }}">Proxima</a>
+            <a class="btn secondary" href="?{% if querystring_sem_pagina %}{{ querystring_sem_pagina }}&{% endif %}page={{ page_obj.paginator.num_pages }}">Ultima</a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endif %}
 {% else %}
 <p class="empty">Nenhuma compra ou contratacao cadastrada.</p>
 {% endif %}

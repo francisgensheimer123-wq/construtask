@@ -10,8 +10,12 @@
         <h2>Cotacoes</h2>
         <p>Comparativo e aprovacao de fornecedores antes da emissao da ordem de compra.</p>
     </div>
-    <a class="btn" href="{% url 'cotacao_create' %}">Nova Cotacao</a>
-</div>
+    <div style="display:flex; gap:8px;">
+        <a class="btn secondary" href="{% url 'cotacao_export' %}">Exportar Excel</a>
+        <a class="btn secondary" href="{% url 'cotacao_lista_pdf' %}">Exportar PDF</a>
+        <a class="btn" href="{% url 'cotacao_create' %}">Nova Cotacao</a>
+    </div>
+  </div>
 
 <div class="panel">
     {% if cotacoes %}
@@ -32,7 +36,9 @@
                 <td><a href="{% url 'cotacao_detail' cotacao.pk %}">{{ cotacao.numero }}</a></td>
                 <td>{{ cotacao.solicitacao.numero }}</td>
                 <td>{{ cotacao.fornecedor }}</td>
-                <td>{{ cotacao.get_status_display }}</td>
+                <td>
+                    <span class="badge bg-{{ cotacao|workflow_badge_class }}">{{ cotacao.get_status_display }}</span>
+                </td>
                 <td>{{ cotacao.data_cotacao|date:"d/m/Y" }}</td>
                 <td class="money">{{ cotacao.valor_total|money_br }}</td>
             </tr>

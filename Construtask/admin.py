@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 from django import forms
+from django.conf import settings
 from django.contrib import admin, messages
 from django.core.exceptions import ValidationError
 from django.db.models import Count, Sum
@@ -16,15 +17,29 @@ from .models import (
     AuditEvent,
     Compromisso,
     Empresa,
+    HistoricoReuniaoComunicacao,
+    ItemPautaReuniao,
     Medicao,
     NotaFiscal,
     NotaFiscalCentroCusto,
+    ParametroComunicacaoEmpresa,
     PlanoContas,
+    ReuniaoComunicacao,
     UserProfile,
     UsuarioEmpresa,
 )
 from .models_risco import Risco, RiscoHistorico
 from .services import importar_plano_contas_excel, obter_dados_contrato, validar_rateio_nota
+
+
+def _admin_superuser_autorizado(request):
+    user = getattr(request, "user", None)
+    if not user or not user.is_active or not user.is_superuser:
+        return False
+    return user.get_username() == getattr(settings, "CONSTRUTASK_ADMIN_SUPERUSER_USERNAME", "Construtask")
+
+
+admin.site.has_permission = _admin_superuser_autorizado
 
 
 class ImportExcelForm(forms.Form):
@@ -419,8 +434,8 @@ class UsuarioEmpresaAdmin(admin.ModelAdmin):
     Admin para gerenciar vínculo usuário-empresa.
     Apenas superusers podem criar UsuarioEmpresa.
     """
-    list_display = ("usuario", "empresa", "is_admin_empresa", "obras_count", "criado_em")
-    list_filter = ("is_admin_empresa", "empresa")
+    list_display = ("usuario", "empresa", "papel_aprovacao", "is_admin_empresa", "obras_count", "criado_em")
+    list_filter = ("papel_aprovacao", "is_admin_empresa", "empresa")
     search_fields = ("usuario__username", "usuario__email", "empresa__nome")
     raw_id_fields = ("usuario",)
     filter_horizontal = ("obras_permitidas",)
@@ -465,3 +480,30 @@ class RiscoHistoricoAdmin(admin.ModelAdmin):
     search_fields = ("risco__titulo", "usuario__username")
     readonly_fields = ("timestamp",)
 
+
+@admin.register(ParametroComunicacaoEmpresa)
+class ParametroComunicacaoEmpresaAdmin(admin.ModelAdmin):
+    list_display = ("empresa", "frequencia_curto_prazo_dias", "frequencia_medio_prazo_dias", "frequencia_longo_prazo_dias")
+    search_fields = ("empresa__nome",)
+
+
+class ItemPautaReuniaoInline(admin.TabularInline):
+    model = ItemPautaReuniao
+    extra = 0
+
+
+@admin.register(ReuniaoComunicacao)
+class ReuniaoComunicacaoAdmin(admin.ModelAdmin):
+    list_display = ("numero", "obra", "tipo_reuniao", "status", "data_prevista", "aprovado_em")
+    list_filter = ("tipo_reuniao", "status", "obra__empresa")
+    search_fields = ("numero", "titulo", "obra__codigo", "obra__nome")
+    readonly_fields = ("numero", "criado_em", "atualizado_em")
+    inlines = [ItemPautaReuniaoInline]
+
+
+@admin.register(HistoricoReuniaoComunicacao)
+class HistoricoReuniaoComunicacaoAdmin(admin.ModelAdmin):
+    list_display = ("reuniao", "acao", "usuario", "criado_em")
+    list_filter = ("acao", "criado_em")
+    search_fields = ("reuniao__numero", "usuario__username", "observacao")
+    readonly_fields = ("criado_em",)

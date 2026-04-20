@@ -12,6 +12,7 @@
     </div>
     <div style="display:flex; gap:10px;">
         <a class="btn secondary" href="{% url 'plano_fisico_dashboard' %}">Dashboard</a>
+        <a class="btn secondary" href="{% url 'mapa_correspondencia_list' %}">Mapeamento EAP</a>
         <a class="btn" href="{% url 'plano_fisico_importar' %}">Importar Cronograma</a>
     </div>
 </div>
@@ -79,13 +80,15 @@
             {% for plano in planos %}
             <tr>
                 <td>
-                    <a href="{% url 'plano_fisico_detail' plano.pk %}">{{ plano.titulo }}</a>
+                    <a href="{% url 'plano_fisico_detail' plano.pk %}">{% if plano.numero %}{{ plano.numero }} - {% endif %}{{ plano.titulo }}</a>
                     {% if plano.is_baseline %}<strong style="margin-left:8px;">[Baseline]</strong>{% endif %}
                 </td>
                 <td>v{{ plano.versao }}</td>
-                <td>{{ plano.get_status_display }}</td>
-                <td class="money">{{ plano.total_itens }}</td>
-                <td class="money">{{ plano.percentual_geral|trunc2 }}%</td>
+                <td>
+                    <span class="badge bg-{{ plano|workflow_badge_class }}">{{ plano.get_status_display }}</span>
+                </td>
+                <td class="money">{{ plano.total_itens_exibicao|default:plano.total_itens_count|default:0 }}</td>
+                <td class="money">{{ plano.percentual_geral_exibicao|default:0|trunc2 }}%</td>
                 <td>{{ plano.created_at|date:"d/m/Y H:i" }}</td>
                 <td>{{ plano.responsavel_importacao.username }}</td>
                 <td style="display:flex; gap:8px;">
@@ -103,11 +106,4 @@
     {% endif %}
 </section>
 
-<section class="panel">
-    <div class="toolbar">
-        <h3>Mapeamentos Cronograma x EAP</h3>
-        <a class="btn secondary" href="{% url 'mapa_correspondencia_list' %}">Ver Mapeamentos</a>
-    </div>
-    <p class="muted">Use esta secao para consolidar planejamento, EAP e controle fisico-financeiro.</p>
-</section>
 {% endblock %}

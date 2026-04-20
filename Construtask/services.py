@@ -7,6 +7,7 @@ from django.db import transaction
 from django.db.models.deletion import ProtectedError
 
 from .models import PlanoContas
+from .numeric_utils import coerce_decimal
 
 
 def tratar_decimal(valor):
@@ -16,7 +17,7 @@ def tratar_decimal(valor):
         return None
     if str(valor).strip() == "":
         return None
-    return Decimal(str(valor))
+    return coerce_decimal(valor, default=None, allow_none=True)
 
 
 def normalizar_codigo(codigo):

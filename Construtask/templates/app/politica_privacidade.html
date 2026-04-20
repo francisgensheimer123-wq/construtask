@@ -1,0 +1,81 @@
+{% extends "app/base.html" %}
+
+{% block title %}Politica de Privacidade | Construtask{% endblock %}
+
+{% block content %}
+<div class="toolbar">
+    <div>
+        <h2>Politica de Privacidade</h2>
+        <p>Diretrizes de tratamento de dados pessoais no Construtask para operacao, auditoria e seguranca.</p>
+    </div>
+</div>
+
+<section class="panel" style="margin-bottom:20px;">
+    <h3>Principios</h3>
+    <p>O sistema trata dados pessoais estritamente para finalidades operacionais, contratuais, de seguranca, auditoria e exercicio regular de direitos, respeitando necessidade, proporcionalidade e rastreabilidade.</p>
+</section>
+
+<section class="panel" style="margin-bottom:20px;">
+    <h3>Inventario de Dados Pessoais</h3>
+    <table class="compact-table">
+        <thead>
+            <tr>
+                <th>Categoria</th>
+                <th>Entidade</th>
+                <th>Dados Tratados</th>
+                <th>Finalidade</th>
+                <th>Base Legal</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in inventario_dados_pessoais %}
+            <tr>
+                <td>{{ item.categoria_titular }}</td>
+                <td>{{ item.entidade }}</td>
+                <td>{{ item.dados_tratados }}</td>
+                <td>{{ item.finalidade }}</td>
+                <td>{{ item.base_legal }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+
+<section class="panel" style="margin-bottom:20px;">
+    <h3>Retencao e Descarte</h3>
+    <table class="compact-table" style="margin-bottom:12px;">
+        <thead>
+            <tr>
+                <th>Registro</th>
+                <th>Regra</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in politica_retencao_padrao %}
+            <tr>
+                <td>{{ item.registro }}</td>
+                <td>{{ item.regra }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <table class="compact-table">
+        <thead>
+            <tr>
+                <th>Entidade</th>
+                <th>Criterio</th>
+                <th>Acao Recomendada</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in politica_descarte_anonimizacao %}
+            <tr>
+                <td>{{ item.entidade }}</td>
+                <td>{{ item.criterio }}</td>
+                <td>{{ item.acao_recomendada }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endblock %}

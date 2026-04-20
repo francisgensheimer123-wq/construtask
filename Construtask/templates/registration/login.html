@@ -3,50 +3,168 @@
 
 {% block title %}Login - Construtask{% endblock %}
 
+{% block extra_head %}
+<style>
+    .login-shell {
+        min-height: calc(100vh - 230px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 18px 0 30px;
+    }
+    .login-card {
+        width: min(100%, 460px);
+        background: linear-gradient(180deg, rgba(61,61,61,.97) 0%, rgba(28,28,28,.99) 100%);
+        border-radius: 18px;
+        border: 1px solid rgba(255,255,255,.12);
+        box-shadow: var(--panel-shadow);
+        overflow: hidden;
+        position: relative;
+    }
+    .login-card::before {
+        content: "";
+        position: absolute;
+        inset: 0 0 auto 0;
+        height: 4px;
+        background: linear-gradient(90deg, var(--red-dark) 0%, var(--red-soft) 55%, rgba(255,255,255,.14) 100%);
+    }
+    .login-head {
+        padding: 26px 26px 18px;
+        text-align: center;
+        border-bottom: 1px solid rgba(255,255,255,.08);
+        background: linear-gradient(180deg, rgba(139,0,0,.18) 0%, rgba(61,61,61,.2) 100%);
+    }
+    .login-head h1 {
+        margin: 0 0 8px;
+        font-size: 1.65rem;
+        color: var(--white);
+    }
+    .login-head p {
+        margin: 0;
+        color: var(--muted-soft);
+    }
+    .login-body {
+        padding: 24px 26px 22px;
+    }
+    .login-field {
+        margin-bottom: 16px;
+    }
+    .login-field label {
+        display: block;
+        margin-bottom: 8px;
+        color: var(--white);
+        font-weight: 700;
+    }
+    .login-field input {
+        width: 100%;
+        background: rgba(18,18,18,.92);
+        border: 1px solid rgba(200,200,200,.18);
+        color: var(--white);
+        border-radius: 12px;
+        padding: 12px 14px;
+        box-sizing: border-box;
+    }
+    .login-field input:focus {
+        outline: none;
+        border-color: rgba(180,180,180,.3);
+        box-shadow: 0 0 0 3px rgba(139,0,0,.16);
+    }
+    .login-error {
+        margin-bottom: 16px;
+        padding: 12px 14px;
+        border-radius: 12px;
+        border: 1px solid rgba(192,57,43,.5);
+        background: rgba(192,57,43,.13);
+        color: #ffd6d0;
+    }
+    .login-remember {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 10px;
+        margin-bottom: 18px;
+        color: var(--muted-soft);
+        cursor: pointer;
+        width: fit-content;
+    }
+    .login-remember input {
+        width: auto;
+        height: auto;
+        margin: 0;
+        flex: 0 0 auto;
+        accent-color: #c71f1f;
+    }
+    .login-remember span {
+        white-space: nowrap;
+        line-height: 1.2;
+    }
+    .login-submit {
+        width: 100%;
+        justify-content: center;
+    }
+    .login-footer {
+        padding: 16px 26px 22px;
+        border-top: 1px solid rgba(255,255,255,.08);
+        text-align: center;
+        color: var(--muted-soft);
+    }
+    .login-footer a {
+        color: var(--white);
+        text-decoration: none;
+    }
+    .login-footer a:hover {
+        color: #f5d7d7;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container">
-    <div class="row justify-content-center mt-5">
-        <div class="col-md-4">
-            <div class="card shadow">
-                <div class="card-header bg-primary text-white text-center">
-                    <h4><i class="fas fa-hard-hat"></i> Construtask</h4>
-                    <p class="mb-0 small">Sistema de Gestão de Obras</p>
+<div class="login-shell">
+    <section class="login-card">
+        <div class="login-head">
+            <h1>Construtask</h1>
+            <p>Sistema de Gestao de Obras</p>
+        </div>
+
+        <div class="login-body">
+            {% if form.errors %}
+            <div class="login-error">
+                <strong>Erro de autenticacao.</strong>
+                {% if form.non_field_errors %}
+                    {% for erro in form.non_field_errors %}
+                    <div>{{ erro }}</div>
+                    {% endfor %}
+                {% else %}
+                <div>Usuario ou senha invalidos.</div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <form method="post">
+                {% csrf_token %}
+                <div class="login-field">
+                    <label for="id_username">Usuario</label>
+                    <input type="text" name="username" id="id_username" required autofocus>
                 </div>
-                <div class="card-body">
-                    {% if form.errors %}
-                        <div class="alert alert-danger">
-                            <strong>Erro!</strong> Usuário ou senha inválidos.
-                        </div>
-                    {% endif %}
-                    
-                    <form method="post">
-                        {% csrf_token %}
-                        <div class="mb-3">
-                            <label for="id_username" class="form-label">Usuário</label>
-                            <input type="text" name="username" id="id_username" 
-                                   class="form-control" required autofocus>
-                        </div>
-                        <div class="mb-3">
-                            <label for="id_password" class="form-label">Senha</label>
-                            <input type="password" name="password" id="id_password" 
-                                   class="form-control" required>
-                        </div>
-                        <div class="mb-3 form-check">
-                            <input type="checkbox" class="form-check-input" id="id_remember">
-                            <label class="form-check-label" for="id_remember">
-                                Lembrar-me
-                            </label>
-                        </div>
-                        <button type="submit" class="btn btn-primary w-100">
-                            <i class="fas fa-sign-in-alt"></i> Entrar
-                        </button>
-                    </form>
+                <div class="login-field">
+                    <label for="id_password">Senha</label>
+                    <input type="password" name="password" id="id_password" required>
                 </div>
-                <div class="card-footer text-center">
-                    <small class="text-muted">Sistema de gestão construtiva</small>
-                </div>
+                <label class="login-remember" for="id_remember">
+                    <input type="checkbox" id="id_remember">
+                    <span>Lembrar-me</span>
+                </label>
+                <button type="submit" class="btn login-submit">Entrar</button>
+            </form>
+        </div>
+
+        <div class="login-footer">
+            <small>Sistema de gestao construtiva</small>
+            <div style="margin-top:8px;">
+                <a href="{% url 'termos_uso' %}">Termos de Uso</a> |
+                <a href="{% url 'politica_privacidade' %}">Politica de Privacidade</a>
             </div>
         </div>
-    </div>
+    </section>
 </div>
 {% endblock %}

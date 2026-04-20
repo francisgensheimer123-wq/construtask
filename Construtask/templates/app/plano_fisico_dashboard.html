@@ -1,12 +1,16 @@
 {% extends "app/base.html" %}
+{% load l10n %}
 
 {% block content %}
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1>Dashboard de Cronogramas</h1>
-        <a href="{% url 'plano_fisico_list' %}" class="btn btn-secondary">
-            <i class="bi bi-arrow-left"></i> Voltar aos Cronogramas
-        </a>
+        <div style="display:flex; gap:10px;">
+            <a href="{% url 'mapa_correspondencia_list' %}" class="btn btn-secondary">Mapeamento EAP</a>
+            <a href="{% url 'plano_fisico_list' %}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Voltar aos Cronogramas
+            </a>
+        </div>
     </div>
 
     {% if obra %}
@@ -73,9 +77,6 @@
                 <li>{{ div.mensagem }}</li>
                 {% endfor %}
             </ul>
-            <a href="{% url 'mapa_correspondencia_list' %}" class="btn btn-warning">
-                Ver Todos os Mapeamentos
-            </a>
         </div>
     </div>
     {% endif %}
@@ -109,7 +110,7 @@
                         <td>{{ plano.titulo }}</td>
                         <td>v{{ plano.versao }}</td>
                         <td>
-                            <span class="badge bg-{% if plano.is_baseline %}success{% else %}primary{% endif %}">
+                            <span class="badge bg-{{ plano|workflow_badge_class }}">
                                 {{ plano.get_status_display }}
                             </span>
                         </td>
@@ -133,38 +134,126 @@
 
 {% block extra_js %}
 {% if curva_planejada %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const ctx = document.getElementById('curvaSChart').getContext('2d');
-    new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: [{% for p in curva_planejada %}'{{ p.mes }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
-            datasets: [{
-                label: 'Planejado',
-                data: [{% for p in curva_planejada %}{{ p.acumulado }}{% if not forloop.last %}, {% endif %}{% endfor %}],
-                borderColor: '#0d6efd',
-                backgroundColor: 'rgba(13, 110, 253, 0.1)',
-                fill: true
-            },
-            {% if curva_realizada %}
-            {
-                label: 'Realizado',
-                data: [{% for r in curva_realizada %}{{ r.acumulado }}{% if not forloop.last %}, {% endif %}{% endfor %}],
-                borderColor: '#198754',
-                backgroundColor: 'rgba(25, 135, 84, 0.1)',
-                fill: true
-            }
-            {% endif %}
-            ]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                y: { beginAtZero: true }
-            }
+    const canvas = document.getElementById('curvaSChart');
+    if (!canvas) return;
+    const planejada = [
+        {% for p in curva_planejada %}
+        { mes: "{{ p.mes }}", acumulado: {{ p.acumulado|unlocalize }} }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+    const realizada = [
+        {% for r in curva_realizada %}
+        { mes: "{{ r.mes }}", acumulado: {{ r.acumulado|unlocalize }} }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    function desenharCurvaS(canvas, seriePlanejada, serieRealizada) {
+        const wrapperWidth = canvas.parentElement ? canvas.parentElement.clientWidth : 900;
+        const width = Math.max(wrapperWidth, 640);
+        const height = 320;
+        canvas.width = width;
+        canvas.height = height;
+        canvas.style.width = "100%";
+        canvas.style.height = height + "px";
+
+        const g = canvas.getContext("2d");
+        const labels = [...new Set([...seriePlanejada.map(i => i.mes), ...serieRealizada.map(i => i.mes)])].sort();
+        if (!labels.length) return;
+
+        const mapPlanejada = Object.fromEntries(seriePlanejada.map(i => [i.mes, Number(i.acumulado || 0)]));
+        const mapRealizada = Object.fromEntries(serieRealizada.map(i => [i.mes, Number(i.acumulado || 0)]));
+
+        let ultimoPlanejado = 0;
+        let ultimoRealizado = 0;
+        const pontosPlanejada = labels.map((mes) => {
+            ultimoPlanejado = mapPlanejada[mes] ?? ultimoPlanejado;
+            return { mes, valor: ultimoPlanejado };
+        });
+        const pontosRealizada = labels.map((mes) => {
+            ultimoRealizado = mapRealizada[mes] ?? ultimoRealizado;
+            return { mes, valor: ultimoRealizado };
+        });
+
+        const maxValor = Math.max(1, ...pontosPlanejada.map(p => p.valor), ...pontosRealizada.map(p => p.valor));
+        const padding = { top: 24, right: 28, bottom: 46, left: 70 };
+        const chartWidth = width - padding.left - padding.right;
+        const chartHeight = height - padding.top - padding.bottom;
+
+        g.clearRect(0, 0, width, height);
+        g.fillStyle = "rgba(255,255,255,0.02)";
+        g.fillRect(0, 0, width, height);
+        g.strokeStyle = "rgba(255,255,255,0.14)";
+        g.lineWidth = 1;
+        g.beginPath();
+        g.moveTo(padding.left, padding.top);
+        g.lineTo(padding.left, padding.top + chartHeight);
+        g.lineTo(padding.left + chartWidth, padding.top + chartHeight);
+        g.stroke();
+
+        g.font = "12px Aptos, Segoe UI, sans-serif";
+        g.fillStyle = "rgba(255,255,255,0.70)";
+        g.textAlign = "right";
+        g.textBaseline = "middle";
+        const steps = 4;
+        for (let i = 0; i <= steps; i++) {
+            const valor = (maxValor / steps) * i;
+            const y = padding.top + chartHeight - (chartHeight * i / steps);
+            g.strokeStyle = "rgba(255,255,255,0.08)";
+            g.beginPath();
+            g.moveTo(padding.left, y);
+            g.lineTo(padding.left + chartWidth, y);
+            g.stroke();
+            g.fillText(valor.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 }), padding.left - 10, y);
         }
+
+        function coordenadas(pontos) {
+            return pontos.map((p, index) => {
+                const x = labels.length === 1 ? padding.left + chartWidth / 2 : padding.left + (chartWidth * index / (labels.length - 1));
+                const y = padding.top + chartHeight - ((p.valor / maxValor) * chartHeight);
+                return { ...p, x, y };
+            });
+        }
+
+        function desenharLinha(pontos, corLinha, corArea) {
+            if (!pontos.length) return;
+            const coords = coordenadas(pontos);
+            g.beginPath();
+            g.moveTo(coords[0].x, padding.top + chartHeight);
+            coords.forEach((p) => g.lineTo(p.x, p.y));
+            g.lineTo(coords[coords.length - 1].x, padding.top + chartHeight);
+            g.closePath();
+            g.fillStyle = corArea;
+            g.fill();
+
+            g.beginPath();
+            coords.forEach((p, index) => {
+                if (index === 0) g.moveTo(p.x, p.y);
+                else g.lineTo(p.x, p.y);
+            });
+            g.strokeStyle = corLinha;
+            g.lineWidth = 3;
+            g.stroke();
+        }
+
+        desenharLinha(pontosPlanejada, "#2563eb", "rgba(37,99,235,0.14)");
+        if (pontosRealizada.some(p => p.valor > 0)) {
+            desenharLinha(pontosRealizada, "#16a34a", "rgba(22,163,74,0.12)");
+        }
+
+        g.textAlign = "center";
+        g.textBaseline = "top";
+        g.fillStyle = "rgba(255,255,255,0.68)";
+        labels.forEach((mes, index) => {
+            const x = labels.length === 1 ? padding.left + chartWidth / 2 : padding.left + (chartWidth * index / (labels.length - 1));
+            g.fillText(mes, x, padding.top + chartHeight + 10);
+        });
+    }
+
+    desenharCurvaS(canvas, planejada, realizada);
+    window.addEventListener("resize", function () {
+        desenharCurvaS(canvas, planejada, realizada);
     });
 });
 </script>

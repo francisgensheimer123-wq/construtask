@@ -1,0 +1,68 @@
+{% extends "app/base.html" %}
+
+{% block title %}Central de Evidencias | Construtask{% endblock %}
+
+{% block content %}
+<div class="toolbar">
+    <div>
+        <h2>Central de Evidencias</h2>
+        <p>Dossie consolidado de evidencias exportaveis da obra selecionada.</p>
+    </div>
+</div>
+
+<section class="panel" style="margin-bottom:18px;">
+    <form method="get" class="toolbar" style="justify-content:flex-start;">
+        <select name="tipo">
+            <option value=""{% if not tipo_filtro %} selected{% endif %}>Todos</option>
+            <option value="contrato"{% if tipo_filtro == "contrato" %} selected{% endif %}>Contratos</option>
+            <option value="medicao"{% if tipo_filtro == "medicao" %} selected{% endif %}>Medicoes</option>
+            <option value="baseline"{% if tipo_filtro == "baseline" %} selected{% endif %}>Baselines</option>
+        </select>
+        <button class="btn" type="submit">Filtrar</button>
+    </form>
+</section>
+
+<section class="panel">
+    {% if obra_contexto %}
+        {% if evidencias %}
+        <table class="compact-table">
+            <thead>
+                <tr>
+                    <th>Tipo</th>
+                    <th>Identificador</th>
+                    <th>Referencia</th>
+                    <th>Status</th>
+                    <th>Valor</th>
+                    <th>Aprovacao</th>
+                    <th>Parecer</th>
+                    <th>Exportar</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for evidencia in evidencias %}
+                <tr>
+                    <td>{{ evidencia.tipo }}</td>
+                    <td>{{ evidencia.identificador }}</td>
+                    <td>{{ evidencia.referencia }}</td>
+                    <td>{{ evidencia.status }}</td>
+                    <td>{{ evidencia.valor }}</td>
+                    <td>{{ evidencia.responsavel }}</td>
+                    <td>{{ evidencia.parecer }}</td>
+                    <td>
+                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                            <a href="{{ evidencia.pdf_url }}">PDF</a>
+                            <a href="{{ evidencia.excel_url }}">Excel</a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="empty">Nenhuma evidencia encontrada para o filtro selecionado.</p>
+        {% endif %}
+    {% else %}
+    <p class="empty">Selecione uma obra para acessar o dossie de evidencias.</p>
+    {% endif %}
+</section>
+{% endblock %}

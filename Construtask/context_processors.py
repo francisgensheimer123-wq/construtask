@@ -3,7 +3,7 @@ Context processors para o Construtask.
 Inclui contexto de obra e permissões de usuário.
 """
 
-from .permissions import get_obras_permitidas
+from .permissions import get_obras_permitidas, is_admin_empresa_vinculado, is_admin_sistema
 
 
 def obra_contexto(request):
@@ -12,8 +12,6 @@ def obra_contexto(request):
     - Lista de obras permitidas para o usuário (não inclui "todas")
     - Obra atualmente selecionada no contexto
     """
-    from .models import Obra
-    
     obras_permitidas = get_obras_permitidas(request.user)
     obra_id = request.session.get("obra_contexto_id")
     obra_atual = None
@@ -49,21 +47,11 @@ def user_permissoes(request):
         }
     
     is_superuser = request.user.is_superuser
-    is_admin_empresa = False
-    is_admin_sistema = False
-    
-    # Verificar se é admin de empresa
-    try:
-        if hasattr(request.user, 'usuario_empresa'):
-            is_admin_empresa = request.user.usuario_empresa.is_admin_empresa
-    except Exception:
-        pass
-    
-    # Superuser é admin do sistema
-    is_admin_sistema = is_superuser
+    admin_sistema = is_admin_sistema(request.user)
+    admin_empresa = is_admin_empresa_vinculado(request.user)
     
     return {
         "is_superuser": is_superuser,
-        "is_admin_empresa": is_admin_empresa,
-        "is_admin_sistema": is_admin_sistema,
+        "is_admin_empresa": admin_empresa,
+        "is_admin_sistema": admin_sistema,
     }

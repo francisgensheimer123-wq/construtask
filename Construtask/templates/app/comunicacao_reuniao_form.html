@@ -1,0 +1,38 @@
+{% extends "app/base.html" %}
+
+{% block title %}Nova Reuniao | Construtask{% endblock %}
+
+{% block content %}
+<div class="form-page-shell">
+<div class="toolbar">
+    <div>
+        <h2>Nova Reuniao de Comunicacao</h2>
+        <p class="muted">A pauta inicial sera gerada automaticamente com base no contexto atual da obra.</p>
+    </div>
+    <a class="btn secondary" href="{% url 'reuniao_comunicacao_list' %}">Voltar</a>
+</div>
+
+<section class="panel">
+    {% if obra_contexto %}
+    <p><strong>Obra:</strong> {{ obra_contexto.codigo }} - {{ obra_contexto.nome }}</p>
+    {% endif %}
+    <form method="post">
+        {% csrf_token %}
+        <div class="grid-2">
+            {% for field in form %}
+            <div class="field">
+                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+                {% if field.help_text %}<small class="muted">{{ field.help_text }}</small>{% endif %}
+                {% for error in field.errors %}<small style="color:#7f1d1d;">{{ error }}</small>{% endfor %}
+            </div>
+            {% endfor %}
+        </div>
+        {% for error in form.non_field_errors %}<small style="color:#7f1d1d;">{{ error }}</small>{% endfor %}
+        <div class="actions">
+            <button type="submit" class="btn">Criar reuniao</button>
+        </div>
+    </form>
+</section>
+</div>
+{% endblock %}

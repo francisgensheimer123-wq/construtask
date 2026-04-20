@@ -3,7 +3,8 @@
 {% block title %}Nao Conformidade | Construtask{% endblock %}
 
 {% block content %}
-<div class="panel" style="max-width:920px;">
+<div class="form-page-shell form-page-compact">
+<div class="panel">
     <div class="toolbar">
         <div>
             <h2>{% if object %}Editar Nao Conformidade{% else %}Nova Nao Conformidade{% endif %}</h2>
@@ -26,5 +27,6 @@
             <a class="btn secondary" href="{% url 'nao_conformidade_list' %}">Voltar</a>
         </div>
     </form>
+</div>
 </div>
 {% endblock %}

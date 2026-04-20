@@ -1,4 +1,5 @@
 {% extends "app/base.html" %}
+{% load formatters %}
 
 {% block main_class %}main-full{% endblock %}
 {% block title %}Nao Conformidades | Construtask{% endblock %}
@@ -9,8 +10,12 @@
         <h2>Nao Conformidades</h2>
         <p>Controle de qualidade, tratamento e verificacao das ocorrencias da obra.</p>
     </div>
-    <a class="btn" href="{% url 'nao_conformidade_create' %}">Nova Nao Conformidade</a>
-</div>
+    <div style="display:flex; gap:8px;">
+        <a class="btn secondary" href="{% url 'nao_conformidade_export' %}">Exportar Excel</a>
+        <a class="btn secondary" href="{% url 'nao_conformidade_pdf' %}">Exportar PDF</a>
+        <a class="btn" href="{% url 'nao_conformidade_create' %}">Nova Nao Conformidade</a>
+    </div>
+  </div>
 
 <div class="panel">
     <form method="get" class="toolbar" style="align-items:end;">
@@ -48,12 +53,14 @@
         <tbody>
             {% for nc in nao_conformidades %}
             <tr>
-                <td><a href="{% url 'nao_conformidade_detail' nc.pk %}">NC-{{ nc.pk }}</a></td>
+                <td><a href="{% url 'nao_conformidade_detail' nc.pk %}">{% if nc.numero %}{{ nc.numero }}{% else %}NC-{{ nc.pk }}{% endif %}</a></td>
                 <td>{{ nc.obra.codigo }} - {{ nc.obra.nome }}</td>
                 <td>{% if nc.plano_contas %}{{ nc.plano_contas.codigo }} - {{ nc.plano_contas.descricao }}{% else %}-{% endif %}</td>
                 <td class="wrap-text">{{ nc.descricao|truncatechars:120 }}</td>
                 <td>{{ nc.responsavel }}</td>
-                <td>{{ nc.get_status_display }}</td>
+                <td>
+                    <span class="badge bg-{{ nc|workflow_badge_class }}">{{ nc.get_status_display }}</span>
+                </td>
                 <td>{{ nc.data_abertura|date:"d/m/Y" }}</td>
             </tr>
             {% endfor %}

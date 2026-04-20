@@ -1,3 +1,5 @@
+from django.utils import timezone
+
 from .models_qualidade import NaoConformidade, NaoConformidadeHistorico
 
 
@@ -9,6 +11,9 @@ class QualidadeWorkflowService:
             "descricao": nc.descricao,
             "causa": nc.causa,
             "acao_corretiva": nc.acao_corretiva,
+            "evidencia_tratamento": nc.evidencia_tratamento,
+            "evidencia_encerramento": nc.evidencia_encerramento,
+            "eficacia_observacao": nc.eficacia_observacao,
         }
 
     @classmethod
@@ -49,6 +54,8 @@ class QualidadeWorkflowService:
     @classmethod
     def enviar_para_verificacao(cls, nc, usuario, observacao=""):
         antes = cls._snapshot(nc)
+        nc.eficacia_verificada_por = usuario
+        nc.eficacia_verificada_em = timezone.now()
         nc.status = "EM_VERIFICACAO"
         nc.save()
         NaoConformidadeHistorico.objects.create(
@@ -64,6 +71,8 @@ class QualidadeWorkflowService:
     @classmethod
     def encerrar(cls, nc, usuario, observacao=""):
         antes = cls._snapshot(nc)
+        nc.eficacia_verificada_por = usuario
+        nc.eficacia_verificada_em = timezone.now()
         nc.status = "ENCERRADA"
         nc.save()
         NaoConformidadeHistorico.objects.create(

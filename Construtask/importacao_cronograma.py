@@ -4,6 +4,7 @@ Atende: ISO 6.1 (Planejamento) + PMBOK 6 (Cronograma)
 Suporta: XLSX (Excel) e MPP (Microsoft Project)
 """
 
+from collections import defaultdict
 from datetime import datetime, date, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 
@@ -18,6 +19,8 @@ from .models_planejamento import (
     PlanoFisicoBaseline,
     PlanoFisicoItem,
 )
+from .numeric_utils import coerce_decimal, coerce_int
+from .text_normalization import corrigir_mojibake
 
 
 class CronogramaService:
@@ -27,7 +30,150 @@ class CronogramaService:
     
     # Mapeamento de colunas esperadas no XLSX
     COLUNAS_OBRIGATORIAS = ["CODIGO", "ATIVIDADE", "DURACAO_DIAS", "DATA_INICIO", "DATA_FIM"]
-    COLUNAS_OPCIONAIS = ["PREDECESSORA", "SUCESSORA", "MARCO", "CODIGO_EAP", "VALOR"]
+    COLUNAS_OPCIONAIS = ["PREDECESSORA", "SUCESSORA", "MARCO", "CODIGO_EAP", "VALOR", "WBS", "NIVEL"]
+
+    @classmethod
+    def _distribuir_valor_por_mes(cls, inicio, fim, valor_total):
+        valores_por_mes = defaultdict(Decimal)
+        if not inicio or not fim or not valor_total:
+            return valores_por_mes
+
+        if fim < inicio:
+            inicio, fim = fim, inicio
+
+        total_dias = (fim - inicio).days + 1
+        if total_dias <= 0:
+            return valores_por_mes
+
+        cursor = inicio
+        valor_total = Decimal(str(valor_total))
+        acumulado = Decimal("0.00")
+
+        while cursor <= fim:
+            proximo_mes = (cursor.replace(day=1) + timedelta(days=32)).replace(day=1)
+            fim_mes = min(fim, proximo_mes - timedelta(days=1))
+            dias_mes = (fim_mes - cursor).days + 1
+            chave = f"{cursor.year}-{cursor.month:02d}"
+            if fim_mes == fim:
+                valor_mes = valor_total - acumulado
+            else:
+                valor_mes = (valor_total * Decimal(dias_mes) / Decimal(total_dias)).quantize(
+                    Decimal("0.01"),
+                    rounding=ROUND_HALF_UP,
+                )
+                acumulado += valor_mes
+            valores_por_mes[chave] += valor_mes
+            cursor = fim_mes + timedelta(days=1)
+
+        return valores_por_mes
+
+    @classmethod
+    def _normalizar_codigo_eap(cls, valor):
+        codigo = cls._normalizar_string(valor)
+        if not codigo:
+            return ""
+        return codigo.strip().upper()
+
+    @classmethod
+    def _resolver_plano_contas_por_codigo_eap(cls, obra, codigo_eap):
+        if not obra or not codigo_eap:
+            return None
+
+        from .models import PlanoContas
+
+        codigo_normalizado = cls._normalizar_codigo_eap(codigo_eap)
+        queryset = PlanoContas.objects.filter(obra=obra, filhos__isnull=True)
+
+        exato = queryset.filter(codigo__iexact=codigo_normalizado).first()
+        if exato:
+            return exato
+
+        return None
+
+    @classmethod
+    def _resolver_hierarquia_item(cls, row, codigo, idx, pilha_por_nivel):
+        wbs_code = cls._normalizar_string(row.get("WBS")) or codigo
+        level = cls._parse_level(row.get("NIVEL"))
+        if level is None:
+            level = cls._inferir_level_por_codigo(wbs_code)
+        level = max(level or 0, 0)
+
+        parent = pilha_por_nivel.get(level - 1) if level > 0 else None
+
+        for chave in [chave for chave in list(pilha_por_nivel.keys()) if chave >= level]:
+            pilha_por_nivel.pop(chave, None)
+
+        return {
+            "level": level,
+            "wbs_code": wbs_code,
+            "parent": parent,
+            "sort_order": idx,
+        }
+
+    @classmethod
+    def analisar_xlsx(cls, arquivo, obra=None):
+        try:
+            df = pd.read_excel(arquivo, dtype=str)
+        except Exception as e:
+            raise ValidationError(f"Erro ao ler arquivo Excel: {str(e)}")
+
+        df = cls._normalizar_colunas(df)
+        cls._validar_colunas(df)
+
+        total_linhas = len(df.index)
+        atividades_validas = 0
+        sem_datas = 0
+        com_codigo_eap = 0
+        eap_reconhecida = 0
+        preview = []
+
+        for idx, row in df.iterrows():
+            codigo = cls._normalizar_string(row.get("CODIGO"))
+            atividade = cls._normalizar_string(row.get("ATIVIDADE"))
+            if not codigo or not atividade:
+                continue
+            atividades_validas += 1
+            data_inicio = cls._parse_data(row.get("DATA_INICIO"))
+            data_fim = cls._parse_data(row.get("DATA_FIM"))
+            if not data_inicio or not data_fim:
+                sem_datas += 1
+            codigo_eap = cls._normalizar_string(row.get("CODIGO_EAP"))
+            reconhecida = False
+            if codigo_eap:
+                com_codigo_eap += 1
+                if obra:
+                    from .models import PlanoContas
+
+                    reconhecida = cls._resolver_plano_contas_por_codigo_eap(obra, codigo_eap) is not None
+                    if reconhecida:
+                        eap_reconhecida += 1
+            if len(preview) < 8:
+                preview.append(
+                    {
+                        "linha": idx + 2,
+                        "codigo": codigo,
+                        "atividade": atividade,
+                        "data_inicio": data_inicio.strftime("%d/%m/%Y") if data_inicio else "Nao identificada",
+                        "data_fim": data_fim.strftime("%d/%m/%Y") if data_fim else "Nao identificada",
+                        "codigo_eap": codigo_eap or "-",
+                        "eap_reconhecida": reconhecida,
+                    }
+                )
+
+        try:
+            arquivo.seek(0)
+        except Exception:
+            pass
+
+        return {
+            "colunas_presentes": list(df.columns),
+            "total_linhas": total_linhas,
+            "atividades_validas": atividades_validas,
+            "sem_datas": sem_datas,
+            "com_codigo_eap": com_codigo_eap,
+            "eap_reconhecida": eap_reconhecida,
+            "preview": preview,
+        }
     
     @classmethod
     def importar_xlsx(cls, arquivo, obra, responsavel, titulo=None, criar_baseline=False):
@@ -47,17 +193,9 @@ class CronogramaService:
         Raises:
             ValidationError: Se houver erro de validação
         """
-        # Ler arquivo Excel
-        try:
-            df = pd.read_excel(arquivo, dtype=str)
-        except Exception as e:
-            raise ValidationError(f"Erro ao ler arquivo Excel: {str(e)}")
-        
-        # Normalizar nomes das colunas
+        analise = cls.analisar_xlsx(arquivo, obra=obra)
+        df = pd.read_excel(arquivo, dtype=str)
         df = cls._normalizar_colunas(df)
-        
-        # Validar colunas obrigatórias
-        cls._validar_colunas(df)
         
         # Criar cronograma
         with transaction.atomic():
@@ -91,6 +229,14 @@ class CronogramaService:
             if criar_baseline:
                 cls._criar_baseline(plano, responsavel, "Importação inicial")
         
+        plano._resumo_importacao = {
+            "total_linhas": analise["total_linhas"],
+            "atividades_validas": analise["atividades_validas"],
+            "sem_datas": analise["sem_datas"],
+            "com_codigo_eap": analise["com_codigo_eap"],
+            "eap_reconhecida": analise["eap_reconhecida"],
+            "itens_criados": len(itens_criados),
+        }
         return plano
     
     @classmethod
@@ -127,8 +273,12 @@ class CronogramaService:
             'MILESTONE': 'MARCO',
             'MARCADOR': 'MARCO',
             'EAP': 'CODIGO_EAP',
+            'CODIGO EAP': 'CODIGO_EAP',
             'CENTRO DE CUSTO': 'CODIGO_EAP',
             'CC': 'CODIGO_EAP',
+            'WBS': 'WBS',
+            'NIVEL': 'NIVEL',
+            'NÍVEL': 'NIVEL',
             'VALOR': 'VALOR',
             'VALOR PLANEJADO': 'VALOR',
             'IMPORTÂNCIA': 'VALOR',
@@ -136,7 +286,25 @@ class CronogramaService:
         
         colunas_normalizadas = {}
         for col in df.columns:
-            col_upper = str(col).upper().strip()
+            col_upper = corrigir_mojibake(str(col).upper().strip())
+            col_upper = (
+                col_upper
+                .replace("Ã‰", "É")
+                .replace("Ã", "Í")
+                .replace("Ã“", "Ó")
+                .replace("Ã‚", "Â")
+                .replace("Ã‡", "Ç")
+            )
+            if col_upper in {"DATA INICIO PREVISTA", "DATA_INICIO_PREVISTA", "INICIO PREVISTO", "INICIO PLANEJADO", "DATA DE INICIO"}:
+                col_upper = "DATA_INICIO"
+            elif col_upper in {"DATA FIM PREVISTA", "DATA_FIM_PREVISTA", "FIM PREVISTO", "FIM PLANEJADO", "DATA DE FIM", "TERMINO PREVISTO", "TERMINO PLANEJADO", "TÉRMINO PREVISTO"}:
+                col_upper = "DATA_FIM"
+            elif col_upper in {"CÓDIGO EAP"}:
+                col_upper = "CODIGO EAP"
+            elif col_upper in {"NÍVEL"}:
+                col_upper = "NIVEL"
+            elif col_upper in {"IMPORTÂNCIA"}:
+                col_upper = "IMPORTÃ‚NCIA"
             colunas_normalizadas[col] = mapeamento.get(col_upper, col_upper)
         
         df = df.rename(columns=colunas_normalizadas)
@@ -170,6 +338,7 @@ class CronogramaService:
         """
         itens_criados = []
         codigos_processados = set()
+        pilha_por_nivel = {}
         
         for idx, row in df.iterrows():
             codigo = cls._normalizar_string(row.get('CODIGO'))
@@ -205,17 +374,23 @@ class CronogramaService:
             # Processar código EAP (vínculo com orçamento)
             plano_contas = None
             codigo_eap = cls._normalizar_string(row.get('CODIGO_EAP'))
+            erro_vinculo_eap = ""
             if codigo_eap and obra:
-                from .models import PlanoContas
-                plano_contas = PlanoContas.objects.filter(
-                    obra=obra,
-                    codigo__icontains=codigo_eap
-                ).first()
+                plano_contas = cls._resolver_plano_contas_por_codigo_eap(obra, codigo_eap)
+                if plano_contas is None:
+                    erro_vinculo_eap = f"Codigo da EAP '{codigo_eap}' nao localizado na EAP da obra."
+
+            hierarquia = cls._resolver_hierarquia_item(row, codigo, idx, pilha_por_nivel)
             
+            valor_planejado_item = valor or 0
+
             # Criar item
             item = PlanoFisicoItem.objects.create(
                 plano=plano,
+                parent=hierarquia["parent"],
                 plano_contas=plano_contas,
+                codigo_eap_importado=codigo_eap or "",
+                erro_vinculo_eap=erro_vinculo_eap,
                 codigo_atividade=codigo,
                 atividade=atividade,
                 predecessor=predecessor,
@@ -224,13 +399,32 @@ class CronogramaService:
                 data_inicio_prevista=data_inicio,
                 data_fim_prevista=data_fim,
                 is_marco=is_marco,
-                valor_planejado=valor or 0,
-                sort_order=idx
+                valor_planejado=valor_planejado_item,
+                level=hierarquia["level"],
+                wbs_code=hierarquia["wbs_code"],
+                sort_order=hierarquia["sort_order"]
             )
-            
+
+            pilha_por_nivel[hierarquia["level"]] = item
+
+            if plano_contas and obra and obra.empresa_id:
+                MapaCorrespondencia.objects.update_or_create(
+                    empresa=obra.empresa,
+                    obra=obra,
+                    plano_fisico_item=item,
+                    plano_contas=plano_contas,
+                    status="ATIVO",
+                    defaults={
+                        "percentual_rateio": 100,
+                        "created_by": plano.responsavel_importacao,
+                    },
+                )
+
             itens_criados.append(item)
             codigos_processados.add(codigo)
-        
+
+        MapeamentoService.recalcular_valores_planejados(plano)
+
         return itens_criados
     
     @classmethod
@@ -270,10 +464,92 @@ class CronogramaService:
                 continue
         
         return None
+
+    @classmethod
+    def _parse_data(cls, valor):
+        """Converte valor para data com tolerancia a formatos do Excel."""
+        if valor is None:
+            return None
+
+        if isinstance(valor, date):
+            return valor
+        if hasattr(valor, "to_pydatetime"):
+            try:
+                return valor.to_pydatetime().date()
+            except Exception:
+                pass
+
+        valor_str = cls._normalizar_string(valor)
+        if not valor_str:
+            return None
+
+        formatos = [
+            "%Y-%m-%d",
+            "%Y-%m-%d %H:%M:%S",
+            "%d/%m/%Y %H:%M:%S",
+            "%d/%m/%Y",
+            "%d/%m/%y",
+            "%m/%d/%Y",
+            "%Y/%m/%d",
+        ]
+        for fmt in formatos:
+            try:
+                return datetime.strptime(valor_str, fmt).date()
+            except ValueError:
+                continue
+
+        if valor_str.replace(".", "", 1).isdigit():
+            try:
+                numero = float(valor_str)
+                if numero > 20000:
+                    return (datetime(1899, 12, 30) + timedelta(days=numero)).date()
+            except ValueError:
+                pass
+
+        try:
+            data_convertida = pd.to_datetime(valor_str, dayfirst=True, errors="coerce")
+            if pd.notna(data_convertida):
+                return data_convertida.date()
+        except Exception:
+            pass
+
+        return None
+
+    @classmethod
+    def _parse_level(cls, valor):
+        if valor is None:
+            return None
+
+        valor_str = cls._normalizar_string(valor)
+        if not valor_str:
+            return None
+
+        try:
+            numero = int(float(valor_str.replace(",", ".")))
+        except ValueError:
+            return None
+
+        if numero <= 0:
+            return 0
+        return numero - 1
+
+    @classmethod
+    def _inferir_level_por_codigo(cls, codigo):
+        codigo_str = cls._normalizar_string(codigo)
+        if not codigo_str:
+            return 0
+
+        for separador in [".", "/"]:
+            if separador in codigo_str:
+                partes = [parte for parte in codigo_str.split(separador) if parte.strip()]
+                if len(partes) > 1:
+                    return len(partes) - 1
+        return 0
     
     @classmethod
     def _parse_int(cls, valor):
         """Converte valor para inteiro."""
+        return coerce_int(valor, default=None)
         if valor is None:
             return None
         
@@ -292,6 +568,7 @@ class CronogramaService:
     @classmethod
     def _parse_decimal(cls, valor):
         """Converte valor para Decimal."""
+        return coerce_decimal(valor, default=None, allow_none=True, quantize="0.01")
         if valor is None:
             return None
         
@@ -344,11 +621,15 @@ class CronogramaService:
             )
             
             # Copiar itens da versão anterior
-            itens_originais = plano_original.itens.all()
+            itens_originais = list(plano_original.itens.all().order_by("sort_order", "pk"))
+            mapa_novos_itens = {}
             for item in itens_originais:
-                PlanoFisicoItem.objects.create(
+                novo_item = PlanoFisicoItem.objects.create(
                     plano=novo_plano,
+                    parent=mapa_novos_itens.get(item.parent_id),
                     plano_contas=item.plano_contas,
+                    codigo_eap_importado=item.codigo_eap_importado,
+                    erro_vinculo_eap=item.erro_vinculo_eap,
                     codigo_atividade=item.codigo_atividade,
                     atividade=item.atividade,
                     predecessor=item.predecessor,
@@ -356,13 +637,38 @@ class CronogramaService:
                     duracao=item.duracao,
                     data_inicio_prevista=item.data_inicio_prevista,
                     data_fim_prevista=item.data_fim_prevista,
+                    data_inicio_real=item.data_inicio_real,
+                    data_fim_real=item.data_fim_real,
+                    percentual_concluido=item.percentual_concluido,
                     is_marco=item.is_marco,
                     valor_planejado=item.valor_planejado,
+                    valor_realizado=item.valor_realizado,
                     level=item.level,
                     wbs_code=item.wbs_code,
                     sort_order=item.sort_order
                 )
-            
+                mapa_novos_itens[item.id] = novo_item
+            mapeamentos_originais = list(
+                MapaCorrespondencia.objects.filter(
+                    plano_fisico_item__plano=plano_original,
+                    status="ATIVO",
+                    plano_contas__isnull=False,
+                ).select_related("plano_contas")
+            )
+            for mapeamento in mapeamentos_originais:
+                novo_item = mapa_novos_itens.get(mapeamento.plano_fisico_item_id)
+                if not novo_item:
+                    continue
+                MapaCorrespondencia.objects.create(
+                    empresa=plano_original.obra.empresa,
+                    obra=plano_original.obra,
+                    plano_fisico_item=novo_item,
+                    plano_contas=mapeamento.plano_contas,
+                    percentual_rateio=100,
+                    status="ATIVO",
+                    created_by=responsavel,
+                )
+            MapeamentoService.recalcular_valores_planejados(novo_plano)
             return novo_plano
     
     @classmethod
@@ -375,25 +681,33 @@ class CronogramaService:
         
         plano = PlanoFisico.objects.get(pk=plano_id)
         
-        # Atualizar cada item
-        itens = plano.itens.all()
-        
-        for item in itens:
-            # Calcular percentual baseado em valor realizado
-            if item.plano_contas:
-                # Buscar valor realizado no centro de custo
-                centros_ids = list(item.plano_contas.get_descendants(include_self=True).values_list('id', flat=True))
-                
-                realizado = NotaFiscalCentroCusto.objects.filter(
+        analise = MapeamentoService.analisar_vinculos(plano)
+        itens = analise["itens"]
+        totais_realizados_eap = {}
+
+        for eap_id, itens_vinculados in analise["eap_to_items"].items():
+            eap = analise["eap_obj"].get(eap_id)
+            if not eap:
+                continue
+            centros_ids = list(eap.get_descendants(include_self=True).values_list('id', flat=True))
+            totais_realizados_eap[eap_id] = (
+                NotaFiscalCentroCusto.objects.filter(
                     nota_fiscal__obra=plano.obra,
                     nota_fiscal__status__in=['CONFERIDA', 'PAGA'],
                     centro_custo_id__in=centros_ids
-                ).aggregate(total=Sum('valor'))['total'] or 0
-                
-                if item.valor_planejado > 0:
-                    item.valor_realizado = realizado
-                    item.percentual_concluido = min(100, round((realizado / item.valor_planejado) * 100, 1))
-            
+                ).aggregate(total=Sum('valor'))['total'] or Decimal("0.00")
+            )
+
+        for item in itens:
+            realizado = Decimal("0.00")
+            for eap in analise["item_to_eaps"].get(item.pk, []):
+                valor_planejado_contrib = analise["contribuicoes"].get((item.pk, eap.pk), Decimal("0.00"))
+                valor_total_eap = eap.valor_total_consolidado or Decimal("0.00")
+                if valor_total_eap > 0:
+                    realizado += totais_realizados_eap.get(eap.pk, Decimal("0.00")) * (valor_planejado_contrib / valor_total_eap)
+            item.valor_realizado = realizado.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP) if realizado else Decimal("0.00")
+            if item.valor_planejado > 0:
+                item.percentual_concluido = min(100, round((item.valor_realizado / item.valor_planejado) * 100, 1))
             item.save()
         
         return plano
@@ -403,38 +717,29 @@ class CronogramaService:
         """
         Gera dados para curva S planejada.
         """
-        from collections import defaultdict
-        
         plano = PlanoFisico.objects.get(pk=plano_id)
-        
-        # Agrupar por mês
         valores_por_mes = defaultdict(Decimal)
-        
-        for item in plano.itens.all():
-            if item.data_inicio_prevista and item.data_fim_prevista:
-                # Distribuir valor uniformemente pelos meses
-                meses = (item.data_fim_prevista.year - item.data_inicio_prevista.year) * 12 + \
-                        item.data_fim_prevista.month - item.data_inicio_prevista.month + 1
-                
-                if meses > 0:
-                    valor_mes = item.valor_planejado / meses
-                    cursor = item.data_inicio_prevista
-                    for _ in range(meses):
-                        chave = f"{cursor.year}-{cursor.month:02d}"
-                        valores_por_mes[chave] += valor_mes
-                        cursor = cursor.replace(month=cursor.month + 1) if cursor.month < 12 else cursor.replace(year=cursor.year + 1, month=1)
-        
-        # Converter para lista acumulada
+        itens = plano.itens.filter(filhos__isnull=True).order_by("data_inicio_prevista", "id")
+
+        for item in itens:
+            distribuicao = cls._distribuir_valor_por_mes(
+                item.data_inicio_prevista,
+                item.data_fim_prevista,
+                item.valor_planejado or Decimal("0.00"),
+            )
+            for chave, valor_mes in distribuicao.items():
+                valores_por_mes[chave] += valor_mes
+
         resultado = []
-        acumulado = Decimal('0.00')
+        acumulado = Decimal("0.00")
         for chave in sorted(valores_por_mes.keys()):
             acumulado += valores_por_mes[chave]
             resultado.append({
-                'mes': chave,
-                'valor_mes': float(valores_por_mes[chave]),
-                'acumulado': float(acumulado)
+                "mes": chave,
+                "valor_mes": float(valores_por_mes[chave]),
+                "acumulado": float(acumulado),
             })
-        
+
         return resultado
     
     @classmethod
@@ -442,39 +747,46 @@ class CronogramaService:
         """
         Gera dados para curva S realizada (baseado em medições).
         """
-        from collections import defaultdict
-        from .models import Medicao
-        
         if data_corte is None:
             data_corte = date.today()
-        
+
         plano = PlanoFisico.objects.get(pk=plano_id)
-        
-        # Buscar medições até a data de corte
-        medicoes = Medicao.objects.filter(
-            obra=plano.obra,
-            data_medicao__lte=data_corte,
-            status__in=['CONFERIDA', 'APROVADA', 'FATURADA']
-        )
-        
-        # Agrupar por mês
         valores_por_mes = defaultdict(Decimal)
-        
-        for med in medicoes:
-            chave = f"{med.data_medicao.year}-{med.data_medicao.month:02d}"
-            valores_por_mes[chave] += med.valor_medido
-        
-        # Converter para lista acumulada
+        itens = plano.itens.filter(filhos__isnull=True).order_by("data_inicio_real", "id")
+
+        for item in itens:
+            valor_realizado = item.valor_realizado or Decimal("0.00")
+            if not valor_realizado or valor_realizado <= 0 or not item.data_inicio_real:
+                continue
+
+            if item.percentual_concluido >= 100 and item.data_fim_real:
+                fim_real = item.data_fim_real
+            else:
+                fim_real = data_corte
+
+            if fim_real > data_corte:
+                fim_real = data_corte
+            if fim_real < item.data_inicio_real:
+                fim_real = item.data_inicio_real
+
+            distribuicao = cls._distribuir_valor_por_mes(
+                item.data_inicio_real,
+                fim_real,
+                valor_realizado,
+            )
+            for chave, valor_mes in distribuicao.items():
+                valores_por_mes[chave] += valor_mes
+
         resultado = []
-        acumulado = Decimal('0.00')
+        acumulado = Decimal("0.00")
         for chave in sorted(valores_por_mes.keys()):
             acumulado += valores_por_mes[chave]
             resultado.append({
-                'mes': chave,
-                'valor_mes': float(valores_por_mes[chave]),
-                'acumulado': float(acumulado)
+                "mes": chave,
+                "valor_mes": float(valores_por_mes[chave]),
+                "acumulado": float(acumulado),
             })
-        
+
         return resultado
 
 
@@ -482,6 +794,303 @@ class MapeamentoService:
     """
     Serviço para mapeamento entre cronograma e EAP (orçamento).
     """
+
+    @staticmethod
+    def _peso_duracao_item(item):
+        if item.data_inicio_prevista and item.data_fim_prevista:
+            dias = (item.data_fim_prevista - item.data_inicio_prevista).days + 1
+            if dias > 0:
+                return Decimal(str(dias))
+        return Decimal("1")
+
+    @classmethod
+    def _obter_plano(cls, plano_fisico_ou_id):
+        if isinstance(plano_fisico_ou_id, PlanoFisico):
+            return plano_fisico_ou_id
+        return PlanoFisico.objects.get(pk=plano_fisico_ou_id)
+
+    @classmethod
+    def _obter_mapeamentos_ativos(cls, plano):
+        itens = list(
+            plano.itens.filter(filhos__isnull=True).select_related("plano_contas")
+        )
+        itens_por_id = {item.pk: item for item in itens}
+        registros = []
+        vistos = set()
+
+        for mapeamento in (
+            MapaCorrespondencia.objects.filter(
+                plano_fisico_item__plano=plano,
+                plano_fisico_item__filhos__isnull=True,
+                status="ATIVO",
+                plano_contas__isnull=False,
+            )
+            .select_related("plano_fisico_item", "plano_contas")
+            .order_by("plano_contas__codigo", "plano_fisico_item__codigo_atividade", "id")
+        ):
+            chave = (mapeamento.plano_fisico_item_id, mapeamento.plano_contas_id)
+            if chave in vistos:
+                continue
+            vistos.add(chave)
+            registros.append(
+                {
+                    "item": itens_por_id.get(mapeamento.plano_fisico_item_id) or mapeamento.plano_fisico_item,
+                    "plano_contas": mapeamento.plano_contas,
+                    "origem": "MAPEAMENTO",
+                }
+            )
+
+        for item in itens:
+            if item.plano_contas_id:
+                chave = (item.pk, item.plano_contas_id)
+                if chave in vistos:
+                    continue
+                vistos.add(chave)
+                registros.append(
+                    {
+                        "item": item,
+                        "plano_contas": item.plano_contas,
+                        "origem": "ITEM",
+                    }
+                )
+        return itens, registros
+
+    @classmethod
+    def analisar_vinculos(cls, plano_fisico_ou_id):
+        plano = cls._obter_plano(plano_fisico_ou_id)
+        itens, registros = cls._obter_mapeamentos_ativos(plano)
+        item_to_eaps = defaultdict(list)
+        eap_to_items = defaultdict(list)
+        eap_obj = {}
+        itens_por_id = {item.pk: item for item in itens}
+
+        for registro in registros:
+            item = registro["item"]
+            eap = registro["plano_contas"]
+            if eap.pk not in [obj.pk for obj in item_to_eaps[item.pk]]:
+                item_to_eaps[item.pk].append(eap)
+            if item.pk not in [obj.pk for obj in eap_to_items[eap.pk]]:
+                eap_to_items[eap.pk].append(item)
+            eap_obj[eap.pk] = eap
+
+        mensagens = {}
+        itens_invalidos = set()
+
+        visitados_itens = set()
+        visitados_eaps = set()
+        componentes = []
+
+        for item in itens:
+            if item.pk in visitados_itens or item.pk not in item_to_eaps:
+                continue
+
+            fila_itens = [item.pk]
+            componente_itens = set()
+            componente_eaps = set()
+
+            while fila_itens:
+                item_id = fila_itens.pop()
+                if item_id in componente_itens:
+                    continue
+                componente_itens.add(item_id)
+                visitados_itens.add(item_id)
+
+                for eap in item_to_eaps.get(item_id, []):
+                    if eap.pk not in componente_eaps:
+                        componente_eaps.add(eap.pk)
+                    if eap.pk in visitados_eaps:
+                        continue
+                    visitados_eaps.add(eap.pk)
+                    for item_relacionado in eap_to_items.get(eap.pk, []):
+                        if item_relacionado.pk not in componente_itens:
+                            fila_itens.append(item_relacionado.pk)
+
+            componentes.append((componente_itens, componente_eaps))
+
+        for componente_itens, componente_eaps in componentes:
+            if len(componente_itens) > 1 and len(componente_eaps) > 1:
+                for item_id in componente_itens:
+                    itens_invalidos.add(item_id)
+                    mensagens[item_id] = (
+                        "Configuracao N EAP -> N atividades nao suportada. "
+                        "Quebre o cronograma para manter vinculos 1 EAP -> 1 atividade."
+                    )
+
+        valores_item = {item.pk: (item.valor_planejado or Decimal("0.00")) for item in itens}
+        contribuicoes = {}
+        pesos = {item.pk: cls._peso_duracao_item(item) for item in itens}
+
+        for item in itens:
+            if item.pk in item_to_eaps:
+                valores_item[item.pk] = Decimal("0.00")
+
+        for eap_id, itens_vinculados in eap_to_items.items():
+            if any(item.pk in itens_invalidos for item in itens_vinculados):
+                continue
+            valor_total_eap = eap_obj[eap_id].valor_total_consolidado or Decimal("0.00")
+            if len(itens_vinculados) == 1:
+                item = itens_vinculados[0]
+                valores_item[item.pk] += valor_total_eap
+                contribuicoes[(item.pk, eap_id)] = valor_total_eap
+                continue
+
+            soma_pesos = sum((pesos[item.pk] for item in itens_vinculados), Decimal("0.00"))
+            if soma_pesos <= 0:
+                soma_pesos = Decimal(str(len(itens_vinculados)))
+                pesos_locais = {item.pk: Decimal("1") for item in itens_vinculados}
+            else:
+                pesos_locais = {item.pk: pesos[item.pk] for item in itens_vinculados}
+
+            distribuido = Decimal("0.00")
+            for indice, item in enumerate(itens_vinculados, start=1):
+                if indice == len(itens_vinculados):
+                    valor_item = valor_total_eap - distribuido
+                else:
+                    valor_item = (
+                        (valor_total_eap * pesos_locais[item.pk] / soma_pesos)
+                        .quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+                    )
+                    distribuido += valor_item
+                valores_item[item.pk] += valor_item
+                contribuicoes[(item.pk, eap_id)] = valor_item
+
+        codigos_por_item = {
+            item.pk: [eap.codigo for eap in item_to_eaps.get(item.pk, [])]
+            for item in itens
+        }
+        return {
+            "plano": plano,
+            "itens": itens,
+            "item_to_eaps": item_to_eaps,
+            "eap_to_items": eap_to_items,
+            "eap_obj": eap_obj,
+            "itens_invalidos": itens_invalidos,
+            "mensagens": mensagens,
+            "valores_item": valores_item,
+            "contribuicoes": contribuicoes,
+            "codigos_por_item": codigos_por_item,
+        }
+
+    @classmethod
+    def recalcular_valores_planejados(cls, plano_fisico_ou_id):
+        analise = cls.analisar_vinculos(plano_fisico_ou_id)
+        itens = analise["itens"]
+        valores_item = analise["valores_item"]
+        codigos_por_item = analise["codigos_por_item"]
+
+        itens_invalidos = analise["itens_invalidos"]
+
+        for item in itens:
+            item.valor_planejado = (
+                Decimal("0.00")
+                if item.pk in itens_invalidos
+                else valores_item.get(item.pk, item.valor_planejado or Decimal("0.00"))
+            )
+            if item.pk in itens_invalidos:
+                item.erro_vinculo_eap = analise["mensagens"].get(item.pk, "")
+                item.plano_contas = None
+            elif item.codigo_eap_importado and not codigos_por_item.get(item.pk):
+                item.erro_vinculo_eap = f"Codigo da EAP '{item.codigo_eap_importado}' nao localizado na EAP da obra."
+                item.plano_contas = None
+            else:
+                eaps = analise["item_to_eaps"].get(item.pk, [])
+                item.erro_vinculo_eap = ""
+                item.plano_contas = eaps[0] if len(eaps) == 1 else None
+            item.save(update_fields=["valor_planejado", "erro_vinculo_eap", "plano_contas", "updated_at"])
+
+        PlanoFisicoItem.objects.filter(plano=analise["plano"], filhos__isnull=False).update(
+            valor_planejado=Decimal("0.00"),
+            plano_contas=None,
+        )
+        return analise
+
+    @classmethod
+    def validar_novo_vinculo(cls, item, plano_contas, *, substituindo_vinculos_item=False):
+        if not item or not plano_contas:
+            return None
+        if item.filhos.exists():
+            raise ValidationError("O vinculo com a EAP so pode ser definido em atividades folha do cronograma.")
+        if plano_contas.filhos.exists():
+            raise ValidationError("O vinculo com a EAP deve apontar para item analitico da EAP (nivel 6).")
+        eaps_item = set(
+            MapaCorrespondencia.objects.filter(
+                plano_fisico_item=item,
+                status="ATIVO",
+                plano_contas__isnull=False,
+            ).exclude(plano_contas=plano_contas).values_list("plano_contas_id", flat=True)
+        )
+        if not substituindo_vinculos_item and item.plano_contas_id and item.plano_contas_id != plano_contas.pk:
+            eaps_item.add(item.plano_contas_id)
+
+        itens_eap = set(
+            MapaCorrespondencia.objects.filter(
+                plano_contas=plano_contas,
+                status="ATIVO",
+                plano_fisico_item__filhos__isnull=True,
+            ).exclude(plano_fisico_item=item).values_list("plano_fisico_item_id", flat=True)
+        )
+        if eaps_item and itens_eap:
+            raise ValidationError(
+                "Esse vinculo criaria um cenario N EAP -> N atividades, que nao e suportado. "
+                "Quebre o cronograma para manter vinculos 1 EAP -> 1 atividade."
+            )
+        return None
+
+    @classmethod
+    def validar_conjunto_vinculos_item(cls, item, plano_contas_ids):
+        if not item:
+            return None
+        if item.filhos.exists():
+            raise ValidationError("O vinculo com a EAP so pode ser definido em atividades folha do cronograma.")
+
+        plano_contas_ids = {int(pk) for pk in plano_contas_ids if pk}
+        from .models import PlanoContas
+        nao_analiticos = PlanoContas.objects.filter(pk__in=plano_contas_ids).exclude(filhos__isnull=True)
+        if nao_analiticos.exists():
+            raise ValidationError("O vinculo com a EAP deve apontar apenas para itens analiticos da EAP (nivel 6).")
+        plano = item.plano
+        _, registros = cls._obter_mapeamentos_ativos(plano)
+
+        item_to_eaps = defaultdict(set)
+        eap_to_items = defaultdict(set)
+
+        for registro in registros:
+            registro_item = registro["item"]
+            eap = registro["plano_contas"]
+            if registro_item.pk == item.pk:
+                continue
+            item_to_eaps[registro_item.pk].add(eap.pk)
+            eap_to_items[eap.pk].add(registro_item.pk)
+
+        for plano_contas_id in plano_contas_ids:
+            item_to_eaps[item.pk].add(plano_contas_id)
+            eap_to_items[plano_contas_id].add(item.pk)
+
+        if not item_to_eaps.get(item.pk):
+            return None
+
+        componente_itens = set()
+        componente_eaps = set()
+        fila_itens = [item.pk]
+
+        while fila_itens:
+            item_id = fila_itens.pop()
+            if item_id in componente_itens:
+                continue
+            componente_itens.add(item_id)
+            for eap_id in item_to_eaps.get(item_id, set()):
+                if eap_id not in componente_eaps:
+                    componente_eaps.add(eap_id)
+                for item_relacionado in eap_to_items.get(eap_id, set()):
+                    if item_relacionado not in componente_itens:
+                        fila_itens.append(item_relacionado)
+
+        if len(componente_itens) > 1 and len(componente_eaps) > 1:
+            raise ValidationError(
+                "Esse vinculo criaria um cenario N EAP -> N atividades, que nao e suportado. "
+                "Quebre o cronograma para manter vinculos 1 EAP -> 1 atividade."
+            )
+        return None
     
     @classmethod
     def sugerir_correspondencia(cls, plano_fisico_item, lista_plano_contas):
@@ -528,65 +1137,58 @@ class MapeamentoService:
         """
         Vincula todas as atividades de um cronograma a um centro de custo.
         """
-        empresa = plano_fisico.obra.empresa
-        
-        itens = plano_fisico.itens.all()
-        correspondencias_criadas = []
+        itens = plano_fisico.itens.filter(filhos__isnull=True)
+        itens_atualizados = []
         
         for item in itens:
             # Verificar se já existe mapeamento
-            existente = MapaCorrespondencia.objects.filter(
+            cls.validar_novo_vinculo(item, plano_contas)
+            MapaCorrespondencia.objects.filter(
                 plano_fisico_item=item,
-                status='ATIVO'
-            ).first()
-            
-            if existente:
-                existente.plano_contas = plano_contas
-                existente.percentual_rateio = percentual
-                existente.save()
-            else:
-                correspondencia = MapaCorrespondencia.objects.create(
-                    empresa=empresa,
-                    obra=plano_fisico.obra,
-                    plano_fisico_item=item,
-                    plano_contas=plano_contas,
-                    percentual_rateio=percentual,
-                    status='ATIVO'
-                )
-                correspondencias_criadas.append(correspondencia)
-        
-        return correspondencias_criadas
+                status="ATIVO",
+            ).exclude(plano_contas=plano_contas).update(status="INATIVO")
+            MapaCorrespondencia.objects.update_or_create(
+                empresa=plano_fisico.obra.empresa,
+                obra=plano_fisico.obra,
+                plano_fisico_item=item,
+                plano_contas=plano_contas,
+                defaults={
+                    "status": "ATIVO",
+                    "percentual_rateio": 100,
+                    "created_by": plano_fisico.responsavel_importacao,
+                },
+            )
+            item.plano_contas = plano_contas
+            item.erro_vinculo_eap = ""
+            item.save(update_fields=["plano_contas", "erro_vinculo_eap", "updated_at"])
+            itens_atualizados.append(item)
+
+        cls.recalcular_valores_planejados(plano_fisico)
+        return itens_atualizados
     
     @classmethod
-    def verificar_divergencias(cls, plano_fisico_id):
+    def verificar_divergencias(cls, plano_fisico_id, analise=None):
         """
-        Lista atividades sem mapeamento ou com rateio incompleto.
+        Lista atividades sem vinculo valido ou com estrutura nao suportada.
         """
-        plano = PlanoFisico.objects.get(pk=plano_fisico_id)
-        
+        analise = analise or cls.analisar_vinculos(plano_fisico_id)
         divergencias = []
-        
-        for item in plano.itens.all():
-            mapeamentos = MapaCorrespondencia.objects.filter(
-                plano_fisico_item=item,
-                status='ATIVO'
-            )
-            
-            if not mapeamentos.exists():
+
+        for item in analise["itens"]:
+            codigos = analise["codigos_por_item"].get(item.pk, [])
+            if item.pk in analise["itens_invalidos"]:
+                divergencias.append({
+                    'item': item,
+                    'tipo': 'VINCULO_N_N',
+                    'mensagem': analise["mensagens"].get(item.pk, "Configuracao N EAP -> N atividades nao suportada."),
+                })
+            elif not codigos:
                 divergencias.append({
                     'item': item,
                     'tipo': 'SEM_VINCULO',
-                    'mensagem': f"Atividade {item.codigo_atividade} sem vínculo com EAP"
+                    'mensagem': f"Atividade {item.codigo_atividade} sem vinculo com EAP",
                 })
-            else:
-                total_rateio = sum(m.percentual_rateio for m in mapeamentos)
-                if total_rateio < 100:
-                    divergencias.append({
-                        'item': item,
-                        'tipo': 'RATEIO_INCOMPLETO',
-                        'mensagem': f"Atividade {item.codigo_atividade} com rateio incompleto ({total_rateio}%)"
-                    })
-        
+
         return divergencias
     
     @classmethod
@@ -597,41 +1199,31 @@ class MapeamentoService:
         Returns:
             dict: Dicionário com plano_contas_id -> valores consolidados
         """
-        plano = PlanoFisico.objects.get(pk=plano_fisico_id)
-        
+        analise = cls.analisar_vinculos(plano_fisico_id)
         consolidados = {}
-        
-        # Buscar todos os mapeamentos ativos
-        mapeamentos = MapaCorrespondencia.objects.filter(
-            plano_fisico_item__plano=plano,
-            status='ATIVO'
-        ).select_related('plano_fisico_item', 'plano_contas')
-        
-        for mp in mapeamentos:
-            pc_id = mp.plano_contas_id
-            if not pc_id:
+
+        for (item_id, pc_id), valor_planejado in analise["contribuicoes"].items():
+            if item_id in analise["itens_invalidos"]:
                 continue
-            
-            item = mp.plano_fisico_item
-            percentual = mp.percentual_rateio / 100
-            
             if pc_id not in consolidados:
+                plano_contas = next((eap for eap in analise["item_to_eaps"].get(item_id, []) if eap.pk == pc_id), None)
                 consolidados[pc_id] = {
-                    'plano_contas': mp.plano_contas,
-                    'valor_planejado': 0,
-                    'valor_realizado': 0,
-                    'percentual_concluido': 0
+                    'plano_contas': plano_contas,
+                    'valor_planejado': Decimal("0.00"),
+                    'valor_realizado': Decimal("0.00"),
+                    'percentual_concluido': 0,
                 }
-            
-            consolidados[pc_id]['valor_planejado'] += item.valor_planejado * percentual
-            consolidados[pc_id]['valor_realizado'] += item.valor_realizado * percentual
-        
-        # Calcular percentuais
+            item = next(item for item in analise["itens"] if item.pk == item_id)
+            item_total = analise["valores_item"].get(item_id, Decimal("0.00"))
+            participacao = (valor_planejado / item_total) if item_total > 0 else Decimal("0.00")
+            consolidados[pc_id]['valor_planejado'] += valor_planejado
+            consolidados[pc_id]['valor_realizado'] += (item.valor_realizado or Decimal("0.00")) * participacao
+
         for pc_id in consolidados:
             dados = consolidados[pc_id]
             if dados['valor_planejado'] > 0:
                 dados['percentual_concluido'] = round(
                     (dados['valor_realizado'] / dados['valor_planejado']) * 100, 1
                 )
-        
+
         return consolidados

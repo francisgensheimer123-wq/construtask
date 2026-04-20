@@ -27,6 +27,7 @@ class LoginRequiredMiddleware:
             r'^/favicon\.ico',
             r'^/robots\.txt',
             r'^/health/$',
+            r'^/ready/$',
         ]
         # Adicionar URLs extras configuradas
         extra_exempt = getattr(settings, 'LOGIN_EXEMPT_URLS', [])

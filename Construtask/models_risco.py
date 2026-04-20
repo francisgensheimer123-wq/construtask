@@ -5,6 +5,8 @@ Módulo de Gestão de Riscos - ISO 6.1 / PMBOK Riscos
 from django.conf import settings
 from django.db import models
 
+from .domain import gerar_numero_documento
+
 
 class Risco(models.Model):
     """
@@ -73,6 +75,7 @@ class Risco(models.Model):
         on_delete=models.CASCADE,
         related_name="riscos"
     )
+    codigo = models.CharField(max_length=30, unique=True, null=True, blank=True, editable=False)
     plano_contas = models.ForeignKey(
         "PlanoContas",
         on_delete=models.PROTECT,
@@ -144,10 +147,12 @@ class Risco(models.Model):
     atualizado_em = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.titulo} ({self.get_status_display()})"
+        return f"{self.codigo or 'RIS-NOVO'} - {self.titulo} ({self.get_status_display()})"
 
     def save(self, *args, **kwargs):
         """Calcula o nível do risco automaticamente."""
+        if not self.codigo:
+            self.codigo = gerar_numero_documento(Risco, "RIS-", "codigo")
         self.nivel = self.probabilidade * self.impacto
         super().save(*args, **kwargs)
 

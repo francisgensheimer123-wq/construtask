@@ -11,9 +11,29 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 from pathlib import Path
+import json
 import os
 
 import dj_database_url
+from django.core.exceptions import ImproperlyConfigured
+
+
+def _env_bool(name, default=False):
+    return (os.environ.get(name, str(default)) or str(default)).lower() in {"1", "true", "yes", "on"}
+
+
+def _env_list(name, default=""):
+    return [item.strip() for item in os.environ.get(name, default).split(",") if item.strip()]
+
+
+def _env_json(name, default=None):
+    raw_value = os.environ.get(name, "")
+    if not raw_value:
+        return {} if default is None else default
+    try:
+        return json.loads(raw_value)
+    except json.JSONDecodeError as exc:
+        raise ImproperlyConfigured(f"Valor invalido em {name}: JSON esperado.") from exc
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -23,10 +43,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get(
-    "DJANGO_SECRET_KEY",
-    "django-insecure-development-key"
-)
+_secret_key_env = os.environ.get("DJANGO_SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 _debug_env = os.environ.get("DJANGO_DEBUG")
@@ -35,11 +52,17 @@ if _debug_env is None and not os.environ.get("DATABASE_URL"):
     DEBUG = True
 else:
     DEBUG = (_debug_env or "False").lower() in {"1", "true", "yes", "on"}
-ALLOWED_HOSTS = [
-    host.strip()
-    for host in os.environ.get("ALLOWED_HOSTS", "127.0.0.1,localhost").split(",")
-    if host.strip()
-]
+
+if _secret_key_env:
+    SECRET_KEY = _secret_key_env
+elif DEBUG:
+    SECRET_KEY = "django-insecure-development-key"
+else:
+    raise ImproperlyConfigured("Defina DJANGO_SECRET_KEY em ambiente nao local.")
+CONSTRUTASK_ENVIRONMENT = os.environ.get("CONSTRUTASK_ENVIRONMENT", "development" if DEBUG else "production").lower()
+CONSTRUTASK_ADMIN_SUPERUSER_USERNAME = os.environ.get("CONSTRUTASK_ADMIN_SUPERUSER_USERNAME", "Construtask")
+ALLOWED_HOSTS = _env_list("ALLOWED_HOSTS", "127.0.0.1,localhost")
+CSRF_TRUSTED_ORIGINS = _env_list("CSRF_TRUSTED_ORIGINS")
 
 
 # Application definition
@@ -63,6 +86,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'Construtask.observability.RequestObservabilityMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'Construtask.audit.AuditMiddleware',
@@ -97,7 +121,8 @@ if os.environ.get("DATABASE_URL"):
     DATABASES = {
         "default": dj_database_url.parse(
             os.environ.get("DATABASE_URL"),
-            conn_max_age=600
+            conn_max_age=600,
+            conn_health_checks=True,
         )
     }
 
@@ -154,10 +179,56 @@ STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+MEDIA_STORAGE_BACKEND = os.environ.get("DJANGO_MEDIA_STORAGE_BACKEND", "django.core.files.storage.FileSystemStorage")
+MEDIA_STORAGE_OPTIONS = _env_json("DJANGO_MEDIA_STORAGE_OPTIONS_JSON", {})
+CONSTRUTASK_MEDIA_PERSISTENT = _env_bool(
+    "CONSTRUTASK_MEDIA_PERSISTENT",
+    DEBUG or MEDIA_STORAGE_BACKEND != "django.core.files.storage.FileSystemStorage",
+)
+CONSTRUTASK_FILESYSTEM_MEDIA_ALLOWED_IN_PRODUCTION = _env_bool("CONSTRUTASK_FILESYSTEM_MEDIA_ALLOWED_IN_PRODUCTION", DEBUG)
+CONSTRUTASK_BACKUP_ENABLED = _env_bool("CONSTRUTASK_BACKUP_ENABLED", DEBUG)
+CONSTRUTASK_BACKUP_PROVIDER = os.environ.get("CONSTRUTASK_BACKUP_PROVIDER", "filesystem-local" if DEBUG else "")
+CONSTRUTASK_BACKUP_RETENTION_DAYS = int(os.environ.get("CONSTRUTASK_BACKUP_RETENTION_DAYS", "7" if DEBUG else "30"))
+CONSTRUTASK_BACKUP_INTERVAL_HOURS = int(os.environ.get("CONSTRUTASK_BACKUP_INTERVAL_HOURS", "24"))
+CONSTRUTASK_BACKUP_LAST_SUCCESS_AT = os.environ.get("CONSTRUTASK_BACKUP_LAST_SUCCESS_AT", "")
+CONSTRUTASK_LOGIN_MAX_ATTEMPTS = int(os.environ.get("CONSTRUTASK_LOGIN_MAX_ATTEMPTS", "5"))
+CONSTRUTASK_LOGIN_LOCKOUT_MINUTES = int(os.environ.get("CONSTRUTASK_LOGIN_LOCKOUT_MINUTES", "15"))
+CONSTRUTASK_METRICAS_RETENTION_DAYS = int(os.environ.get("CONSTRUTASK_METRICAS_RETENTION_DAYS", "30" if DEBUG else "90"))
+CONSTRUTASK_ERROS_APLICACAO_RETENTION_DAYS = int(
+    os.environ.get("CONSTRUTASK_ERROS_APLICACAO_RETENTION_DAYS", "60" if DEBUG else "180")
+)
+CONSTRUTASK_SLOW_REQUEST_THRESHOLD_MS = int(os.environ.get("CONSTRUTASK_SLOW_REQUEST_THRESHOLD_MS", "1000"))
+CONSTRUTASK_HOME_CACHE_TTL = int(os.environ.get("CONSTRUTASK_HOME_CACHE_TTL", "120"))
+CONSTRUTASK_PLANEJAMENTO_CACHE_TTL = int(os.environ.get("CONSTRUTASK_PLANEJAMENTO_CACHE_TTL", "180"))
+CONSTRUTASK_ALERTAS_SYNC_TTL = int(os.environ.get("CONSTRUTASK_ALERTAS_SYNC_TTL", "120"))
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": os.environ.get("CONSTRUTASK_CACHE_LOCATION", "construtask-default"),
+        "TIMEOUT": int(os.environ.get("CONSTRUTASK_CACHE_TIMEOUT", "300")),
+    }
+}
+
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 5000
 
 STATICFILES_DIRS = []
 
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+STORAGES = {
+    "default": {
+        "BACKEND": MEDIA_STORAGE_BACKEND,
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage" if DEBUG else "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
+if MEDIA_STORAGE_BACKEND == "django.core.files.storage.FileSystemStorage":
+    STORAGES["default"]["OPTIONS"] = {
+        "location": str(MEDIA_ROOT),
+        "base_url": MEDIA_URL,
+    }
+elif MEDIA_STORAGE_OPTIONS:
+    STORAGES["default"]["OPTIONS"] = MEDIA_STORAGE_OPTIONS
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
@@ -171,3 +242,49 @@ LOGOUT_REDIRECT_URL = 'login'
 # Session settings
 SESSION_COOKIE_AGE = 60 * 60 * 24 * 7  # 7 dias
 SESSION_SAVE_EVERY_REQUEST = True
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SAMESITE = "Lax"
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = "DENY"
+SECURE_REFERRER_POLICY = "same-origin"
+
+if not DEBUG:
+    if _env_bool("SECURE_PROXY_SSL_HEADER_ENABLED", True):
+        SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+        USE_X_FORWARDED_HOST = True
+    SECURE_HSTS_SECONDS = int(os.environ.get("SECURE_HSTS_SECONDS", "3600"))
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = os.environ.get("SECURE_HSTS_INCLUDE_SUBDOMAINS", "False").lower() in {"1", "true", "yes", "on"}
+    SECURE_HSTS_PRELOAD = os.environ.get("SECURE_HSTS_PRELOAD", "False").lower() in {"1", "true", "yes", "on"}
+    SECURE_SSL_REDIRECT = os.environ.get("SECURE_SSL_REDIRECT", "True").lower() in {"1", "true", "yes", "on"}
+
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "structured": {
+            "format": "%(asctime)s %(levelname)s %(name)s %(message)s",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "structured",
+        },
+    },
+    "loggers": {
+        "construtask.request": {
+            "handlers": ["console"],
+            "level": os.environ.get("CONSTRUTASK_LOG_LEVEL", "INFO"),
+            "propagate": False,
+        },
+        "construtask.error": {
+            "handlers": ["console"],
+            "level": os.environ.get("CONSTRUTASK_ERROR_LOG_LEVEL", "INFO"),
+            "propagate": False,
+        },
+    },
+}

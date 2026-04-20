@@ -3,12 +3,21 @@ from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import CreateView, DetailView, ListView, UpdateView
+from django.utils import timezone
 
 from .forms import NaoConformidadeForm
 from .models import Obra
 from .models_qualidade import NaoConformidade
 from .permissions import get_empresa_operacional, get_obra_do_contexto
 from .services_qualidade import QualidadeWorkflowService
+from .services_aprovacao import can_manage_quality
+from .views import (
+    _datahora_local,
+    _exportar_excel_response,
+    _exportar_relatorio_probatorio_excel_response,
+    _pdf_relatorio_probatorio_response,
+    money_br,
+)
 
 
 def _obra_contexto(request):
@@ -93,6 +102,9 @@ class NaoConformidadeDetailView(LoginRequiredMixin, DetailView):
         self.object = self.get_object()
         acao = request.POST.get("acao")
         observacao = request.POST.get("observacao", "")
+        if acao in {"VERIFICACAO", "ENCERRAMENTO", "CANCELAMENTO"} and not can_manage_quality(request.user):
+            messages.error(request, "Seu perfil não possui permissão para executar esta etapa da qualidade.")
+            return redirect("nao_conformidade_detail", pk=self.object.pk)
         if acao == "TRATAMENTO":
             QualidadeWorkflowService.iniciar_tratamento(self.object, request.user, observacao)
         elif acao == "VERIFICACAO":
@@ -119,3 +131,131 @@ class NaoConformidadeUpdateView(LoginRequiredMixin, UpdateView):
     def get_success_url(self):
         messages.success(self.request, "Nao conformidade atualizada com sucesso.")
         return reverse_lazy("nao_conformidade_detail", kwargs={"pk": self.object.pk})
+
+
+def _nao_conformidades_queryset(request):
+    empresa = get_empresa_operacional(request)
+    queryset = NaoConformidade.objects.select_related("obra", "plano_contas", "responsavel", "criado_por")
+    if empresa:
+        queryset = queryset.filter(empresa=empresa)
+    obra = _obra_contexto(request)
+    if obra:
+        queryset = queryset.filter(obra=obra)
+    termo = request.GET.get("q", "").strip()
+    status = request.GET.get("status", "").strip()
+    if termo:
+        queryset = queryset.filter(descricao__icontains=termo)
+    if status:
+        queryset = queryset.filter(status=status)
+    return queryset.order_by("-criado_em")
+
+
+def nao_conformidade_export_view(request):
+    queryset = _nao_conformidades_queryset(request)
+    linhas = [
+        {
+            "ID": nc.numero or f"NC-{nc.pk}",
+            "Obra": nc.obra.codigo,
+            "Centro de Custo": f"{nc.plano_contas.codigo} - {nc.plano_contas.descricao}" if nc.plano_contas else "-",
+            "Descricao": nc.descricao,
+            "Status": nc.get_status_display(),
+            "Responsavel": nc.responsavel,
+            "Data de Abertura": nc.data_abertura.strftime("%d/%m/%Y"),
+        }
+        for nc in queryset
+    ]
+    return _exportar_excel_response("nao_conformidades.xlsx", "Nao Conformidades", linhas)
+
+
+def nao_conformidade_pdf_view(request):
+    queryset = _nao_conformidades_queryset(request)
+    resumo = {"Quantidade de Registros": queryset.count(), "Emitido em": _datahora_local(timezone.now()).strftime("%d/%m/%Y %H:%M")}
+    extras = [
+        {
+            "ID": nc.numero or f"NC-{nc.pk}",
+            "Obra": nc.obra.codigo,
+            "Descricao": nc.descricao,
+            "Status": nc.get_status_display(),
+            "Data": nc.data_abertura.strftime("%d/%m/%Y"),
+        }
+        for nc in queryset
+    ]
+    return _pdf_relatorio_probatorio_response(
+        "nao_conformidades_lista.pdf",
+        "Lista de Nao Conformidades",
+        resumo,
+        [],
+        extras,
+        extras_titulo="Lista de Nao Conformidades",
+        extras_colunas=[("ID", 50), ("Obra", 55), ("Descricao", 230), ("Status", 85), ("Data", 75)],
+        incluir_historico=False,
+    )
+
+
+def _dados_probatorio_nc(nc):
+    resumo = {
+        "Identificador": nc.numero or f"NC-{nc.pk:06d}",
+        "Obra": f"{nc.obra.codigo} - {nc.obra.nome}",
+        "Centro de Custo": f"{nc.plano_contas.codigo} - {nc.plano_contas.descricao}" if nc.plano_contas else "-",
+        "Status": nc.get_status_display(),
+        "Responsavel": str(nc.responsavel),
+        "Criado por": str(nc.criado_por),
+        "Data de Abertura": nc.data_abertura.strftime("%d/%m/%Y"),
+        "Descricao": nc.descricao,
+        "Causa": nc.causa or "-",
+        "Acao Corretiva": nc.acao_corretiva or "-",
+        "Evidencia de Tratamento": nc.evidencia_tratamento or "-",
+        "Evidencia de Encerramento": nc.evidencia_encerramento or "-",
+        "Eficacia": nc.eficacia_observacao or "-",
+    }
+    historico = [
+        {
+            "Data": item.timestamp.strftime("%d/%m/%Y %H:%M"),
+            "Acao": item.get_acao_display(),
+            "Usuario": str(item.usuario or "-"),
+            "Descricao": item.observacao or "-",
+        }
+        for item in nc.historico.all()
+    ]
+    extras = [
+        {
+            "Campo": "Data de Encerramento",
+            "Valor": nc.data_encerramento.strftime("%d/%m/%Y") if nc.data_encerramento else "-",
+        },
+        {
+            "Campo": "Eficacia verificada por",
+            "Valor": str(nc.eficacia_verificada_por) if nc.eficacia_verificada_por else "-",
+        },
+        {
+            "Campo": "Data da verificacao de eficacia",
+            "Valor": nc.eficacia_verificada_em.strftime("%d/%m/%Y %H:%M") if nc.eficacia_verificada_em else "-",
+        },
+    ]
+    return resumo, historico, extras
+
+
+def nao_conformidade_aprovacao_pdf_view(request, pk):
+    nc = get_object_or_404(_nao_conformidades_queryset(request).prefetch_related("historico__usuario"), pk=pk)
+    resumo, historico, extras = _dados_probatorio_nc(nc)
+    return _pdf_relatorio_probatorio_response(
+        f"nao_conformidade_{(nc.numero or f'NC-{nc.pk}').replace('/', '_')}.pdf",
+        f"Relatorio Probatorio de Nao Conformidade - {nc.numero or f'NC-{nc.pk}'}",
+        resumo,
+        historico,
+        extras,
+        extras_titulo="Dados Complementares",
+        extras_colunas=[("Campo", 180), ("Valor", 315)],
+    )
+
+
+def nao_conformidade_aprovacao_excel_view(request, pk):
+    nc = get_object_or_404(_nao_conformidades_queryset(request).prefetch_related("historico__usuario"), pk=pk)
+    resumo, historico, extras = _dados_probatorio_nc(nc)
+    return _exportar_relatorio_probatorio_excel_response(
+        f"nao_conformidade_{(nc.numero or f'NC-{nc.pk}').replace('/', '_')}.xlsx",
+        "Resumo",
+        resumo,
+        historico,
+        extras_sheet_name="Complemento",
+        extras_linhas=extras,
+    )

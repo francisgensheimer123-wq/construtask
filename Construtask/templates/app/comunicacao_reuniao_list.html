@@ -1,0 +1,83 @@
+{% extends "app/base.html" %}
+{% load formatters %}
+
+{% block title %}Comunicacoes | Construtask{% endblock %}
+
+{% block content %}
+<div class="toolbar">
+    <div>
+        <h2>Comunicacoes da Obra</h2>
+        <p class="muted">Organize reunioes de curto, medio e longo prazo com pauta semi automatica e ata rastreavel.</p>
+    </div>
+    <div style="display:flex; gap:10px;">
+        {% if pode_criar and obra_contexto %}
+        <a class="btn" href="{% url 'reuniao_comunicacao_create' %}">Nova Reuniao</a>
+        {% endif %}
+        <a class="btn secondary" href="{% url 'modulo_grupo' 'comunicacoes' %}">Voltar ao Modulo</a>
+    </div>
+</div>
+
+{% if not obra_contexto %}
+<section class="panel">
+    <p class="empty">Selecione uma obra para acessar o modulo de comunicacoes.</p>
+</section>
+{% else %}
+<section class="grid-3" style="margin-bottom:20px;">
+    <div class="panel"><span class="muted">Total de reunioes</span><h3>{{ resumo_reunioes.total }}</h3></div>
+    <div class="panel"><span class="muted">Em aprovacao</span><h3>{{ resumo_reunioes.em_aprovacao }}</h3></div>
+    <div class="panel"><span class="muted">Aprovadas</span><h3>{{ resumo_reunioes.aprovadas }}</h3></div>
+</section>
+
+<section class="panel" style="margin-bottom:20px;">
+    <h3>Frequencias padrao da empresa</h3>
+    <table class="compact-table">
+        <tbody>
+            <tr><th>Curto prazo</th><td>{{ parametros_comunicacao.frequencia_curto_prazo_dias }} dia(s)</td></tr>
+            <tr><th>Medio prazo</th><td>{{ parametros_comunicacao.frequencia_medio_prazo_dias }} dia(s)</td></tr>
+            <tr><th>Longo prazo</th><td>{{ parametros_comunicacao.frequencia_longo_prazo_dias }} dia(s)</td></tr>
+        </tbody>
+    </table>
+</section>
+
+<section class="panel">
+    <div class="toolbar">
+        <h3>Reunioes</h3>
+        <div style="display:flex; gap:10px;">
+            <a class="btn secondary" href="{% url 'reuniao_comunicacao_create' %}?tipo_reuniao=CURTO_PRAZO">Curto Prazo</a>
+            <a class="btn secondary" href="{% url 'reuniao_comunicacao_create' %}?tipo_reuniao=MEDIO_PRAZO">Medio Prazo</a>
+            <a class="btn secondary" href="{% url 'reuniao_comunicacao_create' %}?tipo_reuniao=LONGO_PRAZO">Longo Prazo</a>
+        </div>
+    </div>
+    {% if reunioes %}
+    <table class="compact-table">
+        <thead>
+            <tr>
+                <th>Numero</th>
+                <th>Tipo</th>
+                <th>Titulo</th>
+                <th>Status</th>
+                <th>Data Prevista</th>
+                <th>Itens Ativos</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for reuniao in reunioes %}
+            <tr>
+                <td>{{ reuniao.numero }}</td>
+                <td>{{ reuniao.get_tipo_reuniao_display }}</td>
+                <td>{{ reuniao.titulo }}</td>
+                <td><span class="badge bg-{{ reuniao|workflow_badge_class }}">{{ reuniao.get_status_display }}</span></td>
+                <td>{{ reuniao.data_prevista|date:"d/m/Y" }}</td>
+                <td>{{ reuniao.quantidade_itens_ativos }}</td>
+                <td><a href="{% url 'reuniao_comunicacao_detail' reuniao.pk %}">Abrir</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="empty">Ainda nao ha reunioes cadastradas para esta obra.</p>
+    {% endif %}
+</section>
+{% endif %}
+{% endblock %}

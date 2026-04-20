@@ -5,12 +5,25 @@
 {% block title %}Fechamento Mensal | Construtask{% endblock %}
 
 {% block content %}
-<div class="toolbar">
-    <div>
+  <div class="toolbar">
+      <div>
         <h2>Fechamento Mensal</h2>
-        <p>Consolidado operacional mensal por obra.</p>
-    </div>
-</div>
+          <p>Consolidado operacional mensal por obra.</p>
+      </div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <a class="btn secondary" href="{% url 'fechamento_mensal_export' %}?obra={{ obra_atual.pk|default:'' }}&ano={{ ano|stringformat:'d' }}&mes={{ mes|stringformat:'d' }}">Exportar Excel</a>
+          <a class="btn secondary" href="{% url 'fechamento_mensal_pdf' %}?obra={{ obra_atual.pk|default:'' }}&ano={{ ano|stringformat:'d' }}&mes={{ mes|stringformat:'d' }}">Exportar PDF</a>
+          {% if obra_atual %}
+          <form method="post" action="{% url 'fechamento_mensal_job' %}">
+              {% csrf_token %}
+              <input type="hidden" name="ano" value="{{ ano }}">
+              <input type="hidden" name="mes" value="{{ mes }}">
+              <button class="btn secondary" type="submit">Gerar por Job</button>
+          </form>
+          {% endif %}
+          <a class="btn secondary" href="{% url 'jobs_assincronos' %}">Ver Jobs</a>
+      </div>
+  </div>
 
 <section class="panel" style="margin-bottom:18px;">
     <form method="get" class="toolbar" style="justify-content:flex-start;">
@@ -49,7 +62,8 @@
 <section class="panel">
     <h3>Consolidado por Centro de Custo (Mes/Ano)</h3>
     {% if resumo_centros %}
-    <table class="compact-table" style="margin-bottom:18px;">
+    <div class="table-scroll">
+    <table class="compact-table" style="margin-bottom:18px; min-width:980px;">
         <thead>
             <tr>
                 <th>Centro de Custo</th>
@@ -73,15 +87,47 @@
             {% endfor %}
         </tbody>
     </table>
+    </div>
     {% else %}
     <p class="empty">Sem movimentacoes por centro de custo no periodo selecionado.</p>
     {% endif %}
 </section>
 
 <section class="panel">
+    <h3>Jobs Recentes</h3>
+    {% if jobs_recentes %}
+    <div class="table-scroll">
+    <table class="compact-table" style="margin-bottom:18px; min-width:780px;">
+        <thead>
+            <tr>
+                <th>Criado em</th>
+                <th>Tipo</th>
+                <th>Status</th>
+                <th>Resultado</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for job in jobs_recentes %}
+            <tr>
+                <td>{{ job.criado_em|date:"d/m/Y H:i" }}</td>
+                <td>{{ job.get_tipo_display }}</td>
+                <td>{{ job.get_status_display }}</td>
+                <td>{% if job.arquivo_resultado %}<a href="{{ job.arquivo_resultado.url }}">Baixar arquivo</a>{% else %}{{ job.erro|default:"-" }}{% endif %}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% else %}
+    <p class="empty">Nenhum job recente para esta obra.</p>
+    {% endif %}
+</section>
+
+<section class="panel">
     <h3>Ultimos Fechamentos Registrados</h3>
     {% if fechamentos %}
-    <table class="compact-table">
+    <div class="table-scroll">
+    <table class="compact-table" style="min-width:820px;">
         <thead>
             <tr>
                 <th>Obra</th>
@@ -103,6 +149,7 @@
             {% endfor %}
         </tbody>
     </table>
+    </div>
     {% else %}
     <p class="empty">Nenhum fechamento registrado.</p>
     {% endif %}

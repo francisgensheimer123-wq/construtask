@@ -4,8 +4,44 @@
 {% block main_class %}main-full{% endblock %}
 {% block title %}Cotacao | Construtask{% endblock %}
 
+{% block extra_head %}
+<style>
+    .cotacao-form-page .cotacao-sheet {
+        background: linear-gradient(180deg, rgba(56,56,56,.96) 0%, rgba(34,34,34,.98) 100%);
+    }
+    .cotacao-form-page .cotacao-table td.cotacao-neutral,
+    .cotacao-form-page .cotacao-table th.cotacao-neutral {
+        background: linear-gradient(180deg, rgba(62,62,62,.95) 0%, rgba(39,39,39,.98) 100%);
+    }
+    .cotacao-form-page .cotacao-table .cotacao-summary {
+        background: linear-gradient(180deg, rgba(67,67,67,.98) 0%, rgba(43,43,43,.98) 100%);
+    }
+    .cotacao-form-page .cotacao-table .cotacao-meta {
+        font-size: 11px;
+        color: var(--muted-soft);
+    }
+    .cotacao-form-page .cotacao-winner-choice {
+        display: inline-flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 8px;
+        font-weight: 700;
+        margin-bottom: 10px;
+        cursor: pointer;
+    }
+    .cotacao-form-page .cotacao-winner-choice input[type="checkbox"] {
+        width: auto;
+        height: auto;
+        margin: 0;
+        flex: 0 0 auto;
+        accent-color: #c71f1f;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="panel" style="width:100%; max-width:100%; overflow-x:auto;">
+<div class="form-page-shell">
+<div class="panel cotacao-form-page cotacao-sheet" style="overflow-x:auto;">
     <h2>Nova Cotacao Comparativa</h2>
     <p>Compare fornecedores lado a lado, defina o vencedor e registre a proposta de cada um na mesma tela.</p>
     <form method="post" enctype="multipart/form-data">
@@ -30,7 +66,7 @@
             {% if not itens_solicitacao %}
             <p class="empty">Selecione uma solicitacao para carregar os itens da cotacao.</p>
             {% else %}
-            <table class="compact-table" style="min-width:1700px;">
+            <table class="compact-table cotacao-table" style="min-width:1700px;">
                 <thead>
                     <tr>
                         <th rowspan="2" style="min-width:220px;">Centro de Custo</th>
@@ -72,7 +108,7 @@
                         {% for supplier_row in supplier_rows %}
                         {% for entry in supplier_row.item_entries %}
                         {% if entry.item.pk == item.pk %}
-                        <td style="background:#fafafa;" class="js-proposta-cell" data-supplier-index="{{ supplier_row.index }}">
+                        <td class="js-proposta-cell cotacao-neutral" data-supplier-index="{{ supplier_row.index }}">
                             {% if forloop.parentloop.counter0 == 0 %}
                             <span class="muted">Proposta</span>
                             {% endif %}
@@ -95,15 +131,15 @@
                     </tr>
                     {% endfor %}
                     <tr>
-                        <th colspan="4" style="background:#f5f5f5;">Resumo Comparativo</th>
+                        <th colspan="4" class="cotacao-summary">Resumo Comparativo</th>
                         {% for supplier_row in supplier_rows %}
                         {% with fornecedor_form=supplier_row.form %}
-                        <td colspan="4" style="background:#f5f5f5; vertical-align:top;" data-supplier-index="{{ supplier_row.index }}">
-                            <label style="display:flex; align-items:center; gap:8px; font-weight:700; margin-bottom:10px;">
+                        <td colspan="4" class="cotacao-summary" style="vertical-align:top;" data-supplier-index="{{ supplier_row.index }}">
+                            <label class="cotacao-winner-choice">
                                 {{ fornecedor_form.escolhido }} Vencedor
                             </label>
-                            <div style="font-size:11px; color:#4b5563;">Total Geral: <strong class="js-cotacao-total-geral" data-supplier-index="{{ supplier_row.index }}">$ 0,00</strong></div>
-                            <div style="font-size:11px; color:#4b5563;">Prazo Medio: <strong class="js-cotacao-prazo-geral" data-supplier-index="{{ supplier_row.index }}">0,00 dias</strong></div>
+                            <div class="cotacao-meta">Total Geral: <strong class="js-cotacao-total-geral" data-supplier-index="{{ supplier_row.index }}">$ 0,00</strong></div>
+                            <div class="cotacao-meta">Prazo Medio: <strong class="js-cotacao-prazo-geral" data-supplier-index="{{ supplier_row.index }}">0,00 dias</strong></div>
                             <div style="margin-top:6px; display:flex; gap:6px; flex-wrap:wrap;">
                                 <span class="js-indicador-custo-geral" data-supplier-index="{{ supplier_row.index }}" style="display:none; background:#111827; color:#fff; padding:3px 8px; border-radius:999px; font-size:10px;">Menor custo total</span>
                                 <span class="js-indicador-prazo-geral" data-supplier-index="{{ supplier_row.index }}" style="display:none; background:#7f1d1d; color:#fff; padding:3px 8px; border-radius:999px; font-size:10px;">Menor prazo medio</span>
@@ -113,10 +149,10 @@
                         {% endfor %}
                     </tr>
                     <tr>
-                        <th colspan="4" style="background:#f5f5f5;">Anexos / Propostas</th>
+                        <th colspan="4" class="cotacao-summary">Anexos / Propostas</th>
                         {% for supplier_row in supplier_rows %}
                         {% with fornecedor_form=supplier_row.form %}
-                        <td colspan="4" style="background:#f5f5f5; vertical-align:top;">
+                        <td colspan="4" class="cotacao-summary" style="vertical-align:top;">
                             <div class="field" style="margin-bottom:10px;">
                                 <label for="{{ fornecedor_form.anexo_descricao.id_for_label }}">Descricao do Anexo</label>
                                 {{ fornecedor_form.anexo_descricao }}
@@ -140,11 +176,28 @@
         </div>
     </form>
 </div>
+</div>
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
     function parseDecimal(value) {
-        const normalized = (value || "0").toString().replace(/\./g, "").replace(",", ".");
+        let normalized = (value || "0").toString().trim();
+        normalized = normalized.replace(/\s+/g, "").replace(/R\$/g, "").replace(/\$/g, "");
+        if (normalized.includes(",") && normalized.includes(".")) {
+            if (normalized.lastIndexOf(",") > normalized.lastIndexOf(".")) {
+                normalized = normalized.replace(/\./g, "").replace(",", ".");
+            } else {
+                normalized = normalized.replace(/,/g, "");
+            }
+        } else if (normalized.includes(",")) {
+            normalized = normalized.replace(/\./g, "").replace(",", ".");
+        } else {
+            const parts = normalized.split(".");
+            if (parts.length > 2) {
+                const decimal = parts.pop();
+                normalized = parts.join("") + "." + decimal;
+            }
+        }
         const number = Number(normalized);
         return Number.isFinite(number) ? number : 0;
     }

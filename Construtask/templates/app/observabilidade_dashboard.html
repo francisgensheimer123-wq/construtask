@@ -1,0 +1,143 @@
+{% extends "app/base.html" %}
+
+{% block main_class %}main-full{% endblock %}
+{% block title %}Observabilidade | Construtask{% endblock %}
+
+{% block content %}
+<div class="toolbar">
+    <div>
+        <h2>Observabilidade</h2>
+        <p>Monitore desempenho, falhas e execucao operacional da aplicacao.</p>
+    </div>
+    <div>
+        <p class="muted" style="margin-bottom:8px;">Erro sintetico controlado para validacao da instrumentacao.</p>
+        <a class="btn-secondary" href="{% url 'operacao_tecnica_dashboard' %}">Operacao Tecnica</a>
+        {% if request.user.is_superuser and request.user.username == "Construtask" %}
+        <a class="btn-secondary" href="{% url 'observabilidade_teste_erro' %}">Erro sintetico</a>
+        {% else %}
+        <span class="chip-muted">Erro sintetico disponivel apenas para o superusuario tecnico</span>
+        {% endif %}
+    </div>
+</div>
+
+<section class="cards">
+    <div class="card"><span>Requests</span><strong>{{ resumo_metricas.total }}</strong></div>
+    <div class="card"><span>Tempo Medio (ms)</span><strong>{{ resumo_metricas.media_ms|floatformat:2 }}</strong></div>
+    <div class="card"><span>Erros 500</span><strong>{{ resumo_metricas.erros_500 }}</strong></div>
+    <div class="card"><span>Requests Lentas</span><strong>{{ resumo_metricas.lentas }}</strong></div>
+    <div class="card"><span>Erros Abertos</span><strong>{{ resumo_erros.abertos }}</strong></div>
+    <div class="card"><span>Jobs Pendentes</span><strong>{{ resumo_jobs.pendentes }}</strong></div>
+</section>
+
+<section class="panel">
+    <div class="toolbar" style="justify-content:space-between; gap:12px; flex-wrap:wrap;">
+        <div>
+            <h3 style="margin-bottom:6px;">Latencia por Endpoint</h3>
+            <p class="muted" style="margin:0;">Resumo dos caminhos com maior custo medio no contexto atual.</p>
+        </div>
+        <div class="muted">
+            Retencao: metricas {{ politica_retencao.metricas_dias }} dias | erros {{ politica_retencao.erros_dias }} dias
+        </div>
+    </div>
+    {% if endpoints_lentos %}
+    <div class="table-scroll">
+        <table class="compact-table" style="min-width:980px;">
+            <thead>
+                <tr>
+                    <th>Metodo</th>
+                    <th>Path</th>
+                    <th class="text-right">Volume</th>
+                    <th class="text-right">Media (ms)</th>
+                    <th class="text-right">Pico (ms)</th>
+                    <th class="text-right">Erros 500</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for endpoint in endpoints_lentos %}
+                <tr>
+                    <td>{{ endpoint.metodo }}</td>
+                    <td>{{ endpoint.path }}</td>
+                    <td class="money">{{ endpoint.total }}</td>
+                    <td class="money">{{ endpoint.media_ms|default:0|floatformat:2 }}</td>
+                    <td class="money">{{ endpoint.pico_ms|default:0|floatformat:2 }}</td>
+                    <td class="money">{{ endpoint.erros_500 }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="empty">Ainda nao ha volume suficiente para consolidar endpoints lentos neste contexto.</p>
+    {% endif %}
+</section>
+
+<section class="panel">
+    <h3>Metricas Recentes</h3>
+    {% if metricas_recentes %}
+    <div class="table-scroll">
+        <table class="compact-table" style="min-width:980px;">
+            <thead>
+                <tr>
+                    <th>Horario</th>
+                    <th>Metodo</th>
+                    <th>Path</th>
+                    <th>Status</th>
+                    <th>Duracao (ms)</th>
+                    <th>Request ID</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for metrica in metricas_recentes %}
+                <tr>
+                    <td>{{ metrica.criado_em|date:"d/m/Y H:i:s" }}</td>
+                    <td>{{ metrica.metodo }}</td>
+                    <td>{{ metrica.path }}</td>
+                    <td>{{ metrica.status_code }}</td>
+                    <td>{{ metrica.duracao_ms }}</td>
+                    <td>{{ metrica.request_id }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="empty">Nenhuma metrica registrada para o contexto atual.</p>
+    {% endif %}
+</section>
+
+<section class="panel">
+    <h3>Erros Recentes</h3>
+    {% if erros_recentes %}
+    <div class="table-scroll">
+        <table class="compact-table" style="min-width:1100px;">
+            <thead>
+                <tr>
+                    <th>Horario</th>
+                    <th>Classe</th>
+                    <th>Path</th>
+                    <th>Status</th>
+                    <th>Mensagem</th>
+                    <th>Request ID</th>
+                    <th>Resolvido</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for erro in erros_recentes %}
+                <tr>
+                    <td>{{ erro.criado_em|date:"d/m/Y H:i:s" }}</td>
+                    <td>{{ erro.classe_erro }}</td>
+                    <td>{{ erro.path }}</td>
+                    <td>{{ erro.status_code }}</td>
+                    <td class="wrap-text">{{ erro.mensagem }}</td>
+                    <td>{{ erro.request_id }}</td>
+                    <td>{% if erro.resolvido %}Sim{% else %}Nao{% endif %}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="empty">Nenhum erro registrado para o contexto atual.</p>
+    {% endif %}
+</section>
+{% endblock %}

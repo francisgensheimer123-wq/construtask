@@ -1,10 +1,124 @@
-{% extends "app/base.html" %}
+﻿{% extends "app/base.html" %}
 {% load formatters %}
 
 {% block main_class %}main-full{% endblock %}
 {% block title %}Painel | Construtask{% endblock %}
 
 {% block content %}
+<style>
+    .dashboard-cards {
+        grid-template-columns: repeat(10, minmax(0, 1fr));
+        align-items: stretch;
+    }
+    .dashboard-cards .card {
+        min-width: 0;
+    }
+    .dashboard-cards > .card:nth-child(6) small {
+        display: none;
+    }
+    .score-donut-wrap {
+        display: grid;
+        grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
+        gap: 24px;
+        align-items: center;
+    }
+    .score-donut {
+        position: relative;
+        width: min(100%, 342px);
+        aspect-ratio: 1 / 1;
+        border-radius: 50%;
+        margin: 0 auto;
+        background: conic-gradient({{ score_operacional_grafico.gradiente }});
+        box-shadow: inset 0 0 0 10px rgba(255,255,255,0.16), 0 14px 28px rgba(11, 11, 12, 0.12);
+    }
+    .score-donut::after {
+        content: "";
+        position: absolute;
+        inset: 24%;
+        border-radius: 50%;
+        background: linear-gradient(180deg, #f3f3f3 0%, #dddddd 100%);
+        box-shadow: inset 0 0 0 6px rgba(88, 88, 88, 0.12);
+    }
+    .score-donut-center {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 1;
+        text-align: center;
+        padding: 0 24px;
+    }
+    .score-donut-center span {
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted);
+    }
+    .score-donut-center strong {
+        margin: 6px 0;
+        font-size: 2.7rem;
+        color: var(--red-dark);
+        line-height: 1;
+    }
+    .score-component-legend {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+    }
+    .score-component-card {
+        border: 1px solid rgba(255,255,255,.14);
+        border-radius: 14px;
+        padding: 14px 16px;
+        background: linear-gradient(180deg, rgba(61,61,61,.98) 0%, rgba(44,44,44,.98) 100%);
+    }
+    .score-component-card strong {
+        display: block;
+        margin-top: 4px;
+        color: var(--white);
+        font-size: 1rem;
+        text-align: left;
+    }
+    .score-component-card .score-chip {
+        display: inline-flex;
+        width: 14px;
+        height: 14px;
+        border-radius: 999px;
+        margin-right: 8px;
+        vertical-align: middle;
+        box-shadow: inset 0 0 0 1px rgba(255,255,255,.22), 0 0 0 2px rgba(0,0,0,.08);
+    }
+    .score-component-card .meta {
+        margin-top: 8px;
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        color: var(--muted-soft);
+        font-size: 13px;
+    }
+    .chart-track {
+        background: rgba(255,255,255,.06);
+    }
+    .chart-fill {
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.18);
+        opacity: 1;
+    }
+    @media (max-width: 1100px) {
+        .dashboard-cards {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+        .score-donut-wrap {
+            grid-template-columns: 1fr;
+        }
+    }
+    @media (max-width: 800px) {
+        .dashboard-cards {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+</style>
 <div class="toolbar">
     <div>
         <h2>Painel Operacional</h2>
@@ -23,22 +137,73 @@
     <p class="empty">Selecione uma obra no cabecalho para carregar o dashboard executivo.</p>
 </div>
 {% else %}
-<section class="cards">
-    <div class="card"><span>Orcado</span><strong>{{ indicadores_exec.orcado|money_br }}</strong></div>
-    <div class="card"><span>Comprometido</span><strong>{{ indicadores_exec.comprometido|money_br }}</strong></div>
-    <div class="card"><span>Medido</span><strong>{{ indicadores_exec.medido|money_br }}</strong></div>
+<section class="cards dashboard-cards">
+    <div class="card">
+        <span>Score Operacional</span>
+        <strong>{{ score_operacional.pontuacao|trunc2 }}</strong>
+        <small class="text-muted">{{ score_operacional.faixa }}</small>
+    </div>
+    <div class="card"><span>Orçado</span><strong>{{ indicadores_exec.orcado|money_br }}</strong></div>
     <div class="card"><span>Executado</span><strong>{{ indicadores_exec.executado|money_br }}</strong></div>
-    <div class="card"><span>Planejado</span><strong>{{ indicadores_exec.planejado|money_br }}</strong></div>
+    <div class="card"><span>Custo Real</span><strong>{{ indicadores_exec.custo_real|money_br }}</strong></div>
+    <div class="card">
+        <span>Planejado até a Data</span>
+        <strong>{{ indicadores_exec.planejado|money_br }}</strong>
+    </div>
     <div class="card"><span>CPI</span><strong>{{ eva.CPI|trunc2 }}</strong></div>
     <div class="card"><span>SPI</span><strong>{{ eva.SPI|trunc2 }}</strong></div>
     <div class="card"><span>% Planejado x Executado</span><strong>{{ indicadores_dashboard.percentual_planejado_vs_executado|trunc2 }}%</strong></div>
 </section>
 
+<section class="panel" style="margin-top:18px;">
+    <div class="toolbar">
+        <h3>Score Operacional da Obra</h3>
+        <a class="btn secondary" href="{% url 'alerta_operacional_list' %}">Ver Alertas que Impactam</a>
+    </div>
+    {% if score_operacional.componentes %}
+    <div class="score-donut-wrap">
+        <div class="score-donut">
+            <div class="score-donut-center">
+                <span>Score Total</span>
+                <strong>{{ score_operacional.pontuacao|trunc2 }}</strong>
+                <small class="text-muted">{{ score_operacional.faixa }}</small>
+            </div>
+        </div>
+        <div class="score-component-legend">
+            {% for item in score_operacional_grafico.fatias %}
+            <div class="score-component-card">
+                <div>
+                    <span class="score-chip" style="background: {{ item.cor }};"></span>
+                    <small class="text-muted">Componente {{ item.indice }}</small>
+                </div>
+                <strong>{{ item.nome }}</strong>
+                <div class="meta">
+                    <span>{{ item.pontuacao|trunc2 }} / 25,00</span>
+                    <span class="badge {% if item.nivel == 'critico' %}badge-danger{% elif item.nivel == 'atencao' %}badge-warning{% elif item.nivel == 'saudavel' %}badge-info{% else %}badge-success{% endif %}">{{ item.nivel|upper }}</span>
+                </div>
+                <div style="margin-top:10px;">
+                    <small class="text-muted">{{ item.detalhe }}</small>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    <div style="margin-top:12px; display:flex; gap:16px; flex-wrap:wrap;">
+        <span class="badge bg-dark">Alertas ativos: {{ score_operacional.total_alertas_ativos }}</span>
+        <span class="badge bg-dark">Alertas fora do SLA: {{ score_operacional.total_alertas_pendentes_score }}</span>
+        <span class="badge bg-dark">Riscos ativos: {{ score_operacional.total_riscos_ativos }}</span>
+        <span class="badge bg-dark">NCs abertas: {{ score_operacional.total_ncs_abertas }}</span>
+    </div>
+    {% else %}
+    <p class="empty">Selecione uma obra com dados operacionais para calcular o score.</p>
+    {% endif %}
+</section>
+
 <section class="grid-2">
     <div class="panel">
         <div class="toolbar">
-            <h3>Integracao Fisico-Financeira</h3>
-            <a class="btn secondary" href="{% url 'plano_fisico_dashboard' %}">Cronograma</a>
+            <h3>Integração Físico-Financeira</h3>
+            <a class="btn secondary" href="{{ cronograma_ativo_url }}">Cronograma</a>
         </div>
         {% for item in grafico_geral %}
         <div class="chart-row">
@@ -101,7 +266,11 @@
                 <tbody>
                     {% for nc in nao_conformidades_abertas %}
                     <tr>
-                        <td><a href="{% url 'nao_conformidade_detail' nc.pk %}">{{ nc.get_status_display }}</a></td>
+                        <td>
+                            <a href="{% url 'nao_conformidade_detail' nc.pk %}">
+                                <span class="badge bg-{{ nc|workflow_badge_class }}">{{ nc.get_status_display }}</span>
+                            </a>
+                        </td>
                         <td class="wrap-text">{{ nc.descricao|truncatechars:90 }}</td>
                         <td>{{ nc.responsavel }}</td>
                     </tr>
@@ -112,6 +281,78 @@
             <p class="empty">Nenhuma nao conformidade aberta.</p>
             {% endif %}
         </div>
+    </div>
+</section>
+
+<section class="grid-2">
+    <div class="panel">
+        <div class="toolbar">
+            <h3>Prioridades Executivas</h3>
+            <a class="btn secondary" href="{% url 'alerta_operacional_list' %}">Gerir Alertas</a>
+        </div>
+        {% if prioridades_executivas %}
+        <table class="compact-table">
+            <thead>
+                <tr>
+                    <th>Frente</th>
+                    <th>Nível</th>
+                    <th class="text-right">Quantidade</th>
+                    <th>Ação recomendada</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in prioridades_executivas %}
+                <tr>
+                    <td>{{ item.frente }}</td>
+                    <td>
+                        <span class="badge {% if item.nivel == 'critico' %}badge-danger{% elif item.nivel == 'alto' %}badge-warning{% elif item.nivel == 'medio' %}badge-info{% else %}badge-secondary{% endif %}">
+                            {{ item.nivel|upper }}
+                        </span>
+                    </td>
+                    <td class="money">{{ item.total }}</td>
+                    <td class="wrap-text">{{ item.acao }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="empty">Nenhuma prioridade executiva consolidada.</p>
+        {% endif %}
+    </div>
+
+    <div class="panel">
+        <div class="toolbar">
+            <h3>Correlação Operacional</h3>
+            <a class="btn secondary" href="{% url 'alerta_operacional_list' %}">Ver Central</a>
+        </div>
+        {% if correlacoes_operacionais %}
+        <table class="compact-table">
+            <thead>
+                <tr>
+                    <th>Correlação</th>
+                    <th>Nivel</th>
+                    <th class="text-right">Ocorrências</th>
+                    <th>Leitura executiva</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in correlacoes_operacionais %}
+                <tr>
+                    <td>{{ item.titulo }}</td>
+                    <td>
+                        <span class="badge {% if item.nivel == 'critico' %}badge-danger{% elif item.nivel == 'alto' %}badge-warning{% elif item.nivel == 'medio' %}badge-info{% else %}badge-secondary{% endif %}">
+                            {{ item.nivel|upper }}
+                        </span>
+                    </td>
+                    <td class="money">{{ item.quantidade }}</td>
+                    <td class="wrap-text">{{ item.descricao }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+            <p class="empty">Nenhuma correlação operacional calculada.</p>
+        {% endif %}
     </div>
 </section>
 
@@ -167,6 +408,7 @@
     <div class="panel">
         <div class="toolbar">
             <h3>Alertas Operacionais</h3>
+            <a class="btn secondary" href="{% url 'alerta_operacional_list' %}">Central de Alertas</a>
         </div>
         <table class="compact-table">
             <thead>
@@ -207,6 +449,76 @@
             </table>
             {% else %}
             <p class="empty">Nenhum contrato em faixa critica.</p>
+            {% endif %}
+        </div>
+        <div style="margin-top:18px;">
+            <h4 style="margin:0 0 10px;">Alertas automaticos recentes</h4>
+            {% if alertas_operacionais_recentes %}
+            <table class="compact-table">
+                <thead>
+                    <tr>
+                        <th>Regra</th>
+                        <th>Descricao</th>
+                        <th>Referencia</th>
+                        <th>Nivel</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for alerta in alertas_operacionais_recentes %}
+                    <tr>
+                        <td>{{ alerta.codigo_regra }}</td>
+                        <td class="wrap-text">{{ alerta.titulo }}</td>
+                        <td class="wrap-text">
+                            {% if alerta.evidencias.contrato_numero %}
+                                {{ alerta.evidencias.contrato_numero }}
+                            {% elif alerta.evidencias.medicao_numero %}
+                                {{ alerta.evidencias.medicao_numero }}
+                            {% elif alerta.evidencias.nota_numero %}
+                                {{ alerta.evidencias.nota_numero }}
+                            {% elif alerta.evidencias.risco_codigo %}
+                                {{ alerta.evidencias.risco_codigo }}
+                            {% elif alerta.evidencias.numero %}
+                                {{ alerta.evidencias.numero }}
+                            {% elif alerta.evidencias.codigo_atividade %}
+                                {{ alerta.evidencias.codigo_atividade }}
+                            {% else %}
+                                {{ alerta.referencia }}
+                            {% endif %}
+                        </td>
+                        <td>{{ alerta.get_severidade_display|upper }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="empty">Nenhum alerta automatico aberto.</p>
+            {% endif %}
+        </div>
+        <div style="margin-top:18px;">
+            <h4 style="margin:0 0 10px;">Execucoes automaticas recentes</h4>
+            {% if execucoes_regras_operacionais %}
+            <table class="compact-table">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Regra</th>
+                        <th>Resultado</th>
+                        <th>Referencia</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for execucao in execucoes_regras_operacionais %}
+                    <tr>
+                        <td class="no-break-data">{{ execucao.executado_em|date:"d/m/Y H:i" }}</td>
+                        <td>{{ execucao.codigo_regra }}</td>
+                        <td>{{ execucao.get_resultado_display }}</td>
+                        <td class="wrap-text">{{ execucao.referencia|default:"-" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="empty">Nenhuma automacao com alteracao relevante registrada.</p>
             {% endif %}
         </div>
     </div>

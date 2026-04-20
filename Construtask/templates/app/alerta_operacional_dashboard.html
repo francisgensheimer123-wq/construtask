@@ -1,0 +1,244 @@
+{% extends "app/base.html" %}
+{% load formatters %}
+
+{% block content %}
+<section class="page-shell">
+    <div class="page-header">
+        <div>
+            <h1>Painel Executivo de Alertas</h1>
+            <p>Leitura consolidada de score, prioridades, correlacoes e automacoes da obra selecionada.</p>
+        </div>
+        <div class="page-actions">
+            <a class="btn btn-secondary" href="{% url 'alerta_operacional_dashboard_export' %}">Exportar Excel</a>
+            <a class="btn btn-secondary" href="{% url 'alerta_operacional_dashboard_pdf' %}">Exportar PDF</a>
+            <a class="btn btn-secondary" href="{% url 'alerta_operacional_list' %}">Voltar para a Central</a>
+        </div>
+    </div>
+
+    {% if sem_obra_selecionada %}
+    <div class="card">
+        <div class="card-body">
+            <p class="empty">Selecione uma obra no topo do sistema para abrir o painel executivo de alertas.</p>
+        </div>
+    </div>
+    {% else %}
+    <section class="cards">
+        <div class="card">
+            <span>Score Operacional</span>
+            <strong>{{ score_operacional.pontuacao|trunc2 }}</strong>
+            <small class="text-muted">{{ score_operacional.faixa }}</small>
+        </div>
+        <div class="card">
+            <span>Alertas criticos</span>
+            <strong>{{ alertas_criticos|length }}</strong>
+        </div>
+        <div class="card">
+            <span>Alertas em atraso</span>
+            <strong>{{ alertas_em_atraso|length }}</strong>
+        </div>
+        <div class="card">
+            <span>Execucoes automaticas</span>
+            <strong>{{ execucoes_recentes|length }}</strong>
+        </div>
+    </section>
+
+    <section class="grid-2">
+        <div class="panel">
+            <div class="toolbar">
+                <h3>Score por Componente</h3>
+            </div>
+            {% if score_operacional.componentes %}
+            <table class="compact-table">
+                <thead>
+                    <tr>
+                        <th>Componente</th>
+                        <th class="text-right">Pontuacao</th>
+                        <th>Nivel</th>
+                        <th>Leitura</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for componente in score_operacional.componentes %}
+                    <tr>
+                        <td>{{ componente.nome }}</td>
+                        <td class="money">{{ componente.pontuacao|trunc2 }} / {{ componente.maximo|trunc2 }}</td>
+                        <td>{{ componente.nivel|upper }}</td>
+                        <td class="wrap-text">{{ componente.detalhe }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="empty">Nenhum componente calculado.</p>
+            {% endif %}
+        </div>
+
+        <div class="panel">
+            <div class="toolbar">
+                <h3>Prioridades Executivas</h3>
+            </div>
+            {% if prioridades_executivas %}
+            <table class="compact-table">
+                <thead>
+                    <tr>
+                        <th>Frente</th>
+                        <th>Nivel</th>
+                        <th class="text-right">Quantidade</th>
+                        <th>Acao</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in prioridades_executivas %}
+                    <tr>
+                        <td>{{ item.frente }}</td>
+                        <td>{{ item.nivel|upper }}</td>
+                        <td class="money">{{ item.total }}</td>
+                        <td class="wrap-text">{{ item.acao }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="empty">Nenhuma prioridade executiva consolidada.</p>
+            {% endif %}
+        </div>
+    </section>
+
+    <section class="grid-2">
+        <div class="panel">
+            <div class="toolbar">
+                <h3>Correlacoes Operacionais</h3>
+            </div>
+            {% if correlacoes_operacionais %}
+            <table class="compact-table">
+                <thead>
+                    <tr>
+                        <th>Correlacao</th>
+                        <th>Nivel</th>
+                        <th class="text-right">Ocorrencias</th>
+                        <th>Leitura</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in correlacoes_operacionais %}
+                    <tr>
+                        <td>{{ item.titulo }}</td>
+                        <td>{{ item.nivel|upper }}</td>
+                        <td class="money">{{ item.quantidade }}</td>
+                        <td class="wrap-text">{{ item.descricao }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="empty">Nenhuma correlacao operacional consolidada.</p>
+            {% endif %}
+        </div>
+
+        <div class="panel">
+            <div class="toolbar">
+                <h3>Execucoes Automaticas Recentes</h3>
+            </div>
+            {% if execucoes_recentes %}
+            <table class="compact-table">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Regra</th>
+                        <th>Resultado</th>
+                        <th>Referencia</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for execucao in execucoes_recentes %}
+                    <tr>
+                        <td class="no-break-data">{{ execucao.executado_em|date:"d/m/Y H:i" }}</td>
+                        <td>{{ execucao.codigo_regra }}</td>
+                        <td>{{ execucao.get_resultado_display }}</td>
+                        <td class="wrap-text">{{ execucao.referencia|default:"-" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="empty">Nenhuma execucao automatica recente.</p>
+            {% endif %}
+        </div>
+    </section>
+
+    <section class="grid-2">
+        <div class="panel">
+            <div class="toolbar">
+                <h3>Alertas Criticos em Aberto</h3>
+            </div>
+            {% if alertas_criticos %}
+            <table class="compact-table">
+                <thead>
+                    <tr>
+                        <th>Regra</th>
+                        <th>Titulo</th>
+                        <th>Status</th>
+                        <th>Responsavel</th>
+                        <th>Prazo</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for alerta in alertas_criticos %}
+                    <tr>
+                        <td class="code-cell">{{ alerta.codigo_regra }}</td>
+                        <td><a href="{% url 'alerta_operacional_detail' alerta.pk %}">{{ alerta.titulo }}</a></td>
+                        <td>{{ alerta.get_status_display }}</td>
+                        <td>{{ alerta.responsavel|default:"-" }}</td>
+                        <td class="no-break-data">{% if alerta.prazo_solucao_em %}{{ alerta.prazo_solucao_em|date:"d/m/Y" }}{% else %}-{% endif %}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="empty">Nenhum alerta critico em aberto.</p>
+            {% endif %}
+        </div>
+
+        <div class="panel">
+            <div class="toolbar">
+                <h3>Alertas em Atraso</h3>
+            </div>
+            {% if alertas_em_atraso %}
+            <table class="compact-table">
+                <thead>
+                    <tr>
+                        <th>Regra</th>
+                        <th>Titulo</th>
+                        <th>Tipo</th>
+                        <th>Responsavel</th>
+                        <th>Prazo</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for alerta in alertas_em_atraso %}
+                    <tr>
+                        <td class="code-cell">{{ alerta.codigo_regra }}</td>
+                        <td><a href="{% url 'alerta_operacional_detail' alerta.pk %}">{{ alerta.titulo }}</a></td>
+                        <td>
+                            {% if alerta.em_atraso_prazo %}
+                            Prazo vencido
+                            {% elif alerta.em_atraso_sla %}
+                            SLA estourado
+                            {% else %}
+                            Em dia
+                            {% endif %}
+                        </td>
+                        <td>{{ alerta.responsavel|default:"-" }}</td>
+                        <td class="no-break-data">{% if alerta.prazo_solucao_em %}{{ alerta.prazo_solucao_em|date:"d/m/Y" }}{% else %}-{% endif %}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="empty">Nenhum alerta em atraso.</p>
+            {% endif %}
+        </div>
+    </section>
+    {% endif %}
+</section>
+{% endblock %}

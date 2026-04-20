@@ -28,6 +28,7 @@ class AquisicoesService:
             solicitacao=cotacao.solicitacao,
             cotacao_aprovada=cotacao,
             fornecedor=cotacao.fornecedor,
+            status="RASCUNHO",
             data_emissao=cotacao.data_cotacao,
             descricao=descricao or cotacao.solicitacao.titulo,
             emitido_por=usuario,

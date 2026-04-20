@@ -2,16 +2,21 @@ from decimal import Decimal, ROUND_HALF_UP
 
 from django.core.exceptions import ValidationError
 from django.db.models import Sum
+from django.utils import timezone
+
+from .numeric_utils import coerce_decimal
 
 
 def arredondar_moeda(valor):
-    return Decimal(valor).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    return coerce_decimal(valor, quantize="0.01")
 
 
 def calcular_total_item(quantidade, valor_unitario):
     if quantidade in (None, "") or valor_unitario in (None, ""):
         return Decimal("0.00")
-    return arredondar_moeda(Decimal(quantidade) * Decimal(valor_unitario))
+    quantidade_decimal = coerce_decimal(quantidade)
+    valor_unitario_decimal = coerce_decimal(valor_unitario)
+    return arredondar_moeda(quantidade_decimal * valor_unitario_decimal)
 
 
 def agrupar_totais_por_centro(itens):
@@ -77,14 +82,21 @@ def validar_itens_compromisso_orcamento(compromisso, itens):
 
 
 def gerar_numero_documento(model_class, prefixo, campo):
+    ano = timezone.localdate().year
+    prefixo_ano = f"{prefixo}{ano}-"
     ultimo = (
         model_class.objects
-        .filter(**{f"{campo}__startswith": prefixo})
-        .order_by("-id")
+        .filter(**{f"{campo}__startswith": prefixo_ano})
+        .order_by(f"-{campo}", "-id")
         .first()
     )
-    novo_num = int(getattr(ultimo, campo).replace(prefixo, "")) + 1 if ultimo else 1
-    return f"{prefixo}{str(novo_num).zfill(4)}"
+    if ultimo:
+        ultimo_valor = getattr(ultimo, campo) or ""
+        sufixo = ultimo_valor.replace(prefixo_ano, "", 1)
+        novo_num = int(sufixo) + 1 if sufixo.isdigit() else 1
+    else:
+        novo_num = 1
+    return f"{prefixo_ano}{str(novo_num).zfill(4)}"
 
 
 def hidratar_medicao_do_contrato(medicao):

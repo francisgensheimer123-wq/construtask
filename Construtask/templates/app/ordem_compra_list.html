@@ -32,7 +32,9 @@
                 <td><a href="{% url 'ordem_compra_detail' ordem.pk %}">{{ ordem.numero }}</a></td>
                 <td>{{ ordem.solicitacao.numero }}</td>
                 <td>{{ ordem.fornecedor }}</td>
-                <td>{{ ordem.get_status_display }}</td>
+                <td>
+                    <span class="badge bg-{{ ordem|workflow_badge_class }}">{{ ordem.get_status_display }}</span>
+                </td>
                 <td>{% if ordem.compromisso_relacionado %}<a href="{% url 'contrato_detail' ordem.compromisso_relacionado.pk %}">{{ ordem.compromisso_relacionado.numero }}</a>{% else %}-{% endif %}</td>
                 <td>{{ ordem.data_emissao|date:"d/m/Y" }}</td>
                 <td class="money">{{ ordem.valor_total|money_br }}</td>

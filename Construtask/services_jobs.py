@@ -1,0 +1,187 @@
+import csv
+from io import StringIO
+
+from django.core.files.base import ContentFile
+from django.db import transaction
+from django.utils import timezone
+
+from .application.financeiro import registrar_fechamento_mensal
+from .models import JobAssincrono, Obra, PlanoContas
+from .queries.financeiro import construir_dados_fechamento_mensal, construir_dados_projecao_financeira
+from .services import importar_plano_contas_excel
+from .services_alertas import resumo_alertas_operacionais, sincronizar_alertas_operacionais_obra
+
+
+JOB_HANDLERS = {}
+
+
+def registrar_job_handler(tipo):
+    def decorator(func):
+        JOB_HANDLERS[tipo] = func
+        return func
+
+    return decorator
+
+
+def listar_jobs_recentes(*, empresa=None, obra=None, limite=10):
+    queryset = (
+        JobAssincrono.objects.select_related("obra", "solicitado_por")
+        .only(
+            "id",
+            "obra__codigo",
+            "solicitado_por__username",
+            "tipo",
+            "status",
+            "descricao",
+            "criado_em",
+            "concluido_em",
+            "erro",
+        )
+        .order_by("-criado_em")
+    )
+    if empresa:
+        queryset = queryset.filter(empresa=empresa)
+    if obra:
+        queryset = queryset.filter(obra=obra)
+    return list(queryset[:limite])
+
+
+def enfileirar_job(
+    *,
+    tipo,
+    descricao,
+    solicitado_por=None,
+    empresa=None,
+    obra=None,
+    parametros=None,
+    arquivo_entrada=None,
+):
+    job = JobAssincrono.objects.create(
+        empresa=empresa or getattr(obra, "empresa", None),
+        obra=obra,
+        solicitado_por=solicitado_por,
+        tipo=tipo,
+        descricao=descricao,
+        parametros=parametros or {},
+        arquivo_entrada=arquivo_entrada,
+    )
+    return job
+
+
+def executar_job(job):
+    handler = JOB_HANDLERS.get(job.tipo)
+    if not handler:
+        raise ValueError(f"Handler nao registrado para o job {job.tipo}.")
+
+    with transaction.atomic():
+        job.status = "EM_EXECUCAO"
+        job.iniciado_em = timezone.now()
+        job.tentativas += 1
+        job.erro = ""
+        job.save(update_fields=["status", "iniciado_em", "tentativas", "erro", "atualizado_em"])
+
+    try:
+        resultado = handler(job)
+    except Exception as exc:
+        job.status = "FALHOU"
+        job.concluido_em = timezone.now()
+        job.erro = str(exc)
+        job.save(update_fields=["status", "concluido_em", "erro", "atualizado_em"])
+        raise
+
+    job.status = "CONCLUIDO"
+    job.concluido_em = timezone.now()
+    job.resultado = resultado or {}
+    job.save(update_fields=["status", "concluido_em", "resultado", "arquivo_resultado", "atualizado_em"])
+    return job
+
+
+def processar_jobs_pendentes(*, limite=10):
+    jobs = list(JobAssincrono.objects.filter(status="PENDENTE").order_by("criado_em")[:limite])
+    processados = []
+    for job in jobs:
+        processados.append(executar_job(job))
+    return processados
+
+
+def _salvar_csv_job(job, nome_arquivo, cabecalhos, linhas):
+    buffer = StringIO()
+    writer = csv.DictWriter(buffer, fieldnames=cabecalhos)
+    writer.writeheader()
+    for linha in linhas:
+        writer.writerow(linha)
+    job.arquivo_resultado.save(nome_arquivo, ContentFile(buffer.getvalue().encode("utf-8")), save=False)
+    return {"arquivo": job.arquivo_resultado.name, "linhas": len(linhas)}
+
+
+@registrar_job_handler("SINCRONIZAR_ALERTAS_OBRA")
+def executar_job_sincronizar_alertas(job):
+    obra = job.obra or Obra.objects.get(pk=job.parametros["obra_id"])
+    sincronizar_alertas_operacionais_obra(obra)
+    resumo = resumo_alertas_operacionais(obra)
+    return {
+        "obra_id": obra.pk,
+        "alertas_abertos": resumo.get("abertos", 0),
+        "alertas_criticos": resumo.get("criticos", 0),
+    }
+
+
+@registrar_job_handler("IMPORTAR_PLANO_CONTAS")
+def executar_job_importar_plano_contas(job):
+    obra = job.obra or Obra.objects.get(pk=job.parametros["obra_id"])
+    if not job.arquivo_entrada:
+        raise ValueError("Job de importacao sem arquivo de entrada.")
+    with job.arquivo_entrada.open("rb") as arquivo:
+        importar_plano_contas_excel(arquivo, obra=obra)
+    return {
+        "obra_id": obra.pk,
+        "total_planos": PlanoContas.objects.filter(obra=obra).count(),
+    }
+
+
+@registrar_job_handler("GERAR_RELATORIO_FINANCEIRO")
+def executar_job_relatorio_financeiro(job):
+    tipo_relatorio = job.parametros.get("relatorio")
+    obra = job.obra or Obra.objects.get(pk=job.parametros["obra_id"])
+    if tipo_relatorio == "FECHAMENTO_MENSAL":
+        ano = int(job.parametros["ano"])
+        mes = int(job.parametros["mes"])
+        registrar_fechamento_mensal(obra=obra, ano=ano, mes=mes)
+        dados = construir_dados_fechamento_mensal(obra=obra, ano=ano, mes=mes)
+        linhas = [
+            {
+                "Centro de Custo": f'{linha["centro"].codigo} - {linha["centro"].descricao}',
+                "Comprometido": linha["comprometido"],
+                "Medido": linha["medido"],
+                "Notas": linha["notas"],
+                "Saldo a Medir": linha["saldo_a_medir"],
+                "Saldo a Executar": linha["saldo_a_executar"],
+            }
+            for linha in dados["resumo_centros"]
+        ]
+        metadata = _salvar_csv_job(
+            job,
+            f"fechamento_mensal_{obra.pk}_{ano}_{mes:02d}.csv",
+            ["Centro de Custo", "Comprometido", "Medido", "Notas", "Saldo a Medir", "Saldo a Executar"],
+            linhas,
+        )
+        metadata.update({"relatorio": tipo_relatorio, "ano": ano, "mes": mes})
+        return metadata
+
+    if tipo_relatorio == "PROJECAO_FINANCEIRA":
+        meses = int(job.parametros.get("meses") or 12)
+        dados = construir_dados_projecao_financeira(obra=obra, meses_qtd=meses)
+        linhas = [
+            {"Mes": item["label"], "Entradas": item["entrada"], "Saidas": item["saida"], "Saldo": item["saldo"]}
+            for item in dados["series"]
+        ]
+        metadata = _salvar_csv_job(
+            job,
+            f"projecao_financeira_{obra.pk}_{meses}m.csv",
+            ["Mes", "Entradas", "Saidas", "Saldo"],
+            linhas,
+        )
+        metadata.update({"relatorio": tipo_relatorio, "meses": meses})
+        return metadata
+
+    raise ValueError("Tipo de relatorio financeiro nao suportado.")

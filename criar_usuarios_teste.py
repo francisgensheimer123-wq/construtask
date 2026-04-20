@@ -38,7 +38,7 @@ admin_empresa, created = User.objects.get_or_create(
     username='admin_empresa',
     defaults={
         'email': 'admin@empresateste.com',
-        'is_staff': True,
+        'is_staff': False,
         'is_active': True,
     }
 )
@@ -60,7 +60,7 @@ usuario_comum, created = User.objects.get_or_create(
     username='operador',
     defaults={
         'email': 'operador@empresateste.com',
-        'is_staff': True,
+        'is_staff': False,
         'is_active': True,
     }
 )
@@ -87,7 +87,7 @@ usuario_novo, created = User.objects.get_or_create(
     username='novo_usuario',
     defaults={
         'email': 'novo@empresateste.com',
-        'is_staff': True,
+        'is_staff': False,
         'is_active': True,
     }
 )

@@ -1,0 +1,348 @@
+{% extends "app/base.html" %}
+{% load static formatters %}
+
+{% block title %}Dossiê da Obra | Construtask{% endblock %}
+
+{% block main_class %}main-full{% endblock %}
+
+{% block content %}
+<style>
+    /* Controla o container principal do relatório e seu respiro visual. */
+    .report-shell {
+        background: #ffffff;
+        border: 1px solid #d8d8d8;
+        box-shadow: 0 14px 36px rgba(11, 11, 12, 0.12);
+        padding: 28px 28px 40px;
+    }
+    .report-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 20px;
+        margin-bottom: 18px;
+    }
+    .report-title h1 {
+        margin: 0;
+        font-size: 2.35rem;
+        line-height: 1.1;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+    }
+    .report-title p {
+        margin: 8px 0 0;
+        color: #4b5563;
+        font-weight: 600;
+    }
+    .report-logo {
+        max-width: 280px;
+        width: 100%;
+        height: auto;
+    }
+    .report-section {
+        margin-top: 24px;
+    }
+    .report-section h2 {
+        margin: 0 0 12px;
+        font-size: 1.85rem;
+        text-transform: uppercase;
+    }
+    .report-meta {
+        display: grid;
+        grid-template-columns: 130px minmax(240px, 1fr);
+        gap: 10px 14px;
+        max-width: 780px;
+        margin-bottom: 18px;
+    }
+    .report-meta dt {
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+    .report-meta dd {
+        margin: 0;
+    }
+    /* Controla a grade dos cards principais do relatório gerencial. */
+    .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(180px, 1fr));
+        gap: 14px;
+        margin: 16px 0 14px;
+    }
+    /* Controla a grade dos cards secundários de percentuais e saldos. */
+    .kpi-grid.secondary {
+        grid-template-columns: repeat(5, minmax(150px, 1fr));
+    }
+    .kpi-card {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+    .kpi-card .label {
+        font-size: 0.98rem;
+        line-height: 1.25;
+        word-break: break-word;
+    }
+    .kpi-card .value {
+        background: #840b0b;
+        color: #ffffff;
+        border: 1px solid #3f0303;
+        padding: 6px 14px;
+        font-size: 1.15rem;
+        font-weight: 700;
+        min-height: 40px;
+        display: flex;
+        align-items: center;
+        line-height: 1.25;
+        word-break: break-word;
+        overflow-wrap: anywhere;
+    }
+    /* Controla a largura mínima e o comportamento base das tabelas do dossiê. */
+    .table-report {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+        table-layout: auto;
+        min-width: 920px;
+    }
+    /* Controla quebra de texto, borda e altura visual das células do dossiê. */
+    .table-report th,
+    .table-report td {
+        border: 1px solid #202020;
+        padding: 10px 10px;
+        font-size: 0.94rem;
+        vertical-align: top;
+        white-space: normal;
+        word-break: break-word;
+        overflow-wrap: anywhere;
+        line-height: 1.3;
+    }
+    .table-report th {
+        background: #840b0b;
+        color: #ffffff;
+        text-transform: none;
+        letter-spacing: normal;
+    }
+    /* Mantém os valores financeiros em uma única linha para não quebrar moedas. */
+    .table-report td.money {
+        text-align: right;
+        white-space: nowrap;
+    }
+    .table-report td.center {
+        text-align: center;
+    }
+    .report-note {
+        margin-top: 10px;
+        color: #4b5563;
+        font-size: 0.92rem;
+    }
+    /* Controla a rolagem horizontal das tabelas do dossiê em telas menores. */
+    .table-scroll {
+        overflow-x: auto;
+        width: 100%;
+    }
+    .report-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 18px;
+    }
+    @media print {
+        header,
+        .messages,
+        .report-actions {
+            display: none !important;
+        }
+        body,
+        main {
+            background: #ffffff !important;
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+        .report-shell {
+            box-shadow: none;
+            border: 0;
+            padding: 0;
+        }
+    }
+    @media (max-width: 1080px) {
+        .kpi-grid,
+        .kpi-grid.secondary {
+            grid-template-columns: repeat(2, minmax(180px, 1fr));
+        }
+    }
+    @media (max-width: 720px) {
+        .report-header {
+            flex-direction: column;
+        }
+        .report-meta {
+            grid-template-columns: 1fr;
+        }
+        .kpi-grid,
+        .kpi-grid.secondary {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<div class="report-actions">
+    <div>
+        <strong>Dossiê da Obra</strong>
+        <div class="muted">Modelo padronizado a partir dos relatórios de acompanhamento enviados.</div>
+    </div>
+    <a class="btn" href="{% url 'dossie_obra_pdf' %}">Exportar PDF</a>
+  </div>
+
+<section class="report-shell">
+    <div class="report-header">
+        <div class="report-title">
+            <h1>Relatórios de Acompanhamento de Obra</h1>
+            <p>Padrão gerencial e probatório consolidado da obra</p>
+        </div>
+        <img class="report-logo" src="{% static 'app/logo-construtask.png' %}" alt="Construtask">
+    </div>
+
+    <section class="report-section">
+        <h2>Relatório 01 - Gerencial</h2>
+        <dl class="report-meta">
+            <dt>Cliente:</dt>
+            <dd>{{ dados_cabecalho.cliente }}</dd>
+            <dt>Obra:</dt>
+            <dd>{{ dados_cabecalho.obra }}</dd>
+            <dt>Endereço:</dt>
+            <dd>{{ dados_cabecalho.endereco }}</dd>
+            <dt>Responsável:</dt>
+            <dd>{{ dados_cabecalho.responsavel }}</dd>
+        </dl>
+
+        <div class="kpi-grid">
+            <div class="kpi-card">
+                <div class="label">Valor Total Orçado</div>
+                <div class="value">R{{ relatorio_gerencial.valor_orcado|money_br }}</div>
+            </div>
+            <div class="kpi-card">
+                <div class="label">Valor Total Comprometido</div>
+                <div class="value">R{{ relatorio_gerencial.valor_comprometido|money_br }}</div>
+            </div>
+            <div class="kpi-card">
+                <div class="label">Valor Total Medido</div>
+                <div class="value">R{{ relatorio_gerencial.valor_medido|money_br }}</div>
+            </div>
+            <div class="kpi-card">
+                <div class="label">Valor Total Executado</div>
+                <div class="value">R{{ relatorio_gerencial.valor_executado|money_br }}</div>
+            </div>
+        </div>
+
+        <div class="kpi-grid secondary">
+            <div class="kpi-card">
+                <div class="label">% Comprometido</div>
+                <div class="value">{{ relatorio_gerencial.percentual_comprometido|trunc2 }}%</div>
+            </div>
+            <div class="kpi-card">
+                <div class="label">% Medido</div>
+                <div class="value">{{ relatorio_gerencial.percentual_medido|trunc2 }}%</div>
+            </div>
+            <div class="kpi-card">
+                <div class="label">% Executado</div>
+                <div class="value">{{ relatorio_gerencial.percentual_executado|trunc2 }}%</div>
+            </div>
+            <div class="kpi-card">
+                <div class="label">Saldo a Comprometer</div>
+                <div class="value">R{{ relatorio_gerencial.saldo_a_comprometer|money_br }}</div>
+            </div>
+            <div class="kpi-card">
+                <div class="label">Saldo a Executar</div>
+                <div class="value">R{{ relatorio_gerencial.saldo_a_executar|money_br }}</div>
+            </div>
+        </div>
+    </section>
+
+    <section class="report-section">
+        <h2>Relatório 03 - Análise de Plano de Contas</h2>
+        <dl class="report-meta">
+            <dt>Cliente:</dt>
+            <dd>{{ dados_cabecalho.cliente }}</dd>
+            <dt>Obra:</dt>
+            <dd>{{ dados_cabecalho.obra }}</dd>
+            <dt>Endereço:</dt>
+            <dd>{{ dados_cabecalho.endereco }}</dd>
+            <dt>Responsável:</dt>
+            <dd>{{ dados_cabecalho.responsavel }}</dd>
+        </dl>
+
+        <!-- Controla a rolagem horizontal da análise de plano de contas no dossiê. -->
+        <div class="table-scroll">
+        <table class="table-report">
+            <thead>
+                <tr>
+                    <th style="width: 80px;">Índice</th>
+                    <th style="width: 120px;">Código</th>
+                    <th>Descrição</th>
+                    <th style="width: 150px;">Valor Orçado</th>
+                    <th style="width: 150px;">Valor Contratado</th>
+                    <th style="width: 140px;">Valor Pago</th>
+                    <th style="width: 150px;">Saldo a Pagar</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in analise_plano %}
+                <tr>
+                    <td class="center">{{ item.indice }}</td>
+                    <td>{{ item.codigo|default:"-" }}</td>
+                    <td>{{ item.descricao|default:"-" }}</td>
+                    <td class="money">R{{ item.valor_orcado|money_br }}</td>
+                    <td class="money">R{{ item.valor_contratado|money_br }}</td>
+                    <td class="money">R{{ item.valor_pago|money_br }}</td>
+                    <td class="money">R{{ item.saldo_a_pagar|money_br }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7">Nenhum centro de custo disponível para compor a análise.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </section>
+
+    <section class="report-section">
+        <h2>Relatório 04 - Evidências de Aprovação</h2>
+        <!-- Controla a rolagem horizontal da tabela de evidências do dossiê. -->
+        <div class="table-scroll">
+        <table class="table-report">
+            <thead>
+                <tr>
+                    <th style="width: 120px;">Tipo</th>
+                    <th style="width: 180px;">Identificador</th>
+                    <th>Referência</th>
+                    <th style="width: 130px;">Status</th>
+                    <th style="width: 140px;">Valor</th>
+                    <th style="width: 180px;">Responsável</th>
+                    <th>Parecer</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for evidencia in evidencias %}
+                <tr>
+                    <td>{{ evidencia.tipo }}</td>
+                    <td>{{ evidencia.identificador }}</td>
+                    <td>{{ evidencia.referencia }}</td>
+                    <td>{{ evidencia.status }}</td>
+                    <td class="money">{{ evidencia.valor|default:"-" }}</td>
+                    <td>{{ evidencia.responsavel|default:"-" }}</td>
+                    <td>{{ evidencia.parecer|default:"-" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7">Nenhuma evidência formal encontrada para a obra selecionada.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        <div class="report-note">
+            Este dossiê consolida indicadores gerenciais e evidências formais de aprovação para uso operacional, executivo e probatório.
+        </div>
+    </section>
+</section>
+{% endblock %}

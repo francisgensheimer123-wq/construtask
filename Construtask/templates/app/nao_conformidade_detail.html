@@ -1,4 +1,5 @@
 {% extends "app/base.html" %}
+{% load formatters %}
 
 {% block main_class %}main-full{% endblock %}
 {% block title %}Detalhe da Nao Conformidade | Construtask{% endblock %}
@@ -6,10 +7,12 @@
 {% block content %}
 <div class="toolbar">
     <div>
-        <h2>NC-{{ nc.pk }}</h2>
-        <p>{{ nc.get_status_display }} | {{ nc.obra.codigo }} - {{ nc.obra.nome }}</p>
+        <h2>{% if nc.numero %}{{ nc.numero }}{% else %}NC-{{ nc.pk }}{% endif %}</h2>
+        <p><span class="badge bg-{{ nc|workflow_badge_class }}">{{ nc.get_status_display }}</span> <small class="text-muted">{{ nc|workflow_stage_display }}</small> | {{ nc.obra.codigo }} - {{ nc.obra.nome }}</p>
     </div>
     <div style="display:flex; gap:10px;">
+        <a class="btn secondary" href="{% url 'nao_conformidade_aprovacao_pdf' nc.pk %}">Probatório PDF</a>
+        <a class="btn secondary" href="{% url 'nao_conformidade_aprovacao_excel' nc.pk %}">Probatório Excel</a>
         <a class="btn secondary" href="{% url 'nao_conformidade_update' nc.pk %}">Editar</a>
         <a class="btn secondary" href="{% url 'nao_conformidade_list' %}">Voltar</a>
     </div>
@@ -26,6 +29,10 @@
                 <tr><th>Descricao</th><td class="wrap-text">{{ nc.descricao }}</td></tr>
                 <tr><th>Causa</th><td class="wrap-text">{{ nc.causa|default:"-" }}</td></tr>
                 <tr><th>Acao corretiva</th><td class="wrap-text">{{ nc.acao_corretiva|default:"-" }}</td></tr>
+                <tr><th>Evidencia de tratamento</th><td class="wrap-text">{{ nc.evidencia_tratamento|default:"-" }}</td></tr>
+                <tr><th>Evidencia de encerramento</th><td class="wrap-text">{{ nc.evidencia_encerramento|default:"-" }}</td></tr>
+                <tr><th>Eficacia</th><td class="wrap-text">{{ nc.eficacia_observacao|default:"-" }}</td></tr>
+                <tr><th>Verificada por</th><td>{{ nc.eficacia_verificada_por|default:"-" }}</td></tr>
             </tbody>
         </table>
     </div>

@@ -5,10 +5,9 @@ Inclui middleware e utilities para registro de eventos.
 
 import uuid
 from threading import local
-from typing import Any, Optional
+from typing import Optional
 
 from django.db.models import Model
-from django.utils import timezone
 
 _audit_local = local()
 
@@ -30,6 +29,7 @@ class AuditService:
     """
     Serviço centralizado para registro de eventos de auditoria.
     """
+    SNAPSHOT_ATTR = "_audit_before_snapshot"
     
     @staticmethod
     def get_request_info(request) -> tuple:
@@ -123,14 +123,29 @@ class AuditService:
     
     @staticmethod
     def instance_to_dict(instance: Model) -> dict:
-        """Converte instância do modelo para dict (sem relação)."""
+        """Converte instância do modelo para dict serializável."""
         result = {}
-        for field in instance._meta.get_fields():
-            if hasattr(field, 'name') and not field.is_relation:
-                value = getattr(instance, field.name, None)
-                if value is not None:
-                    result[field.name] = str(value)
+        for field in instance._meta.concrete_fields:
+            value = getattr(instance, field.attname, None)
+            if value is not None:
+                result[field.attname] = str(value)
         return result
+
+    @classmethod
+    def capture_before_state(cls, instance: Model):
+        if not getattr(instance, "pk", None):
+            return
+        anterior = instance.__class__.objects.filter(pk=instance.pk).first()
+        if anterior is None:
+            return
+        setattr(instance, cls.SNAPSHOT_ATTR, cls.instance_to_dict(anterior))
+
+    @classmethod
+    def pop_before_state(cls, instance: Model):
+        before = getattr(instance, cls.SNAPSHOT_ATTR, None)
+        if hasattr(instance, cls.SNAPSHOT_ATTR):
+            delattr(instance, cls.SNAPSHOT_ATTR)
+        return before
 
 
 class AuditMiddleware:
@@ -143,7 +158,7 @@ class AuditMiddleware:
     
     def __call__(self, request):
         # Gerar request_id único
-        request._audit_request_id = str(uuid.uuid4())[:8]
+        request._audit_request_id = getattr(request, "_audit_request_id", str(uuid.uuid4())[:8])
         set_current_request(request)
         try:
             response = self.get_response(request)
@@ -159,7 +174,6 @@ class AuditMiddleware:
 def audit_post_save(sender, instance, created, **kwargs):
     """Signal handler para audit em post_save."""
     from django.db import connection
-    from .audit import AuditService
     
     # Não auditar se for uma migração
     if connection.schema_editor().atomic_ddl:
@@ -184,7 +198,6 @@ def audit_post_save(sender, instance, created, **kwargs):
 def audit_post_delete(sender, instance, **kwargs):
     """Signal handler para audit em post_delete."""
     from django.db import connection
-    from .audit import AuditService
     
     if connection.schema_editor().atomic_ddl:
         return

@@ -11,14 +11,45 @@
         <p>Visão consolidada da medição e sua execução fiscal.</p>
     </div>
     <div style="display:flex; gap:10px;">
+        <a class="btn secondary" href="{% url 'medicao_aprovacao_pdf' medicao.pk %}">Relatório Probatório</a>
+        <a class="btn secondary" href="{% url 'medicao_aprovacao_excel' medicao.pk %}">Relatório Probatório Excel</a>
+        {% if medicao.status == "EM_ELABORACAO" %}
         <a class="btn secondary" href="{% url 'medicao_update' medicao.pk %}">Editar</a>
+        {% endif %}
         <a class="btn secondary" href="{% url 'medicao_list' %}">Voltar</a>
     </div>
 </div>
 
+<section class="panel" style="margin-bottom:18px;">
+    <div style="display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap;">
+        <div>
+            <strong>Workflow de Aprovação</strong>
+            <p class="muted" style="margin:6px 0 0 0;">Funcao atual: {{ papel_aprovacao|default:"Nao configurada" }} | Alcada: {{ limite_aprovacao_label }}</p>
+        </div>
+        <div style="min-width:min(100%, 420px);">
+            <form method="post">
+                {% csrf_token %}
+                <div class="field" style="margin-bottom:10px;">
+                    <label for="id_parecer_aprovacao_medicao">Parecer</label>
+                    <textarea id="id_parecer_aprovacao_medicao" name="parecer_aprovacao" rows="3" placeholder="Opcional no envio/aprovacao e obrigatorio na devolucao para ajuste.">{{ medicao.parecer_aprovacao }}</textarea>
+                </div>
+                <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                    {% if pode_enviar_para_aprovacao and medicao.status == "EM_ELABORACAO" %}
+                    <button type="submit" class="btn" name="acao" value="enviar_para_aprovacao">Enviar para Aprovação</button>
+                    {% endif %}
+                    {% if pode_aprovar and medicao.status == "EM_APROVACAO" %}
+                    <button type="submit" class="btn" name="acao" value="aprovar">Aprovar</button>
+                    <button type="submit" class="btn secondary" name="acao" value="retornar_para_ajuste">Retornar para Ajuste</button>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
+
 <section class="cards">
     <div class="card"><span>Obra</span><strong style="text-align:left;">{% if medicao.obra %}{{ medicao.obra.codigo }}{% else %}-{% endif %}</strong></div>
-    <div class="card"><span>Status</span><strong style="text-align:left;">{{ medicao.get_status_display }}</strong></div>
+    <div class="card"><span>Status</span><strong style="text-align:left;">{{ medicao.get_status_display }}</strong><small class="text-muted">{{ medicao|workflow_stage_display }}</small></div>
     <div class="card"><span>Contrato</span><strong style="text-align:left;">{{ medicao.contrato.numero }}</strong></div>
     <div class="card"><span>Valor Contrato</span><strong>{{ medicao.contrato.valor_contratado|money_br }}</strong></div>
     <div class="card"><span>Valor Medido</span><strong>{{ medicao.valor_medido|money_br }}</strong></div>
@@ -36,6 +67,9 @@
                 <tr><td>Descrição</td><td>{{ medicao.descricao }}</td></tr>
                 <tr><td>Estrutura</td><td>{{ medicao.torre|default:"-" }} / {{ medicao.bloco|default:"-" }} / {{ medicao.etapa|default:"-" }}</td></tr>
                 <tr><td>Data</td><td>{{ medicao.data_medicao|date:"d/m/Y" }}</td></tr>
+                <tr><td>Enviado para Aprovação</td><td>{% if medicao.enviado_para_aprovacao_por %}{{ medicao.enviado_para_aprovacao_por.username }} em {{ medicao.enviado_para_aprovacao_em|date:"d/m/Y H:i" }}{% else %}-{% endif %}</td></tr>
+                <tr><td>Aprovado por</td><td>{% if medicao.aprovado_por %}{{ medicao.aprovado_por.username }} em {{ medicao.aprovado_em|date:"d/m/Y H:i" }}{% else %}-{% endif %}</td></tr>
+                <tr><td>Último Parecer</td><td>{{ medicao.parecer_aprovacao|default:"-" }}</td></tr>
             </tbody>
         </table>
     </div>
@@ -93,11 +127,20 @@
         <h3>Histórico</h3>
         {% if medicao.historicos.all %}
         <table class="compact-table">
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Ação</th>
+                    <th>Usuário</th>
+                    <th>Descrição</th>
+                </tr>
+            </thead>
             <tbody>
                 {% for item in medicao.historicos.all|slice:":12" %}
                 <tr>
                     <td>{{ item.criado_em|date:"d/m/Y" }}</td>
                     <td>{{ item.acao }}</td>
+                    <td>{{ item.usuario.username|default:"-" }}</td>
                     <td>{{ item.descricao }}</td>
                 </tr>
                 {% endfor %}
@@ -125,7 +168,10 @@
             {% for nota in notas_medicao %}
             <tr>
                 <td>{{ nota.numero }}</td>
-                <td>{{ nota.get_status_display }}</td>
+                <td>
+                    <span class="badge bg-{{ nota|workflow_badge_class }}">{{ nota.get_status_display }}</span>
+                    <div><small class="text-muted">{{ nota|workflow_stage_display }}</small></div>
+                </td>
                 <td>{{ nota.descricao }}</td>
                 <td class="money">{{ nota.valor_total|money_br }}</td>
             </tr>

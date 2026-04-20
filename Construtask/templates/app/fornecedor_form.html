@@ -3,7 +3,8 @@
 {% block title %}Fornecedor | Construtask{% endblock %}
 
 {% block content %}
-<div class="panel" style="max-width:920px;">
+<div class="form-page-shell form-page-compact">
+<div class="panel">
     <h2>Novo Fornecedor</h2>
     <p>Cadastre fornecedores para uso em cotacoes e ordens de compra.</p>
     <form method="post">
@@ -22,5 +23,6 @@
             <a class="btn secondary" href="{% url 'fornecedor_list' %}">Voltar</a>
         </div>
     </form>
+</div>
 </div>
 {% endblock %}

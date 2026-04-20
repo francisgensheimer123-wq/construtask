@@ -1,4 +1,5 @@
 {% extends "app/base.html" %}
+{% load formatters %}
 
 {% block main_class %}main-full{% endblock %}
 {% block title %}{{ risco.titulo }} | Construtask{% endblock %}
@@ -6,7 +7,7 @@
 {% block content %}
 <div class="toolbar">
     <div>
-        <h2>{{ risco.titulo }}</h2>
+    <h2>{% if risco.codigo %}{{ risco.codigo }} - {% endif %}{{ risco.titulo }}</h2>
         <p>Visao consolidada do risco, matriz de classificacao, plano de resposta e historico de tratamento.</p>
     </div>
     <div style="display:flex; gap:10px;">
@@ -21,7 +22,7 @@
     <div class="card"><span>Nivel do Risco</span><strong>{{ risco.nivel }}</strong></div>
     <div class="card"><span>Probabilidade</span><strong>{{ risco.probabilidade }}</strong></div>
     <div class="card"><span>Impacto</span><strong>{{ risco.impacto }}</strong></div>
-    <div class="card"><span>Status</span><strong style="text-align:left;">{{ risco.get_status_display }}</strong></div>
+    <div class="card"><span>Status</span><strong style="text-align:left;">{{ risco.get_status_display }}</strong><small class="text-muted">{{ risco|workflow_stage_display }}</small></div>
     <div class="card"><span>Responsavel</span><strong style="text-align:left;">{{ risco.responsavel.username }}</strong></div>
     <div class="card"><span>Dias para Meta</span><strong>{% if dias_para_meta != None %}{{ dias_para_meta }}{% else %}-{% endif %}</strong></div>
 </section>

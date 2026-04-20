@@ -4,222 +4,533 @@
 {% block main_class %}main-full{% endblock %}
 {% block title %}Gerenciamento da Empresa | Construtask{% endblock %}
 
+{% block extra_head %}
+<style>
+    .empresa-admin-page .admin-subpanel {
+        background: linear-gradient(180deg, rgba(56,56,56,.96) 0%, rgba(34,34,34,.98) 100%);
+        border: 1px solid rgba(200,200,200,.14);
+    }
+    .empresa-admin-page label,
+    .regras-table th,
+    .regras-table td,
+    .parametros-table th,
+    .parametros-table td {
+        vertical-align: top;
+    }
+    .regras-table td,
+    .parametros-table td {
+        line-height: 1.45;
+    }
+    .regras-table .code-cell {
+        font-weight: 700;
+    }
+    .parametros-table th {
+        width: 75%;
+        min-width: 620px;
+        background: linear-gradient(180deg, rgba(61,61,61,.96) 0%, rgba(33,33,33,.98) 100%);
+        color: var(--white);
+        border-right: 1px solid rgba(255,255,255,.10);
+    }
+    .parametros-table td {
+        width: 25%;
+        background: rgba(255,255,255,.02);
+    }
+    .parametros-table .field {
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    .parametros-table label {
+        font-weight: 700;
+        color: var(--muted-soft);
+        margin: 0;
+    }
+    .parametros-table small {
+        display: block;
+    }
+    .empresa-admin-page select,
+    .empresa-admin-page input,
+    .empresa-admin-page textarea {
+        background: rgba(18,18,18,.9);
+        border-color: rgba(200,200,200,.18);
+        color: var(--white);
+    }
+    .permissoes-wrap {
+        overflow-x: auto;
+    }
+    .permissoes-table {
+        width: 100%;
+        min-width: 760px;
+        border-collapse: separate;
+        border-spacing: 0;
+        border: 1px solid rgba(255,255,255,.08);
+        border-radius: 14px;
+        overflow: hidden;
+        background: linear-gradient(180deg, rgba(51,51,51,.98) 0%, rgba(28,28,28,.99) 100%);
+    }
+    .permissoes-table thead th {
+        background: linear-gradient(180deg, rgba(139,0,0,.78) 0%, rgba(87,0,0,.92) 100%);
+        color: var(--white);
+        font-weight: 700;
+        text-align: center;
+        padding: 12px 10px;
+        border-bottom: 1px solid rgba(255,255,255,.12);
+    }
+    .permissoes-table thead th:first-child {
+        text-align: left;
+        padding-left: 16px;
+    }
+    .permissoes-table tbody tr:nth-child(odd) td {
+        background: rgba(255,255,255,.025);
+    }
+    .permissoes-table tbody tr:nth-child(even) td {
+        background: rgba(255,255,255,.012);
+    }
+    .permissoes-table td {
+        padding: 10px;
+        border-bottom: 1px solid rgba(255,255,255,.06);
+        border-right: 1px solid rgba(255,255,255,.05);
+        text-align: center;
+        vertical-align: middle;
+    }
+    .permissoes-table tbody tr:last-child td {
+        border-bottom: 0;
+    }
+    .permissoes-table td:first-child {
+        text-align: left;
+        padding-left: 16px;
+        font-weight: 700;
+        color: var(--white);
+        min-width: 180px;
+    }
+    .permissoes-table td:last-child,
+    .permissoes-table th:last-child {
+        border-right: 0;
+    }
+    .permissoes-checkbox {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+    }
+    .permissoes-checkbox input[type="checkbox"] {
+        width: 16px;
+        height: 16px;
+        accent-color: #c71f1f;
+        cursor: pointer;
+    }
+    .permissoes-caption {
+        margin: 0 0 12px;
+        color: var(--muted-soft);
+        line-height: 1.45;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="toolbar">
-    <div>
-        <h2>Gerenciamento da Empresa</h2>
-        <p>Gerencie usuarios e obras da empresa {{ empresa.nome }}.</p>
-    </div>
-    <div>
-        <a class="btn secondary" href="{% url 'home' %}">Voltar</a>
-    </div>
-</div>
-
-{% if messages %}
-<div class="messages">
-    {% for message in messages %}
-    <div class="message {{ message.tags }}">{{ message }}</div>
-    {% endfor %}
-</div>
-{% endif %}
-
-<section class="panel" style="margin-bottom: 20px;">
-    <h3>{{ empresa.nome }}</h3>
-    <p>CNPJ: {{ empresa.cnpj }}</p>
-    {% if empresas %}
-    <form method="get" style="margin-top: 12px;">
-        <label for="empresa">Filtrar por empresa:</label>
-        <select name="empresa" id="empresa" onchange="this.form.submit()">
-            <option value="">-- Selecione --</option>
-            {% for emp in empresas %}
-            <option value="{{ emp.pk }}"{% if emp.pk == empresa.pk %} selected{% endif %}>{{ emp.nome }}</option>
-            {% endfor %}
-        </select>
-    </form>
-    {% endif %}
-</section>
-
-<!-- secao de obras -->
-<section class="panel" style="margin-bottom: 24px;">
+<div class="empresa-admin-page">
     <div class="toolbar">
-        <h3>Obras da Empresa ({{ obras_da_empresa.count }})</h3>
+        <div>
+            <h2>Gerenciamento da Empresa</h2>
+            <p>Esta area e exclusiva para o admin da empresa {{ empresa.nome }}.</p>
+        </div>
+        <div>
+            <a class="btn secondary" href="{% url 'home' %}">Voltar</a>
+        </div>
     </div>
-    
-    {% if obras_da_empresa %}
-    <table class="compact-table">
-        <thead>
-            <tr>
-                <th>Codigo</th>
-                <th>Nome</th>
-                <th>Cliente</th>
-                <th>Status</th>
-                <th>Data Inicio</th>
-                <th>Data Fim</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for obra in obras_da_empresa %}
-            <tr>
-                <td>{{ obra.codigo }}</td>
-                <td>{{ obra.nome }}</td>
-                <td>{{ obra.cliente|default:"-" }}</td>
-                <td>{{ obra.get_status_display }}</td>
-                <td>{{ obra.data_inicio|date:"d/m/Y"|default:"-" }}</td>
-                <td>{{ obra.data_fim|date:"d/m/Y"|default:"-" }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-    <p class="empty">Nenhuma obra cadastrada para esta empresa.</p>
+
+    {% if messages %}
+    <div class="messages">
+        {% for message in messages %}
+        <div class="message {{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+    </div>
     {% endif %}
-    
-    <h4 style="margin-top: 20px; margin-bottom: 12px;">Nova Obra</h4>
-    <form method="post" class="panel" style="background: #f8f9fa;">
-        {% csrf_token %}
-        <input type="hidden" name="acao" value="criar_obra">
-        <input type="hidden" name="empresa_id" value="{{ empresa.pk }}">
-        
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
-            <div class="field">
-                <label for="id_nome">Nome da Obra *</label>
-                <input type="text" name="nome" id="id_nome" required>
+
+    <section class="panel" style="margin-bottom: 20px;">
+        <h3>{{ empresa.nome }}</h3>
+        <p>CNPJ: {{ empresa.cnpj }}</p>
+        <p class="muted">O admin da empresa pode configurar parametros operacionais, definir a frequencia das reunioes e gerir usuarios operacionais vinculados.</p>
+    </section>
+
+    <section class="panel" style="margin-bottom: 24px;">
+        <div class="toolbar">
+            <div>
+                <h3>Gatilhos Operacionais dos Alertas</h3>
+                <p class="muted">Ajuste os valores que disparam cada alerta automatico da empresa.</p>
             </div>
-            <div class="field">
-                <label for="id_cliente">Cliente</label>
-                <input type="text" name="cliente" id="id_cliente">
+        </div>
+
+        <div class="table-responsive" style="margin-bottom: 18px;">
+            <table class="compact-table regras-table">
+                <thead>
+                    <tr>
+                        <th class="code-cell">Codigo</th>
+                        <th>Regra</th>
+                        <th>Gatilho Configuravel</th>
+                        <th class="no-break-data">Valor Atual</th>
+                        <th>Impacto Operacional</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for regra in catalogo_alertas %}
+                    <tr>
+                        <td class="code-cell">{{ regra.codigo }}</td>
+                        <td>{{ regra.titulo }}</td>
+                        <td>{{ regra.gatilho }}</td>
+                        <td class="no-break-data">{{ regra.valor_atual }}</td>
+                        <td>{{ regra.impacto }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <form method="post" class="panel admin-subpanel">
+            {% csrf_token %}
+            <input type="hidden" name="acao" value="salvar_parametros_alerta">
+            <input type="hidden" name="empresa_id" value="{{ empresa.pk }}">
+
+            <div class="table-responsive">
+                <table class="compact-table parametros-table">
+                    <thead>
+                        <tr>
+                            <th>Parametro</th>
+                            <th>Valor Configurado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for field in parametros_alerta_form %}
+                        <tr>
+                            <th>
+                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                {% if field.help_text %}
+                                <small class="muted">{{ field.help_text }}</small>
+                                {% endif %}
+                            </th>
+                            <td>
+                                <div class="field">
+                                    {{ field }}
+                                    {% for error in field.errors %}
+                                    <small style="color:#7f1d1d;">{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
-            <div class="field">
-                <label for="id_responsavel">Responsavel</label>
-                <input type="text" name="responsavel" id="id_responsavel">
+
+            <div class="actions">
+                <button type="submit" class="btn">Salvar Gatilhos</button>
             </div>
-            <div class="field">
-                <label for="id_status">Status</label>
-                <select name="status" id="id_status">
-                    <option value="PLANEJADA">Planejada</option>
-                    <option value="EM_ANDAMENTO" selected>Em Andamento</option>
-                    <option value="PARALISADA">Paralisada</option>
-                    <option value="CONCLUIDA">Concluida</option>
+        </form>
+    </section>
+
+    <section class="panel" style="margin-bottom: 24px;">
+        <div class="toolbar">
+            <div>
+                <h3>Frequencia das Reunioes de Comunicacao</h3>
+                <p class="muted">Defina a cadencia padrao das reunioes da empresa.</p>
+            </div>
+        </div>
+        <form method="post" class="panel admin-subpanel">
+            {% csrf_token %}
+            <input type="hidden" name="acao" value="salvar_parametros_comunicacao">
+            <input type="hidden" name="empresa_id" value="{{ empresa.pk }}">
+
+            <div class="table-responsive">
+                <table class="compact-table parametros-table">
+                    <thead>
+                        <tr>
+                            <th>Periodicidade</th>
+                            <th>Valor Configurado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for field in parametros_comunicacao_form %}
+                        <tr>
+                            <th>
+                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                {% if field.help_text %}
+                                <small class="muted">{{ field.help_text }}</small>
+                                {% endif %}
+                            </th>
+                            <td>
+                                <div class="field">
+                                    {{ field }}
+                                    {% for error in field.errors %}
+                                    <small style="color:#7f1d1d;">{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="actions">
+                <button type="submit" class="btn">Salvar Frequencias</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="panel" style="margin-bottom: 24px;">
+        <div class="toolbar">
+            <h3>Obras da Empresa ({{ obras_da_empresa.count }})</h3>
+        </div>
+
+        {% if obras_da_empresa %}
+        <table class="compact-table">
+            <thead>
+                <tr>
+                    <th>Codigo</th>
+                    <th>Nome</th>
+                    <th>Cliente</th>
+                    <th>Status</th>
+                    <th>Data Inicio</th>
+                    <th>Data Fim</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for obra in obras_da_empresa %}
+                <tr>
+                    <td>{{ obra.codigo }}</td>
+                    <td>{{ obra.nome }}</td>
+                    <td>{{ obra.cliente|default:"-" }}</td>
+                    <td><span class="badge bg-{{ obra|workflow_badge_class }}">{{ obra.get_status_display }}</span></td>
+                    <td>{{ obra.data_inicio|date:"d/m/Y"|default:"-" }}</td>
+                    <td>{{ obra.data_fim|date:"d/m/Y"|default:"-" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="empty">Nenhuma obra cadastrada para esta empresa.</p>
+        {% endif %}
+
+        <h4 style="margin-top: 20px; margin-bottom: 12px;">Nova Obra</h4>
+        <form method="post" class="panel admin-subpanel">
+            {% csrf_token %}
+            <input type="hidden" name="acao" value="criar_obra">
+            <input type="hidden" name="empresa_id" value="{{ empresa.pk }}">
+
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:16px;">
+                <div class="field">
+                    <label for="id_nome">Nome da Obra *</label>
+                    <input type="text" name="nome" id="id_nome" required>
+                </div>
+                <div class="field">
+                    <label for="id_cliente">Cliente</label>
+                    <input type="text" name="cliente" id="id_cliente">
+                </div>
+                <div class="field">
+                    <label for="id_responsavel">Responsavel</label>
+                    <input type="text" name="responsavel" id="id_responsavel">
+                </div>
+                <div class="field">
+                    <label for="id_status">Status</label>
+                    <select name="status" id="id_status">
+                        <option value="PLANEJADA">Planejada</option>
+                        <option value="EM_ANDAMENTO" selected>Em Andamento</option>
+                        <option value="PARALISADA">Paralisada</option>
+                        <option value="CONCLUIDA">Concluida</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label for="id_data_inicio">Data Inicio</label>
+                    <input type="date" name="data_inicio" id="id_data_inicio">
+                </div>
+                <div class="field">
+                    <label for="id_data_fim">Data Fim</label>
+                    <input type="date" name="data_fim" id="id_data_fim">
+                </div>
+            </div>
+            <div class="field" style="margin-top: 12px;">
+                <label for="id_descricao">Descricao</label>
+                <textarea name="descricao" id="id_descricao" rows="2"></textarea>
+            </div>
+
+            <div class="actions">
+                <button type="submit" class="btn">Criar Obra</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="panel">
+        <div class="toolbar">
+            <h3>Usuarios da Empresa ({{ usuarios_empresa.count }})</h3>
+        </div>
+
+        {% if usuarios_empresa %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Usuario</th>
+                    <th>Email</th>
+                    <th>Tipo</th>
+                    <th>Funcao</th>
+                    <th>Obras Permitidas</th>
+                    <th>Acoes</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ue in usuarios_empresa %}
+                <tr>
+                    <td><strong>{{ ue.usuario.username }}</strong></td>
+                    <td>{{ ue.usuario.email|default:"-" }}</td>
+                    <td>
+                        {% if ue.is_admin_empresa %}
+                        <span style="color:#059669; font-weight:600;">Admin da Empresa</span>
+                        {% else %}
+                        <span style="color:#6b7280;">Usuario</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ ue.get_papel_aprovacao_display }}</td>
+                    <td>
+                        {% if ue.is_admin_empresa %}
+                        <span style="color:#059669;">Todas as obras da empresa</span>
+                        {% else %}
+                        {{ ue.obras_permitidas.count }} obra(s)
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if not ue.is_admin_empresa %}
+                        <form method="post" style="display:inline-flex; gap:8px; align-items:center; margin-bottom:10px;">
+                            {% csrf_token %}
+                            <input type="hidden" name="acao" value="atualizar_obras_usuario">
+                            <input type="hidden" name="usuario_empresa_id" value="{{ ue.pk }}">
+                            <select name="papel_aprovacao">
+                                {% for valor, label in ue.PAPEL_APROVACAO_CHOICES %}
+                                <option value="{{ valor }}"{% if valor == ue.papel_aprovacao %} selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                            <select name="obras" multiple style="min-width:200px; height:60px;">
+                                {% for obra in obras_da_empresa %}
+                                <option value="{{ obra.pk }}"{% if obra in ue.obras_permitidas.all %} selected{% endif %}>{{ obra.codigo }} - {{ obra.nome }}</option>
+                                {% endfor %}
+                            </select>
+                            <button type="submit" class="btn secondary" style="padding:6px 12px;">Atualizar</button>
+                        </form>
+                        <form method="post" class="panel admin-subpanel" style="padding:12px; margin-top:8px;">
+                            {% csrf_token %}
+                            <input type="hidden" name="acao" value="atualizar_permissoes_usuario">
+                            <input type="hidden" name="usuario_empresa_id" value="{{ ue.pk }}">
+                            <p class="permissoes-caption">Defina as permissoes do usuario por modulo e por acao operacional.</p>
+                            <div class="permissoes-wrap">
+                                <table class="permissoes-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Modulo</th>
+                                            <th>View</th>
+                                            <th>Create</th>
+                                            <th>Update</th>
+                                            <th>Approve</th>
+                                            <th>Export</th>
+                                            <th>Manage</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for modulo, acoes in catalogo_permissoes_modulo.items %}
+                                        <tr>
+                                            <td>{{ modulo|capfirst }}</td>
+                                            <td>
+                                                {% if "view" in acoes %}
+                                                <label class="permissoes-checkbox"><input type="checkbox" name="perm_{{ modulo }}_view"{% if modulo|add:":view" in ue.permissoes_checks %} checked{% endif %}></label>
+                                                {% else %}<span style="color:rgba(255,255,255,.16);">-</span>{% endif %}
+                                            </td>
+                                            <td>
+                                                {% if "create" in acoes %}
+                                                <label class="permissoes-checkbox"><input type="checkbox" name="perm_{{ modulo }}_create"{% if modulo|add:":create" in ue.permissoes_checks %} checked{% endif %}></label>
+                                                {% else %}<span style="color:rgba(255,255,255,.16);">-</span>{% endif %}
+                                            </td>
+                                            <td>
+                                                {% if "update" in acoes %}
+                                                <label class="permissoes-checkbox"><input type="checkbox" name="perm_{{ modulo }}_update"{% if modulo|add:":update" in ue.permissoes_checks %} checked{% endif %}></label>
+                                                {% else %}<span style="color:rgba(255,255,255,.16);">-</span>{% endif %}
+                                            </td>
+                                            <td>
+                                                {% if "approve" in acoes %}
+                                                <label class="permissoes-checkbox"><input type="checkbox" name="perm_{{ modulo }}_approve"{% if modulo|add:":approve" in ue.permissoes_checks %} checked{% endif %}></label>
+                                                {% else %}<span style="color:rgba(255,255,255,.16);">-</span>{% endif %}
+                                            </td>
+                                            <td>
+                                                {% if "export" in acoes %}
+                                                <label class="permissoes-checkbox"><input type="checkbox" name="perm_{{ modulo }}_export"{% if modulo|add:":export" in ue.permissoes_checks %} checked{% endif %}></label>
+                                                {% else %}<span style="color:rgba(255,255,255,.16);">-</span>{% endif %}
+                                            </td>
+                                            <td>
+                                                {% if "manage" in acoes %}
+                                                <label class="permissoes-checkbox"><input type="checkbox" name="perm_{{ modulo }}_manage"{% if modulo|add:":manage" in ue.permissoes_checks %} checked{% endif %}></label>
+                                                {% else %}<span style="color:rgba(255,255,255,.16);">-</span>{% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="actions" style="margin-top:10px;">
+                                <button type="submit" class="btn secondary">Salvar Permissoes</button>
+                            </div>
+                        </form>
+                        {% else %}
+                        <span style="color:#9ca3af; font-style:italic;">Admin da empresa</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="empty">Nenhum usuario cadastrado para esta empresa.</p>
+        {% endif %}
+
+        <h4 style="margin-top: 20px; margin-bottom: 12px;">Novo Usuario Operacional</h4>
+        <form method="post" class="panel admin-subpanel">
+            {% csrf_token %}
+            <input type="hidden" name="acao" value="criar_usuario">
+            <input type="hidden" name="empresa_id" value="{{ empresa.pk }}">
+
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:16px;">
+                <div class="field">
+                    <label for="id_username">Username *</label>
+                    <input type="text" name="username" id="id_username" required>
+                </div>
+                <div class="field">
+                    <label for="id_email">Email</label>
+                    <input type="email" name="email" id="id_email">
+                </div>
+                <div class="field">
+                    <label for="id_password">Senha *</label>
+                    <input type="password" name="password" id="id_password" required>
+                </div>
+                <div class="field">
+                    <label for="id_papel_aprovacao">Funcao Operacional</label>
+                    <select name="papel_aprovacao" id="id_papel_aprovacao">
+                        <option value="GERENTE_OBRAS">Gerente de Obras</option>
+                        <option value="COORDENADOR_OBRAS">Coordenador de Obras</option>
+                        <option value="ENGENHEIRO_OBRAS">Engenheiro de Obras</option>
+                        <option value="TECNICO_OBRAS" selected>Tecnico de Obras</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="field" style="margin-top: 12px;">
+                <label for="id_obras_usuario">Obras Permitidas (selecione varias com Ctrl/Cmd)</label>
+                <select name="obras_usuario" id="id_obras_usuario" multiple style="min-width:300px; height:100px;">
+                    {% for obra in obras_da_empresa %}
+                    <option value="{{ obra.pk }}">{{ obra.codigo }} - {{ obra.nome }}</option>
+                    {% endfor %}
                 </select>
             </div>
-            <div class="field">
-                <label for="id_data_inicio">Data Inicio</label>
-                <input type="date" name="data_inicio" id="id_data_inicio">
-            </div>
-            <div class="field">
-                <label for="id_data_fim">Data Fim</label>
-                <input type="date" name="data_fim" id="id_data_fim">
-            </div>
-        </div>
-        <div class="field" style="margin-top: 12px;">
-            <label for="id_descricao">Descricao</label>
-            <textarea name="descricao" id="id_descricao" rows="2"></textarea>
-        </div>
-        
-        <div class="actions">
-            <button type="submit" class="btn">Criar Obra</button>
-        </div>
-    </form>
-</section>
 
-<!-- secao de usuarios -->
-<section class="panel">
-    <div class="toolbar">
-        <h3>Usuarios da Empresa ({{ usuarios_empresa.count }})</h3>
-    </div>
-    
-    {% if usuarios_empresa %}
-    <table>
-        <thead>
-            <tr>
-                <th>Usuario</th>
-                <th>Email</th>
-                <th>Tipo</th>
-                <th>Obras Permitidas</th>
-                <th>Acoes</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for ue in usuarios_empresa %}
-            <tr>
-                <td><strong>{{ ue.usuario.username }}</strong></td>
-                <td>{{ ue.usuario.email|default:"-" }}</td>
-                <td>
-                    {% if ue.is_admin_empresa %}
-                    <span style="color: #059669; font-weight: 600;">Admin da Empresa</span>
-                    {% else %}
-                    <span style="color: #6b7280;">Usuario</span>
-                    {% endif %}
-                </td>
-                <td>
-                    {% if ue.is_admin_empresa %}
-                    <span style="color: #059669;">Todas as obras da empresa</span>
-                    {% else %}
-                    {{ ue.obras_permitidas.count }} obra(s)
-                    {% endif %}
-                </td>
-                <td>
-                    {% if not ue.is_admin_empresa %}
-                    <form method="post" style="display:inline-flex; gap:8px; align-items:center;">
-                        {% csrf_token %}
-                        <input type="hidden" name="acao" value="atualizar_obras_usuario">
-                        <input type="hidden" name="usuario_empresa_id" value="{{ ue.pk }}">
-                        <select name="obras" multiple style="min-width:200px; height: 60px;">
-                            {% for obra in obras_da_empresa %}
-                            <option value="{{ obra.pk }}"{% if obra in ue.obras_permitidas.all %} selected{% endif %}>
-                                {{ obra.codigo }} - {{ obra.nome }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                        <button type="submit" class="btn secondary" style="padding: 6px 12px;">Atualizar</button>
-                    </form>
-                    {% else %}
-                    <span style="color: #9ca3af; font-style: italic;">Admin - acesso total</span>
-                    {% endif %}
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-    <p class="empty">Nenhum usuario cadastrado para esta empresa.</p>
-    {% endif %}
-    
-    <h4 style="margin-top: 20px; margin-bottom: 12px;">Novo Usuario</h4>
-    <form method="post" class="panel" style="background: #f8f9fa;">
-        {% csrf_token %}
-        <input type="hidden" name="acao" value="criar_usuario">
-        <input type="hidden" name="empresa_id" value="{{ empresa.pk }}">
-        
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
-            <div class="field">
-                <label for="id_username">Username *</label>
-                <input type="text" name="username" id="id_username" required>
+            <div class="actions">
+                <button type="submit" class="btn">Criar Usuario</button>
             </div>
-            <div class="field">
-                <label for="id_email">Email</label>
-                <input type="email" name="email" id="id_email">
-            </div>
-            <div class="field">
-                <label for="id_password">Senha *</label>
-                <input type="password" name="password" id="id_password" required>
-            </div>
-        </div>
-        
-        <div class="field" style="margin-top: 12px;">
-            <label for="id_obras_usuario">Obras Permitidas (selecione varias com Ctrl/Cmd)</label>
-            <select name="obras_usuario" id="id_obras_usuario" multiple style="min-width:300px; height: 100px;">
-                {% for obra in obras_da_empresa %}
-                <option value="{{ obra.pk }}">
-                    {{ obra.codigo }} - {{ obra.nome }}
-                </option>
-                {% endfor %}
-            </select>
-        </div>
-        
-        <div class="actions">
-            <button type="submit" class="btn">Criar Usuario</button>
-        </div>
-    </form>
-</section>
+        </form>
+    </section>
+</div>
 {% endblock %}

@@ -1,0 +1,330 @@
+{% extends "app/base.html" %}
+
+{% block title %}Governanca LGPD | Construtask{% endblock %}
+
+{% block content %}
+<div class="toolbar">
+    <div>
+        <h2>Governanca LGPD</h2>
+        <p>Inventario minimo de dados pessoais, regras de retencao e trilha de acesso administrativo.</p>
+    </div>
+    <div>
+        {% if empresa_lgpd %}
+        <span class="muted">Empresa: {{ empresa_lgpd.nome }}</span>
+        {% endif %}
+    </div>
+</div>
+
+<section class="panel" style="margin-bottom: 20px;">
+    <h3>Inventario de Tratamento</h3>
+    <table class="compact-table">
+        <thead>
+            <tr>
+                <th>Categoria do Titular</th>
+                <th>Entidade</th>
+                <th>Dados Tratados</th>
+                <th>Finalidade</th>
+                <th>Base Legal</th>
+                <th>Retencao</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in inventario_dados_pessoais %}
+            <tr>
+                <td>{{ item.categoria_titular }}</td>
+                <td>{{ item.entidade }}</td>
+                <td>{{ item.dados_tratados }}</td>
+                <td>{{ item.finalidade }}</td>
+                <td>{{ item.base_legal }}</td>
+                <td>{{ item.retencao }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+
+<section class="panel" style="margin-bottom: 20px;">
+    <div class="toolbar">
+        <div>
+            <h3>Inventario por Model</h3>
+            <p class="muted">Mapeamento consolidado dos campos pessoais identificados no aplicativo.</p>
+        </div>
+    </div>
+    <table class="compact-table">
+        <thead>
+            <tr>
+                <th>Model</th>
+                <th>Possui Dados Pessoais</th>
+                <th>Campos</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in inventario_modelos_lgpd %}
+            <tr>
+                <td>{{ item.app_label }}.{{ item.modelo }}</td>
+                <td>{% if item.possui_dados_pessoais %}Sim{% else %}Nao{% endif %}</td>
+                <td>
+                    {% if item.campos_pessoais %}
+                        {% for campo in item.campos_pessoais %}
+                        <div><strong>{{ campo.campo }}</strong> | {{ campo.categoria_titular }} | {{ campo.base_legal }}</div>
+                        {% endfor %}
+                    {% else %}
+                        <span class="muted">Sem campos pessoais mapeados</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+
+<section class="panel" style="margin-bottom: 20px;">
+    <h3>Politica Base de Retencao</h3>
+    <table class="compact-table">
+        <thead>
+            <tr>
+                <th>Registro</th>
+                <th>Regra</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in politica_retencao_padrao %}
+            <tr>
+                <td>{{ item.registro }}</td>
+                <td>{{ item.regra }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+
+<section class="panel" style="margin-bottom: 20px;">
+    <h3>Descarte e Anonimizacao</h3>
+    <table class="compact-table" style="margin-bottom: 16px;">
+        <thead>
+            <tr>
+                <th>Entidade</th>
+                <th>Criterio</th>
+                <th>Acao Recomendada</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in politica_descarte_anonimizacao %}
+            <tr>
+                <td>{{ item.entidade }}</td>
+                <td>{{ item.criterio }}</td>
+                <td>{{ item.acao_recomendada }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <div class="card" style="box-shadow:none; border-radius:12px;">
+        <strong style="text-align:left; font-size:1rem; color:var(--graphite); margin-top:0;">Resumo de Elegibilidade Atual</strong>
+        <p>Fornecedores inativos elegiveis para anonimização: <strong>{{ resumo_rotinas_lgpd.fornecedores_inativos }}</strong></p>
+        <p>Usuarios inativos elegiveis para anonimização: <strong>{{ resumo_rotinas_lgpd.usuarios_inativos }}</strong></p>
+        <p class="muted">As rotinas operacionais podem ser executadas pelo comando <code>manage.py executar_rotinas_lgpd --apply</code>.</p>
+    </div>
+</section>
+
+<section class="panel" style="margin-bottom: 20px;">
+    <div class="toolbar">
+        <div>
+            <h3>Busca por Titular</h3>
+            <p class="muted">Localize rapidamente usuarios e fornecedores para evidenciar tratamento e executar rotinas LGPD.</p>
+        </div>
+    </div>
+    <form method="get" style="margin-bottom: 16px;">
+        <div class="field">
+            <label for="id_titular">Titular</label>
+            <input type="text" id="id_titular" name="titular" value="{{ titular_busca }}" placeholder="Nome, email, CNPJ ou contato">
+        </div>
+        <div class="actions">
+            <button type="submit" class="btn">Buscar</button>
+        </div>
+    </form>
+    {% if titular_busca %}
+    <table class="compact-table">
+        <thead>
+            <tr>
+                <th>Categoria</th>
+                <th>Entidade</th>
+                <th>Descricao</th>
+                <th>Identificador</th>
+                <th>Acoes</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in titulares_localizados %}
+            <tr>
+                <td>{{ item.categoria_titular }}</td>
+                <td>{{ item.entidade }}</td>
+                <td>{{ item.descricao }}</td>
+                <td>{{ item.identificador }}</td>
+                <td>
+                    {% if item.entidade == "Fornecedor" %}
+                    <form method="post" style="display:flex; gap:8px; flex-wrap:wrap;">
+                        {% csrf_token %}
+                        <input type="hidden" name="fornecedor_id" value="{{ item.objeto_id }}">
+                        <input type="hidden" name="justificativa" value="Tratamento iniciado pela central LGPD">
+                        <button class="btn secondary" type="submit" name="acao" value="excluir_fornecedor">Exclusao Logica</button>
+                        <button class="btn secondary" type="submit" name="acao" value="anonimizar_fornecedor">Anonimizar</button>
+                        <button class="btn secondary" type="submit" name="acao" value="descartar_fornecedor">Descartar</button>
+                    </form>
+                    {% else %}
+                    <span class="muted">Consulta rastreada</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" class="empty">Nenhum titular localizado com o termo informado.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+</section>
+
+<section class="panel" style="margin-bottom: 20px;">
+    <div class="toolbar">
+        <div>
+            <h3>Consentimentos</h3>
+            <p class="muted">Registro e revogacao formal de consentimentos operacionais.</p>
+        </div>
+    </div>
+    <form method="post" style="margin-bottom: 16px;">
+        {% csrf_token %}
+        <input type="hidden" name="acao" value="registrar_consentimento">
+        <div class="field">
+            <label for="id_categoria_titular">Categoria</label>
+            <select id="id_categoria_titular" name="categoria_titular">
+                <option value="USUARIO">Usuario</option>
+                <option value="COLABORADOR">Colaborador</option>
+                <option value="FORNECEDOR">Fornecedor</option>
+                <option value="CLIENTE">Cliente</option>
+                <option value="TERCEIRO">Terceiro</option>
+            </select>
+        </div>
+        <div class="field">
+            <label for="id_email_referencia">Email de Referencia</label>
+            <input type="email" id="id_email_referencia" name="email_referencia">
+        </div>
+        <div class="field">
+            <label for="id_finalidade">Finalidade</label>
+            <input type="text" id="id_finalidade" name="finalidade" value="Comunicacao institucional e operacao autorizada">
+        </div>
+        <div class="field">
+            <label for="id_texto_aceito">Texto Aceito</label>
+            <textarea id="id_texto_aceito" name="texto_aceito" rows="3">Declaro ciência sobre o tratamento de dados pessoais para finalidade operacional, rastreabilidade e conformidade contratual.</textarea>
+        </div>
+        <div class="actions">
+            <button type="submit" class="btn">Registrar Consentimento</button>
+        </div>
+    </form>
+    <table class="compact-table">
+        <thead>
+            <tr>
+                <th>Data</th>
+                <th>Categoria</th>
+                <th>Referencia</th>
+                <th>Finalidade</th>
+                <th>Status</th>
+                <th>Acoes</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for consentimento in consentimentos_lgpd %}
+            <tr>
+                <td>{{ consentimento.criado_em|date:"d/m/Y H:i" }}</td>
+                <td>{{ consentimento.get_categoria_titular_display }}</td>
+                <td>{{ consentimento.email_referencia|default:consentimento.usuario|default:"-" }}</td>
+                <td>{{ consentimento.finalidade }}</td>
+                <td>{% if consentimento.ativo %}Ativo{% else %}Revogado{% endif %}</td>
+                <td>
+                    {% if consentimento.ativo %}
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="acao" value="revogar_consentimento">
+                        <input type="hidden" name="consentimento_id" value="{{ consentimento.pk }}">
+                        <button class="btn secondary" type="submit">Revogar</button>
+                    </form>
+                    {% else %}
+                    <span class="muted">Sem acoes</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" class="empty">Nenhum consentimento registrado.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+
+<section class="panel">
+    <h3>Ultimos Acessos a Dados Pessoais</h3>
+    <table class="compact-table">
+        <thead>
+            <tr>
+                <th>Data/Hora</th>
+                <th>Usuario</th>
+                <th>Categoria</th>
+                <th>Entidade</th>
+                <th>Acao</th>
+                <th>Identificador</th>
+                <th>Finalidade</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for log in logs_dados_pessoais %}
+            <tr>
+                <td>{{ log.criado_em|date:"d/m/Y H:i" }}</td>
+                <td>{{ log.usuario|default:"Nao informado" }}</td>
+                <td>{{ log.get_categoria_titular_display }}</td>
+                <td>{{ log.entidade }}</td>
+                <td>{{ log.get_acao_display }}</td>
+                <td>{{ log.identificador|default:"Nao informado" }}</td>
+                <td>{{ log.finalidade }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="7" class="empty">Nenhum acesso administrativo a dados pessoais foi registrado ainda.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+
+<section class="panel">
+    <h3>Historico de Tratamento</h3>
+    <table class="compact-table">
+        <thead>
+            <tr>
+                <th>Data/Hora</th>
+                <th>Usuario</th>
+                <th>Acao</th>
+                <th>Entidade</th>
+                <th>Identificador</th>
+                <th>Finalidade</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in tratamentos_lgpd %}
+            <tr>
+                <td>{{ item.criado_em|date:"d/m/Y H:i" }}</td>
+                <td>{{ item.usuario|default:"Nao informado" }}</td>
+                <td>{{ item.get_acao_display }}</td>
+                <td>{{ item.entidade }}</td>
+                <td>{{ item.identificador|default:"-" }}</td>
+                <td>{{ item.finalidade }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" class="empty">Nenhum tratamento LGPD registrado.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endblock %}

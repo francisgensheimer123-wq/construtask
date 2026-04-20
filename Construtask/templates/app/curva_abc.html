@@ -8,9 +8,11 @@
 <div class="toolbar">
     <div>
         <h2>Curva ABC</h2>
-        <p>Classificacao por representatividade acumulada (A ate 80%, B ate 95%, C o restante).</p>
+        <p>Classificação por representatividade acumulada (A até 80%, B até 95%, C o restante).</p>
     </div>
     <div>
+        <a class="btn secondary" href="{% url 'curva_abc_export' %}">Exportar Excel</a>
+        <a class="btn secondary" href="{% url 'curva_abc_pdf' %}">Exportar PDF</a>
         <a class="btn secondary" href="{% url 'plano_contas_list' %}">Voltar</a>
     </div>
 </div>
@@ -46,4 +48,3 @@
 <p class="empty">Nenhum dado para gerar a Curva ABC no escopo atual.</p>
 {% endif %}
 {% endblock %}
-

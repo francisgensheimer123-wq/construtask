@@ -8,7 +8,7 @@
 <div class="toolbar">
     <div>
         <h2>{{ solicitacao.numero }}</h2>
-        <p>{{ solicitacao.titulo }} | {{ solicitacao.get_status_display }}</p>
+        <p>{{ solicitacao.titulo }} | <span class="badge bg-{{ solicitacao|workflow_badge_class }}">{{ solicitacao.get_status_display }}</span> <small class="text-muted">{{ solicitacao|workflow_stage_display }}</small></p>
     </div>
     <div style="display:flex; gap:10px;">
         <a class="btn secondary" href="{% url 'solicitacao_compra_pdf' solicitacao.pk %}">Gerar PDF</a>
@@ -33,13 +33,34 @@
     </div>
 
     <div class="panel">
-        <h3>Relacionamentos</h3>
+        <h3>Workflow e Relacionamentos</h3>
         <table class="compact-table">
             <tbody>
+                <tr><th>Status</th><td><span class="badge bg-{{ solicitacao|workflow_badge_class }}">{{ solicitacao.get_status_display }}</span> <small class="text-muted">{{ solicitacao|workflow_stage_display }}</small></td></tr>
+                <tr><th>Enviado para aprovacao</th><td>{% if solicitacao.enviado_para_aprovacao_por %}{{ solicitacao.enviado_para_aprovacao_por.username }} em {{ solicitacao.enviado_para_aprovacao_em|date:"d/m/Y H:i" }}{% else %}-{% endif %}</td></tr>
+                <tr><th>Aprovado por</th><td>{% if solicitacao.aprovado_por %}{{ solicitacao.aprovado_por.username }} em {{ solicitacao.aprovado_em|date:"d/m/Y H:i" }}{% else %}-{% endif %}</td></tr>
+                <tr><th>Ultimo parecer</th><td>{{ solicitacao.parecer_aprovacao|default:"-" }}</td></tr>
+                <tr><th>Valor estimado</th><td>{{ solicitacao.valor_estimado_total|money_br }}</td></tr>
                 <tr><th class="text-right">Cotacoes</th><td class="money">{{ solicitacao.cotacoes.count }}</td></tr>
                 <tr><th class="text-right">Resultados em Compras e Contratacoes</th><td class="money">{{ compromissos_resultantes|length }}</td></tr>
             </tbody>
         </table>
+        <form method="post" style="margin-top:12px;">
+            {% csrf_token %}
+            <div class="field">
+                <label for="id_parecer_aprovacao_solicitacao">Parecer</label>
+                <textarea id="id_parecer_aprovacao_solicitacao" name="parecer_aprovacao" rows="3" placeholder="Opcional no envio/aprovação e obrigatório na devolução para ajuste.">{{ solicitacao.parecer_aprovacao }}</textarea>
+            </div>
+            <div class="actions">
+                {% if pode_enviar_para_aprovacao and solicitacao.status == "RASCUNHO" %}
+                <button type="submit" class="btn" name="acao" value="enviar_para_aprovacao">Enviar para Aprovação</button>
+                {% endif %}
+                {% if pode_aprovar and solicitacao.status == "EM_APROVACAO" %}
+                <button type="submit" class="btn" name="acao" value="aprovar">Aprovar</button>
+                <button type="submit" class="btn secondary" name="acao" value="retornar_para_ajuste">Retornar para Ajuste</button>
+                {% endif %}
+            </div>
+        </form>
     </div>
 </section>
 
@@ -61,7 +82,10 @@
                 <tr>
                     <td><a href="{% url 'cotacao_detail' cotacao.pk %}">{{ cotacao.numero }}</a></td>
                     <td>{{ cotacao.fornecedor }}</td>
-                    <td>{{ cotacao.get_status_display }}</td>
+                    <td>
+                        <span class="badge bg-{{ cotacao|workflow_badge_class }}">{{ cotacao.get_status_display }}</span>
+                        <div><small class="text-muted">{{ cotacao|workflow_stage_display }}</small></div>
+                    </td>
                     <td>{{ cotacao.data_cotacao|date:"d/m/Y" }}</td>
                 </tr>
                 {% endfor %}
@@ -126,6 +150,34 @@
     </table>
     {% else %}
     <p class="empty">Ainda nao ha itens cadastrados para esta solicitacao.</p>
+    {% endif %}
+</section>
+
+<section class="panel">
+    <h3>Linha do Tempo</h3>
+    {% if workflow_events %}
+    <table class="compact-table">
+        <thead>
+            <tr>
+                <th>Data/Hora</th>
+                <th>Acao</th>
+                <th>Usuario</th>
+                <th>Resumo</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for evento in workflow_events %}
+            <tr>
+                <td>{{ evento.timestamp|date:"d/m/Y H:i" }}</td>
+                <td>{{ evento.get_acao_display }}</td>
+                <td>{{ evento.usuario|default:"Nao informado" }}</td>
+                <td>{{ evento.entidade_label }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="empty">Nenhum evento de auditoria registrado.</p>
     {% endif %}
 </section>
 {% endblock %}

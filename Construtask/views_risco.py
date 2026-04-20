@@ -12,24 +12,11 @@ from django.utils import timezone
 from django.views.generic import CreateView, DetailView, ListView, UpdateView
 
 from .models_risco import Risco, RiscoHistorico
-from .permissions import get_empresa_operacional, get_obra_do_contexto
-
-
-def _get_empresa_do_request(request):
-    """Obtém empresa do contexto operacional."""
-    return get_empresa_operacional(request)
-
-
-def _get_obra_contexto(request):
-    """Obtém obra do contexto atual."""
-    return get_obra_do_contexto(request)
-
-
-def _filtrar_por_empresa(queryset, empresa):
-    """Filtra queryset pela empresa."""
-    if empresa:
-        return queryset.filter(empresa=empresa)
-    return queryset
+from .permissions import (
+    filtrar_por_empresa as _filtrar_por_empresa,
+    get_empresa_operacional as _get_empresa_do_request,
+    get_obra_do_contexto as _get_obra_contexto,
+)
 
 
 def _registrar_historico(risco, usuario, acao, dados_anteriores=None, dados_novos=None, observacao=""):

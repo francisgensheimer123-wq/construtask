@@ -1,5 +1,52 @@
 {% extends "app/base.html" %}
 
+{% block extra_head %}
+<style>
+    .documento-table-wrap {
+        width: 100%;
+        overflow-x: auto;
+    }
+    .documento-table {
+        min-width: 1120px;
+    }
+    .documento-table th,
+    .documento-table td {
+        vertical-align: middle;
+    }
+    .documento-table .col-codigo a {
+        color: var(--red-dark);
+        font-weight: 700;
+        text-decoration: underline;
+        white-space: nowrap;
+    }
+    .documento-table .col-codigo strong {
+        display: inline;
+        font-size: inherit;
+        margin-top: 0;
+        color: inherit;
+        text-align: inherit;
+    }
+    .documento-table .col-codigo,
+    .documento-table .col-versao,
+    .documento-table .col-obra,
+    .documento-table .col-data,
+    .documento-table .col-acoes {
+        white-space: nowrap !important;
+        word-break: normal !important;
+        overflow-wrap: normal !important;
+    }
+    .documento-table .col-acoes {
+        width: 1%;
+    }
+    .documento-table .acoes-wrap {
+        display: inline-flex;
+        gap: 8px;
+        flex-wrap: nowrap;
+        white-space: nowrap;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -18,7 +65,6 @@
         {% endfor %}
     {% endif %}
 
-    <!-- Filtros -->
     <div class="card mb-4">
         <div class="card-body">
             <form method="GET" class="row g-3">
@@ -61,81 +107,78 @@
         </div>
     </div>
 
-    <!-- Lista de Documentos -->
     <div class="card">
         <div class="card-body">
-            <table class="table table-hover">
-                <thead>
-                    <tr>
-                        <th>Código</th>
-                        <th>Título</th>
-                        <th>Tipo</th>
-                        <th>Versão</th>
-                        <th>Status</th>
-                        <th>Obra</th>
-                        <th>Criado em</th>
-                        <th>Ações</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for documento in documentos %}
-                    <tr>
-                        <td>
-                            <a href="{% url 'documento_detail' documento.pk %}">
-                                <strong>{{ documento.codigo_documento }}</strong>
-                            </a>
-                        </td>
-                        <td>{{ documento.titulo|truncatechars:50 }}</td>
-                        <td>
-                            <span class="badge bg-info">{{ documento.get_tipo_documento_display }}</span>
-                        </td>
-                        <td>
-                            <span class="badge bg-secondary">v{{ documento.versao_atual }}</span>
-                        </td>
-                        <td>
-                            {% if documento.status == 'RASCUNHO' %}
-                                <span class="badge bg-secondary">{{ documento.get_status_display }}</span>
-                            {% elif documento.status == 'EM_REVISAO' %}
-                                <span class="badge bg-warning">{{ documento.get_status_display }}</span>
-                            {% elif documento.status == 'APROVADO' %}
-                                <span class="badge bg-success">{{ documento.get_status_display }}</span>
-                            {% elif documento.status == 'OBSOLETO' %}
-                                <span class="badge bg-danger">{{ documento.get_status_display }}</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if documento.obra %}
-                                {{ documento.obra.codigo }}
-                            {% else %}
-                                <span class="text-muted">-</span>
-                            {% endif %}
-                        </td>
-                        <td>{{ documento.criado_em|date:"d/m/Y" }}</td>
-                        <td>
-                            <a href="{% url 'documento_detail' documento.pk %}" class="btn btn-sm btn-outline-primary">
-                                <i class="bi bi-eye"></i>
-                            </a>
-                            <a href="{% url 'documento_update' documento.pk %}" class="btn btn-sm btn-outline-secondary">
-                                <i class="bi bi-pencil"></i>
-                            </a>
-                            <form method="POST" action="{% url 'documento_delete' documento.pk %}" style="display:inline;">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Excluir este documento?')">
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                            </form>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="8" class="text-center text-muted py-4">
-                            <i class="bi bi-inbox" style="font-size: 2rem;"></i>
-                            <p class="mt-2">Nenhum documento encontrado.</p>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+            <div class="documento-table-wrap">
+                <table class="table table-hover documento-table">
+                    <thead>
+                        <tr>
+                            <th class="col-codigo">Código</th>
+                            <th>Título</th>
+                            <th>Tipo</th>
+                            <th class="col-versao">Versão</th>
+                            <th>Status</th>
+                            <th class="col-obra">Obra</th>
+                            <th class="col-data">Criado em</th>
+                            <th class="col-acoes">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for documento in documentos %}
+                        <tr>
+                            <td class="col-codigo code-cell">
+                                <a href="{% url 'documento_detail' documento.pk %}">
+                                    <strong>{{ documento.codigo_documento }}</strong>
+                                </a>
+                            </td>
+                            <td>{{ documento.titulo|truncatechars:50 }}</td>
+                            <td>
+                                <span class="badge bg-info">{{ documento.get_tipo_documento_display }}</span>
+                            </td>
+                            <td class="col-versao">
+                                <span class="badge bg-secondary">v{{ documento.versao_atual }}</span>
+                            </td>
+                            <td>
+                                <span class="badge bg-{{ documento.status_badge_class }}">{{ documento.get_status_display }}</span>
+                            </td>
+                            <td class="col-obra code-cell">
+                                {% if documento.obra %}
+                                    {{ documento.obra.codigo }}
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="col-data">{{ documento.criado_em|date:"d/m/Y" }}</td>
+                            <td class="col-acoes">
+                                <div class="acoes-wrap">
+                                    <a href="{% url 'documento_detail' documento.pk %}" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    {% if documento.status == "RASCUNHO" %}
+                                        <a href="{% url 'documento_update' documento.pk %}" class="btn btn-sm btn-outline-secondary">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                    {% endif %}
+                                    <form method="POST" action="{% url 'documento_delete' documento.pk %}" style="display:inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Excluir este documento?')">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center text-muted py-4">
+                                <i class="bi bi-inbox" style="font-size: 2rem;"></i>
+                                <p class="mt-2">Nenhum documento encontrado.</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>

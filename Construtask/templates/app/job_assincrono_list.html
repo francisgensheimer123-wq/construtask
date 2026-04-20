@@ -1,0 +1,63 @@
+{% extends "app/base.html" %}
+
+{% block main_class %}main-full{% endblock %}
+{% block title %}Jobs Assincronos | Construtask{% endblock %}
+
+{% block content %}
+<div class="toolbar">
+    <div>
+        <h2>Jobs Assincronos</h2>
+        <p>Acompanhe importacoes, sincronizacoes e geracoes de relatorio executadas em segundo plano.</p>
+    </div>
+</div>
+
+<section class="panel">
+    <h3>Resumo da Fila</h3>
+    <div class="cards" style="margin-bottom:18px;">
+        <div class="card"><span>Pendentes</span><strong>{{ resumo_jobs.pendentes }}</strong></div>
+        <div class="card"><span>Em Execucao</span><strong>{{ resumo_jobs.em_execucao }}</strong></div>
+        <div class="card"><span>Concluidos</span><strong>{{ resumo_jobs.concluidos }}</strong></div>
+        <div class="card"><span>Falharam</span><strong>{{ resumo_jobs.falharam }}</strong></div>
+    </div>
+
+    <h3>Fila recente</h3>
+    {% if jobs %}
+    <div class="table-scroll">
+        <table class="compact-table" style="min-width:980px;">
+            <thead>
+                <tr>
+                    <th>Criado em</th>
+                    <th>Tipo</th>
+                    <th>Status</th>
+                    <th>Descricao</th>
+                    <th>Solicitado por</th>
+                    <th>Resultado</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for job in jobs %}
+                <tr>
+                    <td>{{ job.criado_em|date:"d/m/Y H:i" }}</td>
+                    <td>{{ job.get_tipo_display }}</td>
+                    <td>{{ job.get_status_display }}</td>
+                    <td>{{ job.descricao }}</td>
+                    <td>{{ job.solicitado_por|default:"-" }}</td>
+                    <td>
+                        {% if job.arquivo_resultado %}
+                        <a href="{{ job.arquivo_resultado.url }}">Baixar arquivo</a>
+                        {% elif job.erro %}
+                        {{ job.erro }}
+                        {% else %}
+                        -
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="empty">Nenhum job assíncrono registrado para o contexto atual.</p>
+    {% endif %}
+</section>
+{% endblock %}

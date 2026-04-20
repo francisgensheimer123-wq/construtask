@@ -1,0 +1,98 @@
+{% extends "app/base.html" %}
+
+{% block main_class %}main-full{% endblock %}
+{% block title %}Operacao Tecnica | Construtask{% endblock %}
+
+{% block content %}
+<div class="toolbar">
+    <div>
+        <h2>Operacao Tecnica</h2>
+        <p>Centro de acompanhamento da saude operacional, checklist de deploy e rotina de sustentacao.</p>
+    </div>
+    <div class="muted">
+        <a class="btn-secondary" href="{% url 'observabilidade_dashboard' %}">Observabilidade</a>
+        <a class="btn-secondary" href="{% url 'jobs_assincronos' %}">Jobs</a>
+        <a class="btn-secondary" href="{% url 'empresa_admin' %}">Base SaaS</a>
+    </div>
+</div>
+
+<section class="cards">
+    <div class="card"><span>Status SaaS</span><strong>{{ diagnostico_saas.status|upper }}</strong></div>
+    <div class="card"><span>Alertas Tecnicos</span><strong>{{ alertas_operacionais_tecnicos|length }}</strong></div>
+    <div class="card"><span>Jobs Falharam</span><strong>{{ resumo_jobs.falharam }}</strong></div>
+    <div class="card"><span>Erros Abertos</span><strong>{{ resumo_erros.abertos }}</strong></div>
+    <div class="card"><span>Requests Lentas</span><strong>{{ resumo_metricas.lentas }}</strong></div>
+    <div class="card"><span>Erros 500</span><strong>{{ resumo_metricas.erros_500 }}</strong></div>
+</section>
+
+<section class="panel">
+    <h3>Alertas Operacionais</h3>
+    {% if alertas_operacionais_tecnicos %}
+    <div class="table-scroll">
+        <table class="compact-table" style="min-width:980px;">
+            <thead>
+                <tr>
+                    <th>Severidade</th>
+                    <th>Titulo</th>
+                    <th>Detalhe</th>
+                    <th>Acao recomendada</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for alerta in alertas_operacionais_tecnicos %}
+                <tr>
+                    <td>{{ alerta.severidade|upper }}</td>
+                    <td>{{ alerta.titulo }}</td>
+                    <td class="wrap-text">{{ alerta.detalhe }}</td>
+                    <td class="wrap-text">{{ alerta.acao }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="empty">Nenhum alerta tecnico relevante no contexto atual.</p>
+    {% endif %}
+</section>
+
+<section class="panel">
+    <h3>Checklist de Deploy</h3>
+    <div class="grid-2">
+        {% for bloco in checklist_deploy %}
+        <article class="card">
+            <h4 style="margin-bottom:10px;">{{ bloco.fase }}</h4>
+            <ul class="list-plain">
+                {% for item in bloco.itens %}
+                <li>{{ item }}</li>
+                {% endfor %}
+            </ul>
+        </article>
+        {% endfor %}
+    </div>
+</section>
+
+<section class="panel">
+    <h3>Checklist de Rollback</h3>
+    <ul class="list-plain">
+        {% for item in checklist_rollback %}
+        <li>{{ item }}</li>
+        {% endfor %}
+    </ul>
+</section>
+
+<section class="panel">
+    <h3>Rotina de Acompanhamento</h3>
+    <div class="grid-3">
+        {% for bloco in rotinas_acompanhamento %}
+        <article class="card">
+            <h4 style="margin-bottom:10px;">{{ bloco.frequencia }}</h4>
+            <ul class="list-plain">
+                {% for item in bloco.itens %}
+                <li>{{ item }}</li>
+                {% endfor %}
+            </ul>
+        </article>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

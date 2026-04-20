@@ -1,4 +1,5 @@
 {% extends "app/base.html" %}
+{% load formatters %}
 
 {% block main_class %}main-full{% endblock %}
 {% block title %}Riscos | Construtask{% endblock %}
@@ -86,18 +87,20 @@
                 <td>
                     <span class="badge" style="background:
                     {% if risco.nivel_texto == 'BAIXO' %}#166534
-                    {% elif risco.nivel_texto == 'MÉDIO' or risco.nivel_texto == 'MÃ‰DIO' %}#a16207
+                    {% elif risco.nivel_texto == 'MÉDIO' %}#a16207
                     {% elif risco.nivel_texto == 'ALTO' %}#991b1b
                     {% else %}#111827{% endif %};
                     color:#fff; padding:6px 10px; border-radius:999px;">
                         {{ risco.nivel }} - {{ risco.nivel_texto }}
                     </span>
                 </td>
-                <td><a href="{% url 'risco_detail' risco.pk %}">{{ risco.titulo }}</a></td>
+                <td><a href="{% url 'risco_detail' risco.pk %}">{% if risco.codigo %}{{ risco.codigo }} - {% endif %}{{ risco.titulo }}</a></td>
                 <td>{{ risco.get_categoria_display }}</td>
                 <td>{{ risco.processo|default:"-" }}</td>
                 <td>{% if risco.plano_contas %}{{ risco.plano_contas.codigo }} - {{ risco.plano_contas.descricao }}{% else %}-{% endif %}</td>
-                <td>{{ risco.get_status_display }}</td>
+                <td>
+                    <span class="badge bg-{{ risco|workflow_badge_class }}">{{ risco.get_status_display }}</span>
+                </td>
                 <td>{{ risco.responsavel.username }}</td>
                 <td>{% if risco.data_meta_tratamento %}{{ risco.data_meta_tratamento|date:"d/m/Y" }}{% else %}-{% endif %}</td>
                 <td>

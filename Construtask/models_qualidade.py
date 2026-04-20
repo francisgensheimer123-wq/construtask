@@ -2,6 +2,8 @@ from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
+from .domain import gerar_numero_documento
+
 
 class NaoConformidade(models.Model):
     class Meta:
@@ -23,6 +25,7 @@ class NaoConformidade(models.Model):
 
     empresa = models.ForeignKey("Empresa", on_delete=models.CASCADE, related_name="nao_conformidades")
     obra = models.ForeignKey("Obra", on_delete=models.CASCADE, related_name="nao_conformidades")
+    numero = models.CharField(max_length=30, unique=True, null=True, blank=True, editable=False)
     plano_contas = models.ForeignKey(
         "PlanoContas",
         on_delete=models.SET_NULL,
@@ -33,6 +36,17 @@ class NaoConformidade(models.Model):
     descricao = models.TextField()
     causa = models.TextField(blank=True)
     acao_corretiva = models.TextField(blank=True)
+    evidencia_tratamento = models.TextField(blank=True)
+    evidencia_encerramento = models.TextField(blank=True)
+    eficacia_observacao = models.TextField(blank=True)
+    eficacia_verificada_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="nao_conformidades_eficacia_verificadas",
+    )
+    eficacia_verificada_em = models.DateTimeField(null=True, blank=True)
     responsavel = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
@@ -50,6 +64,8 @@ class NaoConformidade(models.Model):
     atualizado_em = models.DateTimeField(auto_now=True)
 
     def save(self, *args, **kwargs):
+        if not self.numero:
+            self.numero = gerar_numero_documento(NaoConformidade, "NC-", "numero")
         if self.status == "ENCERRADA" and not self.data_encerramento:
             self.data_encerramento = timezone.localdate()
         if self.status != "ENCERRADA":
@@ -57,7 +73,7 @@ class NaoConformidade(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"NC-{self.pk or 'NOVA'} - {self.get_status_display()}"
+        return f"{self.numero or 'NC-NOVA'} - {self.get_status_display()}"
 
 
 class NaoConformidadeHistorico(models.Model):

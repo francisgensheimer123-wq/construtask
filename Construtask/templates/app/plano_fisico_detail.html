@@ -1,16 +1,62 @@
 {% extends "app/base.html" %}
-{% load formatters %}
+{% load formatters l10n %}
 
 {% block main_class %}main-full{% endblock %}
 {% block title %}{{ plano.titulo }} | Construtask{% endblock %}
 
 {% block content %}
+<style>
+    .cronograma-table th,
+    .cronograma-table td {
+        vertical-align: top;
+    }
+    .cronograma-table th {
+        font-size: 13px;
+    }
+    .cronograma-table td {
+        font-size: 13px;
+    }
+    .cronograma-table .nowrap {
+        white-space: nowrap !important;
+        word-break: normal !important;
+        overflow-wrap: normal !important;
+    }
+    .cronograma-table td.nowrap,
+    .cronograma-table th.nowrap {
+        white-space: nowrap !important;
+        word-break: normal !important;
+        overflow-wrap: normal !important;
+    }
+    .cronograma-item-pai {
+        font-weight: 700;
+    }
+    .cronograma-linha-pai td {
+        font-weight: 700;
+    }
+    .cronograma-realizado-input {
+        width: 88px;
+        min-width: 88px;
+        text-align: right;
+        padding: 8px 10px;
+        border-radius: 10px;
+        border: 1px solid rgba(255,255,255,.18);
+        background: rgba(10,10,10,.72);
+        color: var(--white);
+        box-sizing: border-box;
+    }
+    .cronograma-realizado-input:focus {
+        outline: none;
+        border-color: var(--red-soft);
+        box-shadow: 0 0 0 3px rgba(139, 0, 0, 0.18);
+    }
+</style>
 <div class="toolbar">
     <div>
-        <h2>{{ plano.titulo }}</h2>
-        <p>Visao consolidada do cronograma, baseline, andamento fisico, desvios e vinculos com a EAP.</p>
+        <h2>{% if plano.numero %}{{ plano.numero }} - {% endif %}{{ plano.titulo }}</h2>
+        <p>Visao consolidada do cronograma, com datas planejadas, datas reais, percentuais e vinculo objetivo com a EAP.</p>
     </div>
     <div style="display:flex; gap:10px;">
+        <a class="btn secondary" href="{% url 'mapa_correspondencia_list' %}">Mapeamento EAP</a>
         <a class="btn secondary" href="{% url 'plano_fisico_update' plano.pk %}">Editar</a>
         <a class="btn secondary" href="{% url 'plano_fisico_list' %}">Voltar</a>
     </div>
@@ -18,10 +64,10 @@
 
 <section class="cards">
     <div class="card"><span>Versao</span><strong>{{ plano.versao }}</strong></div>
-    <div class="card"><span>Status</span><strong style="text-align:left;">{{ plano.get_status_display }}</strong></div>
+    <div class="card"><span>Status</span><strong style="text-align:left;">{{ plano.get_status_display }}</strong><small class="text-muted">{{ plano|workflow_stage_display }}</small></div>
     <div class="card"><span>Atividades</span><strong>{{ estatisticas.total_itens }}</strong></div>
     <div class="card"><span>Marcos</span><strong>{{ estatisticas.total_macros }}</strong></div>
-    <div class="card"><span>% Geral</span><strong>{{ estatisticas.media_execucao|trunc2 }}%</strong></div>
+    <div class="card"><span>% Geral Realizado</span><strong>{{ estatisticas.media_execucao|trunc2 }}%</strong></div>
     <div class="card"><span>Atrasadas</span><strong>{{ estatisticas.atrasados }}</strong></div>
     <div class="card"><span>Valor Planejado</span><strong>{{ estatisticas.valor_planejado|money_br }}</strong></div>
     <div class="card"><span>Valor Realizado</span><strong>{{ estatisticas.valor_realizado|money_br }}</strong></div>
@@ -30,33 +76,32 @@
 <section class="grid-2">
     <div class="panel">
         <h3>Dados do Cronograma</h3>
-        <table class="compact-table">
+        <table class="compact-table cronograma-table">
             <tbody>
                 <tr><td>Obra</td><td>{{ plano.obra.codigo }} - {{ plano.obra.nome }}</td></tr>
                 <tr><td>Versao</td><td>v{{ plano.versao }}</td></tr>
-                <tr><td>Status</td><td>{{ plano.get_status_display }}</td></tr>
+                <tr><td>Status</td><td><span class="badge bg-{{ plano|workflow_badge_class }}">{{ plano.get_status_display }}</span> <small class="text-muted">{{ plano|workflow_stage_display }}</small></td></tr>
                 <tr><td>Baseline</td><td>{% if plano.is_baseline %}Sim{% else %}Nao{% endif %}</td></tr>
-                <tr><td>Data Base</td><td>{% if plano.data_base %}{{ plano.data_base|date:"d/m/Y" }}{% else %}-{% endif %}</td></tr>
+                <tr><td>Data Base</td><td>{% if plano.data_base %}{{ plano.data_base|date:"d/m/Y" }}{% else %}Nao informado{% endif %}</td></tr>
                 <tr><td>Importado em</td><td>{{ plano.created_at|date:"d/m/Y H:i" }}</td></tr>
                 <tr><td>Responsavel</td><td>{{ plano.responsavel_importacao.username }}</td></tr>
-                <tr><td>Descricao</td><td class="wrap-text">{{ plano.descricao|default:"-" }}</td></tr>
+                <tr><td>Descricao</td><td class="wrap-text">{{ plano.descricao|default:"Nao informado" }}</td></tr>
             </tbody>
         </table>
     </div>
 
     <div class="panel">
-        <h3>Desvios e Mapeamento</h3>
+        <h3>Desvios e Integracao</h3>
         <table class="compact-table">
             <tbody>
                 <tr><td>Atividades Atrasadas</td><td class="money">{{ estatisticas.atrasados }}</td></tr>
                 <tr><td>Atividades Adiantadas</td><td class="money">{{ estatisticas.adiantados }}</td></tr>
                 <tr><td>Divergencias</td><td class="money">{{ divergencias|length }}</td></tr>
-                <tr><td>Mapeamentos</td><td><a href="{% url 'mapa_correspondencia_list' %}">Abrir mapa de correspondencia</a></td></tr>
             </tbody>
         </table>
         {% if tem_divergencias %}
         <div style="margin-top:12px;">
-            <strong>Divergencias principais</strong>
+            <strong>Pendencias principais</strong>
             <ul style="margin-top:8px;">
                 {% for div in divergencias|slice:":5" %}
                 <li>{{ div.mensagem }}</li>
@@ -77,7 +122,8 @@
                     <th>Codigo</th>
                     <th>Atividade</th>
                     <th class="text-right">Desvio</th>
-                    <th class="text-right">% Exec</th>
+                    <th class="text-right">% Prev.</th>
+                    <th class="text-right">% Real.</th>
                 </tr>
             </thead>
             <tbody>
@@ -85,8 +131,9 @@
                 <tr>
                     <td>{{ item.codigo_atividade }}</td>
                     <td class="wrap-text">{{ item.atividade }}</td>
-                    <td class="money">{{ item.dias_desvio }}</td>
-                    <td class="money">{{ item.percentual_concluido|trunc2 }}%</td>
+                    <td class="money">{{ item.dias_desvio_exibicao }}</td>
+                    <td class="money">{{ item.percentual_previsto_exibicao|trunc2 }}%</td>
+                    <td class="money">{{ item.percentual_realizado_exibicao|trunc2 }}%</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -107,85 +154,263 @@
 </section>
 
 <section class="panel">
-    <h3>Atividades do Cronograma</h3>
+    <div class="toolbar">
+        <div>
+            <h3>Atividades do Cronograma</h3>
+            <p>Lance o realizado diretamente nas atividades filhas e use o botão abaixo para atualizar o cronograma.</p>
+        </div>
+        <div>
+            <button type="button" class="btn" onclick="submeterAtualizacaoCronograma();">Atualizar Cronograma</button>
+        </div>
+    </div>
     {% if itens %}
-    <table class="compact-table">
-        <thead>
-            <tr>
-                <th>Codigo</th>
-                <th>Atividade</th>
-                <th>Previsao</th>
-                <th>Real</th>
-                <th class="text-right">Duracao</th>
-                <th class="text-right">% Exec</th>
-                <th class="text-right">Desvio</th>
-                <th>EAP</th>
-                <th class="text-right">Vlr. Planejado</th>
-                <th class="text-right">Vlr. Realizado</th>
-                <th>Acoes</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for item in itens %}
-            <tr>
-                <td>{{ item.codigo_atividade }}</td>
-                <td class="wrap-text">{% if item.is_marco %}<strong>[Marco]</strong> {% endif %}{{ item.atividade }}</td>
-                <td>{% if item.data_inicio_prevista %}{{ item.data_inicio_prevista|date:"d/m/Y" }} a {{ item.data_fim_prevista|date:"d/m/Y" }}{% else %}-{% endif %}</td>
-                <td>{% if item.data_inicio_real %}{{ item.data_inicio_real|date:"d/m/Y" }} a {{ item.data_fim_real|date:"d/m/Y" }}{% else %}-{% endif %}</td>
-                <td class="money">{{ item.duracao }}</td>
-                <td class="money">{{ item.percentual_concluido|trunc2 }}%</td>
-                <td class="money">{{ item.dias_desvio }}</td>
-                <td>{% if item.plano_contas %}{{ item.plano_contas.codigo }} - {{ item.plano_contas.descricao }}{% else %}-{% endif %}</td>
-                <td class="money">{{ item.valor_planejado|money_br }}</td>
-                <td class="money">{{ item.valor_realizado|money_br }}</td>
-                <td><a class="btn secondary" href="{% url 'plano_fisico_item_update' plano.pk item.pk %}">Editar</a></td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <form method="post" id="cronograma-realizado-form">
+        {% csrf_token %}
+        <input type="hidden" name="acao" value="atualizar_cronograma">
+        <input type="hidden" name="cronograma_realizado_payload" id="cronograma-realizado-payload">
+        <div style="overflow-x:auto;">
+            <table class="compact-table cronograma-table">
+                <thead>
+                    <tr>
+                        <th class="nowrap">Codigo</th>
+                        <th>Atividade</th>
+                        <th class="nowrap">Inicio Prev.</th>
+                        <th class="nowrap">Fim Prev.</th>
+                        <th class="nowrap">Inicio Real</th>
+                        <th class="nowrap">Fim Real</th>
+                        <th class="text-right nowrap">% Prev.</th>
+                        <th class="text-right nowrap">% Real.</th>
+                        <th class="text-right nowrap">Realizado</th>
+                        <th class="text-right nowrap">Duracao</th>
+                        <th class="text-right nowrap">Desvio</th>
+                        <th class="nowrap">EAP</th>
+                        <th class="text-right nowrap">Vlr. Planejado</th>
+                        <th class="text-right nowrap">Vlr. Realizado</th>
+                        <th class="nowrap">Acoes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in itens %}
+                    <tr class="{% if item.tem_filhos_exibicao %}cronograma-linha-pai{% endif %}">
+                        <td class="nowrap">{{ item.codigo_atividade }}</td>
+                        <td class="wrap-text">
+                            <div style="padding-left: {{ item.nivel_exibicao|default:0 }}0px;">
+                                <span class="{% if item.tem_filhos_exibicao %}cronograma-item-pai{% endif %}">
+                                    {% if item.is_marco %}<strong>[Marco]</strong> {% endif %}
+                                    {{ item.atividade }}
+                                </span>
+                            </div>
+                        </td>
+                        <td class="nowrap">{% if item.inicio_previsto_exibicao %}{{ item.inicio_previsto_exibicao|date:"d/m/Y" }}{% else %}Nao informado{% endif %}</td>
+                        <td class="nowrap">{% if item.fim_previsto_exibicao %}{{ item.fim_previsto_exibicao|date:"d/m/Y" }}{% else %}Nao informado{% endif %}</td>
+                        <td class="nowrap">{% if item.inicio_real_exibicao %}{{ item.inicio_real_exibicao|date:"d/m/Y" }}{% else %}Nao informado{% endif %}</td>
+                        <td class="nowrap">{% if item.fim_real_exibicao %}{{ item.fim_real_exibicao|date:"d/m/Y" }}{% else %}Nao informado{% endif %}</td>
+                        <td class="money nowrap">{{ item.percentual_previsto_exibicao|trunc2 }}%</td>
+                        <td class="money nowrap">{{ item.percentual_realizado_exibicao|trunc2 }}%</td>
+                        <td class="money nowrap">
+                            {% if item.tem_filhos_exibicao %}
+                                <span class="badge bg-dark">{{ item.percentual_realizado_exibicao|trunc2 }}%</span>
+                            {% else %}
+                                <input
+                                    type="number"
+                                    min="0"
+                                    max="100"
+                                    step="1"
+                                    name="realizado_{{ item.pk|unlocalize }}"
+                                    data-item-pk="{{ item.pk|unlocalize }}"
+                                    value="{{ item.percentual_concluido|default:0 }}"
+                                    class="cronograma-realizado-input"
+                                >
+                            {% endif %}
+                        </td>
+                        <td class="money nowrap">{{ item.duracao_exibicao }}</td>
+                        <td class="money nowrap">{{ item.dias_desvio_exibicao }}</td>
+                        <td class="nowrap">
+                            {% if item.codigos_eap_exibicao %}
+                                {{ item.codigos_eap_exibicao|join:", " }}
+                                {% if item.erro_vinculo_exibicao %}
+                                    <div style="color:#9f1239; font-size:12px; white-space:normal;">{{ item.erro_vinculo_exibicao }}</div>
+                                {% endif %}
+                            {% else %}
+                                Nao informado
+                            {% endif %}
+                        </td>
+                        <td class="money nowrap">{{ item.valor_planejado_exibicao|money_br }}</td>
+                        <td class="money nowrap">{{ item.valor_realizado_exibicao|money_br }}</td>
+                        <td><a class="btn secondary" href="{% url 'plano_fisico_item_update' plano.pk item.pk %}">Editar</a></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </form>
     {% else %}
     <p class="empty">Nenhuma atividade encontrada.</p>
     {% endif %}
 </section>
+
+<script>
+function submeterAtualizacaoCronograma() {
+    const form = document.getElementById('cronograma-realizado-form');
+    if (!form) return;
+    const payloadInput = document.getElementById('cronograma-realizado-payload');
+    const payload = {};
+    form.querySelectorAll('.cronograma-realizado-input[data-item-pk]').forEach((input) => {
+        payload[input.dataset.itemPk] = input.value;
+    });
+    if (payloadInput) {
+        payloadInput.value = JSON.stringify(payload);
+    }
+    form.submit();
+}
+</script>
 {% endblock %}
 
 {% block extra_js %}
 {% if curva_planejada %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 document.addEventListener("DOMContentLoaded", function () {
     const ctx = document.getElementById("curvaSChart");
     if (!ctx) return;
-    new Chart(ctx.getContext("2d"), {
-        type: "line",
-        data: {
-            labels: [{% for p in curva_planejada %}"{{ p.mes }}"{% if not forloop.last %}, {% endif %}{% endfor %}],
-            datasets: [
-                {
-                    label: "Planejado",
-                    data: [{% for p in curva_planejada %}{{ p.acumulado }}{% if not forloop.last %}, {% endif %}{% endfor %}],
-                    borderColor: "#111827",
-                    backgroundColor: "rgba(17,24,39,0.10)",
-                    fill: true,
-                    tension: 0.2
-                }
-                {% if curva_realizada %},
-                {
-                    label: "Realizado",
-                    data: [{% for r in curva_realizada %}{{ r.acumulado }}{% if not forloop.last %}, {% endif %}{% endfor %}],
-                    borderColor: "#7f1d1d",
-                    backgroundColor: "rgba(127,29,29,0.10)",
-                    fill: true,
-                    tension: 0.2
-                }
-                {% endif %}
-            ]
-        },
-        options: {
-            responsive: true,
-            plugins: { legend: { position: "bottom" } },
-            scales: { y: { beginAtZero: true } }
+    const planejada = [
+        {% for p in curva_planejada %}
+        { mes: "{{ p.mes }}", acumulado: {{ p.acumulado|unlocalize }} }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+    const realizada = [
+        {% for r in curva_realizada %}
+        { mes: "{{ r.mes }}", acumulado: {{ r.acumulado|unlocalize }} }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    function desenharCurvaS(canvas, seriePlanejada, serieRealizada) {
+        const wrapperWidth = canvas.parentElement ? canvas.parentElement.clientWidth : 900;
+        const width = Math.max(wrapperWidth, 640);
+        const height = 320;
+        canvas.width = width;
+        canvas.height = height;
+        canvas.style.width = "100%";
+        canvas.style.height = height + "px";
+
+        const g = canvas.getContext("2d");
+        const labels = [...new Set([...seriePlanejada.map(i => i.mes), ...serieRealizada.map(i => i.mes)])].sort();
+        if (!labels.length) return;
+
+        const mapPlanejada = Object.fromEntries(seriePlanejada.map(i => [i.mes, Number(i.acumulado || 0)]));
+        const mapRealizada = Object.fromEntries(serieRealizada.map(i => [i.mes, Number(i.acumulado || 0)]));
+
+        let ultimoPlanejado = 0;
+        let ultimoRealizado = 0;
+        const pontosPlanejada = labels.map((mes) => {
+            ultimoPlanejado = mapPlanejada[mes] ?? ultimoPlanejado;
+            return { mes, valor: ultimoPlanejado };
+        });
+        const pontosRealizada = labels.map((mes) => {
+            ultimoRealizado = mapRealizada[mes] ?? ultimoRealizado;
+            return { mes, valor: ultimoRealizado };
+        });
+
+        const maxValor = Math.max(
+            1,
+            ...pontosPlanejada.map(p => p.valor),
+            ...pontosRealizada.map(p => p.valor)
+        );
+
+        const padding = { top: 24, right: 28, bottom: 46, left: 70 };
+        const chartWidth = width - padding.left - padding.right;
+        const chartHeight = height - padding.top - padding.bottom;
+
+        g.clearRect(0, 0, width, height);
+        g.fillStyle = "rgba(255,255,255,0.02)";
+        g.fillRect(0, 0, width, height);
+
+        g.strokeStyle = "rgba(255,255,255,0.14)";
+        g.lineWidth = 1;
+        g.beginPath();
+        g.moveTo(padding.left, padding.top);
+        g.lineTo(padding.left, padding.top + chartHeight);
+        g.lineTo(padding.left + chartWidth, padding.top + chartHeight);
+        g.stroke();
+
+        g.font = "12px Aptos, Segoe UI, sans-serif";
+        g.fillStyle = "rgba(255,255,255,0.70)";
+        g.textAlign = "right";
+        g.textBaseline = "middle";
+        const steps = 4;
+        for (let i = 0; i <= steps; i++) {
+            const valor = (maxValor / steps) * i;
+            const y = padding.top + chartHeight - (chartHeight * i / steps);
+            g.strokeStyle = "rgba(255,255,255,0.08)";
+            g.beginPath();
+            g.moveTo(padding.left, y);
+            g.lineTo(padding.left + chartWidth, y);
+            g.stroke();
+            g.fillText(valor.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 }), padding.left - 10, y);
         }
+
+        function coordenadas(pontos) {
+            return pontos.map((p, index) => {
+                const x = labels.length === 1 ? padding.left + chartWidth / 2 : padding.left + (chartWidth * index / (labels.length - 1));
+                const y = padding.top + chartHeight - ((p.valor / maxValor) * chartHeight);
+                return { ...p, x, y };
+            });
+        }
+
+        function desenharLinha(pontos, corLinha, corArea) {
+            if (!pontos.length) return;
+            const coords = coordenadas(pontos);
+
+            g.beginPath();
+            g.moveTo(coords[0].x, padding.top + chartHeight);
+            coords.forEach((p) => g.lineTo(p.x, p.y));
+            g.lineTo(coords[coords.length - 1].x, padding.top + chartHeight);
+            g.closePath();
+            g.fillStyle = corArea;
+            g.fill();
+
+            g.beginPath();
+            coords.forEach((p, index) => {
+                if (index === 0) g.moveTo(p.x, p.y);
+                else g.lineTo(p.x, p.y);
+            });
+            g.strokeStyle = corLinha;
+            g.lineWidth = 3;
+            g.stroke();
+        }
+
+        desenharLinha(pontosPlanejada, "#2563eb", "rgba(37,99,235,0.14)");
+        if (pontosRealizada.some(p => p.valor > 0)) {
+            desenharLinha(pontosRealizada, "#16a34a", "rgba(22,163,74,0.12)");
+        }
+
+        g.textAlign = "center";
+        g.textBaseline = "top";
+        g.fillStyle = "rgba(255,255,255,0.68)";
+        labels.forEach((mes, index) => {
+            const x = labels.length === 1 ? padding.left + chartWidth / 2 : padding.left + (chartWidth * index / (labels.length - 1));
+            g.fillText(mes, x, padding.top + chartHeight + 10);
+        });
+
+        const legendY = 10;
+        const legendItems = [
+            { label: "Planejado", cor: "#2563eb" },
+            { label: "Realizado", cor: "#16a34a" }
+        ];
+        let legendX = padding.left;
+        legendItems.forEach((item) => {
+            g.fillStyle = item.cor;
+            g.fillRect(legendX, legendY, 16, 4);
+            g.fillStyle = "rgba(255,255,255,0.78)";
+            g.textAlign = "left";
+            g.textBaseline = "middle";
+            g.fillText(item.label, legendX + 24, legendY + 2);
+            legendX += 110;
+        });
+    }
+
+    desenharCurvaS(ctx, planejada, realizada);
+    window.addEventListener("resize", function () {
+        desenharCurvaS(ctx, planejada, realizada);
     });
 });
 </script>

@@ -1,0 +1,354 @@
+{% extends "app/base.html" %}
+{% load formatters %}
+
+{% block extra_css %}
+<style>
+    .alerta-overview-row {
+        margin-bottom: 18px;
+    }
+    .alerta-overview-row > [class*="col-"] {
+        min-width: 0;
+    }
+    .alerta-overview-row .card {
+        height: 100%;
+        margin: 0;
+    }
+    .alerta-overview-row .card-body {
+        padding: 16px 18px;
+    }
+    .alerta-filter-form {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+        gap: 12px;
+        align-items: end;
+    }
+    .alerta-filter-form label {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin: 0;
+        min-width: 0;
+    }
+    .alerta-filter-form label span {
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--color-muted);
+    }
+    .alerta-filter-form select {
+        min-width: 0;
+    }
+    .alerta-filter-actions {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+    .alerta-mini-table th,
+    .alerta-mini-table td {
+        padding: 10px 12px;
+        font-size: 13px;
+    }
+    .alerta-main-table th,
+    .alerta-main-table td {
+        vertical-align: middle;
+    }
+    .alerta-main-table .muted {
+        margin-top: 4px;
+    }
+    @media (max-width: 1280px) {
+        .alerta-filter-form {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+    @media (max-width: 820px) {
+        .alerta-filter-form {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="page-shell">
+    <div class="page-header">
+        <div>
+            <h1>Central de Alertas Operacionais</h1>
+            <p>Trate, justifique e acompanhe os alertas automaticos da obra em um unico fluxo.</p>
+        </div>
+        <div class="page-actions">
+            <a class="btn btn-secondary" href="{% url 'alerta_operacional_dashboard' %}">Painel Executivo</a>
+            <a class="btn btn-secondary" href="{% url 'jobs_assincronos' %}">Jobs Assincronos</a>
+            <form method="post" action="{% url 'alerta_operacional_sincronizar_job' %}" style="display:inline;">
+                {% csrf_token %}
+                <button class="btn" type="submit">Sincronizar por Job</button>
+            </form>
+        </div>
+    </div>
+
+    {% if sem_obra_selecionada %}
+    <div class="card">
+        <div class="card-body">
+            <p class="empty">Selecione uma obra no topo do sistema para visualizar os alertas operacionais.</p>
+        </div>
+    </div>
+    {% else %}
+    <section class="row alerta-overview-row">
+        <article class="col-md-6">
+            <div class="card">
+            <div class="card-header">
+                <h3>Filtros</h3>
+            </div>
+            <div class="card-body">
+                <form method="get" class="alerta-filter-form">
+                    <label>
+                        <span>Status</span>
+                        <select name="status">
+                            <option value="">Todos</option>
+                            <option value="ABERTO" {% if filtros.status == "ABERTO" %}selected{% endif %}>Aberto</option>
+                            <option value="EM_TRATAMENTO" {% if filtros.status == "EM_TRATAMENTO" %}selected{% endif %}>Em tratamento</option>
+                            <option value="JUSTIFICADO" {% if filtros.status == "JUSTIFICADO" %}selected{% endif %}>Justificado</option>
+                            <option value="ENCERRADO" {% if filtros.status == "ENCERRADO" %}selected{% endif %}>Encerrado</option>
+                        </select>
+                    </label>
+                    <label>
+                        <span>Severidade</span>
+                        <select name="severidade">
+                            <option value="">Todas</option>
+                            <option value="CRITICA" {% if filtros.severidade == "CRITICA" %}selected{% endif %}>Critica</option>
+                            <option value="ALTA" {% if filtros.severidade == "ALTA" %}selected{% endif %}>Alta</option>
+                            <option value="MEDIA" {% if filtros.severidade == "MEDIA" %}selected{% endif %}>Media</option>
+                            <option value="BAIXA" {% if filtros.severidade == "BAIXA" %}selected{% endif %}>Baixa</option>
+                        </select>
+                    </label>
+                    <label>
+                        <span>Regra</span>
+                        <select name="regra">
+                            <option value="">Todas</option>
+                            {% for regra in regras_disponiveis %}
+                            <option value="{{ regra }}" {% if filtros.regra == regra %}selected{% endif %}>{{ regra }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                    <label>
+                        <span>Responsavel</span>
+                        <select name="responsavel">
+                            <option value="">Todos</option>
+                            {% for responsavel_id, responsavel_nome in responsaveis_disponiveis %}
+                            <option value="{{ responsavel_id }}" {% if filtros.responsavel == responsavel_id|stringformat:'s' %}selected{% endif %}>{{ responsavel_nome }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                    <label>
+                        <span>Atraso</span>
+                        <select name="atraso">
+                            <option value="">Todos</option>
+                            <option value="PRAZO" {% if filtros.atraso == "PRAZO" %}selected{% endif %}>Prazo vencido</option>
+                            <option value="SLA" {% if filtros.atraso == "SLA" %}selected{% endif %}>SLA estourado</option>
+                            <option value="QUALQUER" {% if filtros.atraso == "QUALQUER" %}selected{% endif %}>Qualquer atraso</option>
+                        </select>
+                    </label>
+                    <div class="alerta-filter-actions">
+                        <button type="submit" class="btn btn-primary">Aplicar</button>
+                        <a class="btn btn-secondary" href="{% url 'alerta_operacional_list' %}">Limpar</a>
+                    </div>
+                </form>
+            </div>
+            </div>
+        </article>
+
+        <article class="col-md-3">
+            <div class="card">
+            <div class="card-header">
+                <h3>Resumo por Status</h3>
+            </div>
+            <div class="card-body">
+                {% if resumo_status %}
+                <table class="compact-table alerta-mini-table">
+                    <thead>
+                        <tr>
+                            <th>Status</th>
+                            <th class="text-right no-break-data">Quantidade</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in resumo_status %}
+                        <tr>
+                            <td>{{ item.status_display }}</td>
+                            <td class="text-right no-break-data">{{ item.total }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p class="empty">Nenhum alerta consolidado para a obra.</p>
+                {% endif %}
+            </div>
+            </div>
+        </article>
+
+        <article class="col-md-3">
+            <div class="card">
+            <div class="card-header">
+                <h3>Resumo por Severidade</h3>
+            </div>
+            <div class="card-body">
+                {% if resumo_severidade %}
+                <table class="compact-table alerta-mini-table">
+                    <thead>
+                        <tr>
+                            <th>Severidade</th>
+                            <th class="text-right no-break-data">Quantidade</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in resumo_severidade %}
+                        <tr>
+                            <td>{{ item.severidade|capfirst }}</td>
+                            <td class="text-right no-break-data">{{ item.total }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p class="empty">Nenhuma severidade registrada.</p>
+                {% endif %}
+            </div>
+            </div>
+        </article>
+    </section>
+
+    <section class="card">
+        <div class="card-header">
+            <h3>Alertas da Obra</h3>
+        </div>
+        <div class="card-body">
+            {% if alertas %}
+            <div class="table-responsive">
+                <table class="compact-table alerta-main-table">
+                    <thead>
+                        <tr>
+                            <th class="no-break-data">Regra</th>
+                            <th>Descricao</th>
+                            <th class="no-break-data">Severidade</th>
+                            <th class="no-break-data">Status</th>
+                            <th class="no-break-data">Responsavel</th>
+                            <th class="no-break-data">Prazo</th>
+                            <th class="no-break-data">Atraso</th>
+                            <th class="no-break-data">Atualizado em</th>
+                            <th class="no-break-data">Acoes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for alerta in alertas %}
+                        <tr>
+                            <td class="code-cell">{{ alerta.codigo_regra }}</td>
+                            <td>
+                                <a href="{% url 'alerta_operacional_detail' alerta.pk %}">{{ alerta.titulo }}</a>
+                                <div class="muted">{{ alerta.referencia }}</div>
+                            </td>
+                            <td class="no-break-data">
+                                <span class="badge {% if alerta.severidade == 'CRITICA' %}badge-danger{% elif alerta.severidade == 'ALTA' %}badge-warning{% elif alerta.severidade == 'MEDIA' %}badge-info{% else %}badge-secondary{% endif %}">
+                                    {{ alerta.get_severidade_display }}
+                                </span>
+                            </td>
+                            <td class="no-break-data">
+                                <span class="badge bg-{{ alerta|workflow_badge_class }}">{{ alerta.get_status_display }}</span>
+                            </td>
+                            <td class="no-break-data">{{ alerta.responsavel|default:"Nao informado" }}</td>
+                            <td class="no-break-data">{% if alerta.prazo_solucao_em %}{{ alerta.prazo_solucao_em|date:"d/m/Y" }}{% else %}-{% endif %}</td>
+                            <td class="no-break-data">
+                                {% if alerta.em_atraso_prazo %}
+                                <span class="badge badge-danger">Prazo</span>
+                                {% elif alerta.em_atraso_sla %}
+                                <span class="badge badge-warning">SLA</span>
+                                {% else %}
+                                <span class="badge badge-success">Em dia</span>
+                                {% endif %}
+                            </td>
+                            <td class="no-break-data">{{ alerta.atualizado_em|date:"d/m/Y H:i" }}</td>
+                            <td class="no-break-data actions-cell">
+                                <a class="btn btn-secondary btn-sm" href="{% url 'alerta_operacional_detail' alerta.pk %}">Detalhar</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="empty">Nenhum alerta encontrado com os filtros selecionados.</p>
+            {% endif %}
+        </div>
+    </section>
+
+    <section class="row alerta-overview-row">
+        <article class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Ultimas Execucoes Automaticas</h3>
+                </div>
+                <div class="card-body">
+                    {% if execucoes_recentes %}
+                    <table class="compact-table alerta-mini-table">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Regra</th>
+                                <th>Resultado</th>
+                                <th>Referencia</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for execucao in execucoes_recentes %}
+                            <tr>
+                                <td class="no-break-data">{{ execucao.executado_em|date:"d/m/Y H:i" }}</td>
+                                <td>{{ execucao.codigo_regra }}</td>
+                                <td>{{ execucao.get_resultado_display }}</td>
+                                <td class="wrap-text">{{ execucao.referencia|default:"-" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <p class="empty">Nenhuma automacao com alteracao relevante registrada.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </article>
+
+        <article class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Catalogo das Regras</h3>
+                </div>
+                <div class="card-body">
+                    {% if catalogo_regras %}
+                    <table class="compact-table alerta-mini-table">
+                        <thead>
+                            <tr>
+                                <th>Codigo</th>
+                                <th>Frente</th>
+                                <th>Parametro</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for regra in catalogo_regras %}
+                            <tr>
+                                <td class="code-cell">{{ regra.codigo }}</td>
+                                <td>{{ regra.frente }}</td>
+                                <td class="wrap-text">{{ regra.valor_atual }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <p class="empty">Nenhuma regra operacional catalogada.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </article>
+    </section>
+    {% endif %}
+</section>
+{% endblock %}

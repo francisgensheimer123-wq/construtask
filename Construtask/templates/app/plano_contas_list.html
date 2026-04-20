@@ -8,7 +8,7 @@
 <div class="toolbar">
     <div>
         <h2>Plano de Contas</h2>
-        <p>Consulta da estrutura orcamentaria, dos centros de custo e da execucao financeira.</p>
+        <p>Consulta da estrutura orçamentária, dos centros de custo e da execução financeira.</p>
     </div>
     <div style="display:flex; gap:10px;">
         <a class="btn secondary" href="{% url 'plano_contas_importar' %}">Importar Excel</a>
@@ -16,75 +16,166 @@
     </div>
 </div>
 
+<section class="grid-2" style="margin-bottom:18px;">
+    <div class="panel">
+        <h3>Baseline do Orçamento</h3>
+        {% if obra_contexto %}
+            {% if baseline_ativa %}
+            <p><strong>Baseline ativa:</strong> {{ baseline_ativa.descricao }}</p>
+            <p class="muted">Criada por {{ baseline_ativa.criado_por.username|default:"-" }} em {{ baseline_ativa.criado_em|date:"d/m/Y H:i" }} | Valor congelado: {{ baseline_ativa.valor_total|money_br }}</p>
+            {% else %}
+            <p class="empty">Nenhuma baseline de orçamento criada para esta obra.</p>
+            {% endif %}
+            <form method="post" action="{% url 'plano_contas_criar_baseline' %}">
+                {% csrf_token %}
+                <div class="field">
+                    <label for="id_descricao_baseline">Descrição da Baseline</label>
+                    <input type="text" id="id_descricao_baseline" name="descricao_baseline" placeholder="Ex.: Orçamento aprovado pelo cliente v1">
+                </div>
+                <div class="actions">
+                    <button class="btn" type="submit">Criar Baseline</button>
+                </div>
+            </form>
+        {% else %}
+        <p class="empty">Selecione uma obra para criar baseline do orçamento.</p>
+        {% endif %}
+    </div>
+
+    <div class="panel">
+        <h3>Últimas Versões</h3>
+        {% if baseline_selecionada %}
+        <div class="baseline-box">
+            <p><strong>Versão selecionada:</strong> {{ baseline_selecionada.descricao }}</p>
+            <p class="muted">Status: {{ baseline_selecionada.get_status_display }} ({{ baseline_selecionada|workflow_stage_display }}) | Valor: {{ baseline_selecionada.valor_total|money_br }} | Alçada atual: {{ limite_aprovacao_label|default:"-" }}</p>
+            <p class="muted">Enviado por: {% if baseline_selecionada.enviado_para_aprovacao_por %}{{ baseline_selecionada.enviado_para_aprovacao_por.username }} em {{ baseline_selecionada.enviado_para_aprovacao_em|date:"d/m/Y H:i" }}{% else %}-{% endif %}</p>
+            <p class="muted">Aprovado por: {% if baseline_selecionada.aprovado_por %}{{ baseline_selecionada.aprovado_por.username }} em {{ baseline_selecionada.aprovado_em|date:"d/m/Y H:i" }}{% else %}-{% endif %}</p>
+            <p class="muted">Último parecer: {{ baseline_selecionada.parecer_aprovacao|default:"-" }}</p>
+
+            <form method="post" action="{% url 'plano_contas_baseline_workflow' baseline_selecionada.pk %}">
+                {% csrf_token %}
+                <div class="field">
+                    <label for="id_parecer_aprovacao_baseline">Parecer</label>
+                    <textarea id="id_parecer_aprovacao_baseline" name="parecer_aprovacao" rows="3" placeholder="Opcional no envio/aprovação e obrigatório na devolução para ajuste.">{{ baseline_selecionada.parecer_aprovacao }}</textarea>
+                </div>
+                <div class="actions actions-wrap">
+                    <a class="btn secondary" href="{% url 'plano_contas_baseline_aprovacao_pdf' baseline_selecionada.pk %}">Relatório Probatório</a>
+                    <a class="btn secondary" href="{% url 'plano_contas_baseline_aprovacao_excel' baseline_selecionada.pk %}">Relatório Probatório Excel</a>
+                    {% if pode_enviar_para_aprovacao and baseline_selecionada.status == "RASCUNHO" %}
+                    <button class="btn" type="submit" name="acao" value="enviar_para_aprovacao">Enviar para Aprovação</button>
+                    {% endif %}
+                    {% if pode_aprovar and baseline_selecionada.status == "EM_APROVACAO" %}
+                    <button class="btn" type="submit" name="acao" value="aprovar">Aprovar</button>
+                    <button class="btn secondary" type="submit" name="acao" value="retornar_para_ajuste">Retornar para Ajuste</button>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+        {% endif %}
+
+        {% if baselines_recentes %}
+        <!-- Controla a rolagem horizontal da tabela de versões da baseline. -->
+        <div class="table-scroll">
+            <table class="compact-table baseline-table">
+                <thead>
+                    <tr>
+                        <th>Descrição</th>
+                        <th>Status</th>
+                        <th>Data</th>
+                        <th class="text-right">Valor</th>
+                        <th>Ação</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for baseline in baselines_recentes %}
+                    <tr>
+                        <td>{{ baseline.descricao }}</td>
+                        <td><span class="badge bg-{{ baseline|workflow_badge_class }}">{{ baseline.get_status_display }}</span>{% if baseline.is_ativa %} <span class="badge bg-info">Ativa</span>{% endif %}</td>
+                        <td>{{ baseline.criado_em|date:"d/m/Y H:i" }}</td>
+                        <td class="money">{{ baseline.valor_total|money_br }}</td>
+                        <td><a href="{% url 'plano_contas_list' %}?baseline={{ baseline.pk }}">Selecionar</a></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="empty">Nenhuma versão registrada.</p>
+        {% endif %}
+    </div>
+</section>
+
 <section class="panel" style="width: 100%; margin: 0;">
     <form method="get" class="toolbar" style="justify-content:flex-start;">
-        <input type="text" name="q" value="{{ busca }}" placeholder="Buscar por codigo ou descricao" style="max-width:380px;">
+        <input type="text" name="q" value="{{ busca }}" placeholder="Buscar por código ou descrição" style="max-width:380px;">
         <button class="btn" type="submit">Buscar</button>
     </form>
 
     {% if planos_contas %}
-    <table class="compact-table plano-table">
-        <colgroup>
-            <col style="width: 8%;">
-            <col style="width: 22%;">
-            <col style="width: 4%;">
-            <col style="width: 5%;">
-            <col style="width: 7%;">
-            <col style="width: 7%;">
-            <col style="width: 7%;">
-            <col style="width: 7%;">
-            <col style="width: 8%;">
-            <col style="width: 7%;">
-            <col style="width: 7%;">
-            <col style="width: 7%;">
-            <col style="width: 9%;">
-        </colgroup>
-        <thead>
-            <tr>
-                <th>Codigo</th>
-                <th>Descricao</th>
-                <th>Unidade</th>
-                <th class="text-right">Quantidade</th>
-                <th class="text-right">Valor Unitario</th>
-                <th class="text-right">Valor Total</th>
-                <th class="text-right">Comprometido</th>
-                <th class="text-right">Medido</th>
-                <th class="text-right">Valor Executado</th>
-                <th class="text-right">Saldo a Comprometer</th>
-                <th class="text-right">Saldo a Medir</th>
-                <th class="text-right">Saldo a Executar</th>
-                <th>Acoes</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for plano in planos_contas %}
-            <tr class="plano-row {% if plano.filhos_count %}synthetic{% endif %}" data-notas-url="{% url 'plano_contas_notas' plano.pk %}">
-                <td class="tree-code">{{ plano.codigo }}</td>
-                <td class="wrap-text plano-descricao-cell">{{ plano.descricao }}</td>
-                <td>{% if plano.unidade and plano.unidade != "nan" %}{{ plano.unidade }}{% else %}-{% endif %}</td>
-                <td class="money">{% if plano.quantidade is not None %}{{ plano.quantidade|trunc2 }}{% else %}-{% endif %}</td>
-                <td class="money">{% if plano.valor_unitario is not None %}{{ plano.valor_unitario|money_br }}{% else %}-{% endif %}</td>
-                <td class="money">{{ plano.valor_total_consolidado_calc|money_br }}</td>
-                <td class="money">{{ plano.valor_comprometido_calc|money_br }}</td>
-                <td class="money">{{ plano.valor_medido_calc|money_br }}</td>
-                <td class="money">{{ plano.valor_executado_calc|money_br }}</td>
-                <td class="money">{{ plano.saldo_a_comprometer_calc|money_br }}</td>
-                <td class="money">{{ plano.saldo_a_medir_calc|money_br }}</td>
-                <td class="money">{{ plano.saldo_a_executar_calc|money_br }}</td>
-                <td onclick="event.stopPropagation();">
-                    <div style="display:flex; gap:8px; align-items:center;">
-                        <a href="{% url 'plano_contas_update' plano.pk %}">Editar</a>
-                        <form method="post" action="{% url 'plano_contas_delete' %}" onsubmit="event.stopPropagation(); return confirm('Excluir este centro de custo?');" style="display:inline;">
-                            {% csrf_token %}
-                            <input type="hidden" name="id" value="{{ plano.pk }}">
-                            <button type="submit" style="background:none; border:0; color:#651111; cursor:pointer; padding:0;">Excluir</button>
-                        </form>
-                    </div>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <!-- Controla a rolagem horizontal da tabela principal do plano de contas. -->
+    <div class="table-scroll">
+        <table class="compact-table plano-table">
+            <colgroup>
+                <col style="width: 128px;">
+                <col style="width: 310px;">
+                <col style="width: 76px;">
+                <col style="width: 92px;">
+                <col style="width: 116px;">
+                <col style="width: 116px;">
+                <col style="width: 116px;">
+                <col style="width: 124px;">
+                <col style="width: 132px;">
+                <col style="width: 124px;">
+                <col style="width: 116px;">
+                <col style="width: 132px;">
+                <col style="width: 116px;">
+            </colgroup>
+            <thead>
+                <tr>
+                    <th data-column-index="0">Código</th>
+                    <th data-column-index="1">Descrição</th>
+                    <th data-column-index="2">Unidade</th>
+                    <th class="text-right" data-column-index="3">Quantidade</th>
+                    <th class="text-right" data-column-index="4">Valor Unitário</th>
+                    <th class="text-right" data-column-index="5">Valor Total</th>
+                    <th class="text-right" data-column-index="6">Comprometido</th>
+                    <th class="text-right" data-column-index="7">Valor Executado</th>
+                    <th class="text-right" data-column-index="8">Saldo a Comprometer</th>
+                    <th class="text-right" data-column-index="9">Saldo a Executar</th>
+                    <th class="text-right" data-column-index="10">Baseline</th>
+                    <th class="text-right" data-column-index="11">Desvio vs Baseline</th>
+                    <th data-column-index="12">Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for plano in planos_contas %}
+                <tr class="plano-row {% if plano.filhos_count %}synthetic{% endif %}" data-notas-url="{% url 'plano_contas_notas' plano.pk %}">
+                    <td class="tree-code">{{ plano.codigo }}</td>
+                    <td class="wrap-text plano-descricao-cell">{{ plano.descricao }}</td>
+                    <td>{% if plano.unidade and plano.unidade != "nan" %}{{ plano.unidade }}{% else %}-{% endif %}</td>
+                    <td class="money">{% if plano.quantidade is not None %}{{ plano.quantidade|trunc2 }}{% else %}-{% endif %}</td>
+                    <td class="money">{% if plano.valor_unitario is not None %}{{ plano.valor_unitario|money_br }}{% else %}-{% endif %}</td>
+                    <td class="money">{{ plano.valor_total_consolidado_calc|money_br }}</td>
+                    <td class="money">{{ plano.valor_comprometido_calc|money_br }}</td>
+                    <td class="money">{{ plano.valor_executado_calc|money_br }}</td>
+                    <td class="money">{{ plano.saldo_a_comprometer_calc|money_br }}</td>
+                    <td class="money">{{ plano.saldo_a_executar_calc|money_br }}</td>
+                    <td class="money">{{ plano.valor_baseline_calc|money_br }}</td>
+                    <td class="money">{{ plano.desvio_baseline_calc|money_br }}</td>
+                    <td class="acoes-cell" onclick="event.stopPropagation();">
+                        <div class="acoes-links">
+                            <a href="{% url 'plano_contas_update' plano.pk %}">Editar</a>
+                            <form method="post" action="{% url 'plano_contas_delete' %}" onsubmit="event.stopPropagation(); return confirm('Excluir este centro de custo?');" style="display:inline;">
+                                {% csrf_token %}
+                                <input type="hidden" name="id" value="{{ plano.pk }}">
+                                <button type="submit" class="link-button">Excluir</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
     {% else %}
     <p class="empty">Nenhum item encontrado.</p>
     {% endif %}
@@ -107,9 +198,69 @@
 </div>
 
 <style>
+    .baseline-box {
+        margin-bottom: 14px;
+        padding: 14px;
+        border: 1px solid #d5d9df;
+        border-radius: 12px;
+    }
+
+    .actions-wrap {
+        flex-wrap: wrap;
+    }
+
+    /* Controla a largura mínima e o comportamento geral da tabela principal do plano de contas. */
     .plano-table {
         table-layout: fixed;
         width: 100%;
+        min-width: 1660px;
+        font-size: 0.75rem;
+    }
+
+    .baseline-table {
+        min-width: 720px;
+    }
+
+    /* Controla a barra de rolagem horizontal quando a tabela não cabe na tela. */
+    .table-scroll {
+        overflow-x: auto;
+        width: 100%;
+        padding-bottom: 6px;
+    }
+
+    /* Controla quebra de texto, alinhamento vertical e legibilidade das células. */
+    .plano-table th,
+    .plano-table td {
+        padding: 7px 8px;
+        white-space: normal;
+        word-break: break-word;
+        overflow-wrap: anywhere;
+        line-height: 1.12;
+        vertical-align: top;
+    }
+
+    .plano-table th {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+        cursor: pointer;
+        user-select: none;
+    }
+
+    .plano-table th.column-highlight,
+    .plano-table td.column-highlight {
+        background: rgba(127, 29, 29, 0.14);
+    }
+
+    /* Mantém números monetários em uma única linha para evitar quebra feia de valores. */
+    .plano-table td.money,
+    .baseline-table td.money {
+        white-space: nowrap;
+        text-align: right;
+    }
+
+    .plano-table td.money {
+        font-size: 0.74rem;
     }
 
     .plano-row {
@@ -120,10 +271,46 @@
         background: rgba(127, 29, 29, 0.06);
     }
 
+    /* Dá mais espaço para a coluna de descrição, que costuma ser a mais longa. */
     .plano-descricao-cell {
         white-space: normal;
         word-break: break-word;
-        line-height: 1.3;
+        line-height: 1.15;
+        min-width: 280px;
+        max-width: 310px;
+    }
+
+    .acoes-cell {
+        min-width: 108px;
+    }
+
+    .acoes-links {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .link-button {
+        background: none;
+        border: 0;
+        color: #651111;
+        cursor: pointer;
+        padding: 0;
+    }
+
+    /* Controla a tabela exibida no modal de notas vinculadas ao centro de custo. */
+    .modal-notas-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    /* Controla espaçamento e leitura das células do modal de notas. */
+    .modal-notas-table th,
+    .modal-notas-table td {
+        padding: 10px 12px;
+        border-bottom: 1px solid #d5d9df;
+        vertical-align: top;
     }
 
     .modal-shell {
@@ -150,18 +337,6 @@
         box-shadow: 0 24px 80px rgba(15, 23, 42, 0.22);
     }
 
-    .modal-notas-table {
-        width: 100%;
-        border-collapse: collapse;
-    }
-
-    .modal-notas-table th,
-    .modal-notas-table td {
-        padding: 10px 12px;
-        border-bottom: 1px solid #d5d9df;
-        vertical-align: top;
-    }
-
     .modal-notas-table th {
         text-align: left;
         background: #eef0f3;
@@ -174,6 +349,8 @@
     const modalTitle = document.getElementById("notas-modal-title");
     const modalSubtitle = document.getElementById("notas-modal-subtitle");
     const modalContent = document.getElementById("notas-modal-content");
+    const planoTable = document.querySelector(".plano-table");
+    let highlightedColumnIndex = null;
 
     function fecharModal() {
         modal.hidden = true;
@@ -207,10 +384,10 @@
                 <thead>
                     <tr>
                         <th>ID</th>
-                        <th>Numero da Nota</th>
+                        <th>Número da Nota</th>
                         <th>CNPJ</th>
                         <th>Fornecedor</th>
-                        <th>Descricao</th>
+                        <th>Descrição</th>
                         <th>Centro de Custo</th>
                         <th class="text-right">Valor Apropriado</th>
                         <th>Data</th>
@@ -221,6 +398,26 @@
         `;
     }
 
+    function aplicarDestaqueColuna(indice) {
+        if (!planoTable) {
+            return;
+        }
+        planoTable.querySelectorAll("th, td").forEach((celula) => {
+            celula.classList.remove("column-highlight");
+        });
+        if (indice === null || indice === undefined) {
+            highlightedColumnIndex = null;
+            return;
+        }
+        planoTable.querySelectorAll("tr").forEach((linha) => {
+            const celula = linha.children[indice];
+            if (celula) {
+                celula.classList.add("column-highlight");
+            }
+        });
+        highlightedColumnIndex = indice;
+    }
+
     async function carregarNotas(url) {
         modalSubtitle.textContent = "Carregando...";
         modalContent.innerHTML = '<p class="muted">Carregando notas...</p>';
@@ -228,7 +425,7 @@
         const response = await fetch(url);
         if (!response.ok) {
             modalSubtitle.textContent = "Erro";
-            modalContent.innerHTML = '<p class="muted">Nao foi possivel carregar as notas deste centro de custo.</p>';
+            modalContent.innerHTML = '<p class="muted">Não foi possível carregar as notas deste centro de custo.</p>';
             return;
         }
         const payload = await response.json();
@@ -239,6 +436,18 @@
 
     document.querySelectorAll(".plano-row").forEach((row) => {
         row.addEventListener("click", () => carregarNotas(row.dataset.notasUrl));
+    });
+
+    planoTable?.querySelectorAll("thead th[data-column-index]").forEach((header) => {
+        header.addEventListener("click", (event) => {
+            event.stopPropagation();
+            const indice = Number(header.dataset.columnIndex);
+            if (highlightedColumnIndex === indice) {
+                aplicarDestaqueColuna(null);
+            } else {
+                aplicarDestaqueColuna(indice);
+            }
+        });
     });
 
     document.querySelectorAll("[data-close-modal]").forEach((element) => {

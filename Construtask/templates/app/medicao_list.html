@@ -12,6 +12,7 @@
     </div>
     <div style="display:flex; gap:10px;">
         <a class="btn secondary" href="{% url 'medicao_export' %}?q={{ busca|urlencode }}">Exportar Excel</a>
+        <a class="btn secondary" href="{% url 'medicao_lista_pdf' %}?q={{ busca|urlencode }}">Exportar PDF</a>
         <a class="btn" href="{% url 'medicao_create' %}">Nova Medicao</a>
     </div>
 </div>
@@ -66,7 +67,9 @@
         <tr>
             <td><a href="{% url 'medicao_detail' medicao.pk %}">{{ medicao.numero_da_medicao }}</a></td>
             <td>{% if medicao.obra %}{{ medicao.obra.codigo }}{% else %}-{% endif %}</td>
-            <td>{{ medicao.get_status_display }}</td>
+            <td>
+              <span class="badge bg-{{ medicao|workflow_badge_class }}">{{ medicao.get_status_display }}</span>
+            </td>
             <td>{{ medicao.contrato.numero }}</td>
             <td>{{ medicao.fornecedor }}</td>
             <td class="wrap-text">{{ medicao.descricao }}</td>
@@ -86,6 +89,23 @@
         {% endfor %}
     </tbody>
 </table>
+{% if is_paginated %}
+<div class="panel" style="margin-top:16px;">
+    <div class="toolbar" style="justify-content:space-between; gap:12px; flex-wrap:wrap;">
+        <span class="muted">Pagina {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            {% if page_obj.has_previous %}
+            <a class="btn secondary" href="?{% if querystring_sem_pagina %}{{ querystring_sem_pagina }}&{% endif %}page=1">Primeira</a>
+            <a class="btn secondary" href="?{% if querystring_sem_pagina %}{{ querystring_sem_pagina }}&{% endif %}page={{ page_obj.previous_page_number }}">Anterior</a>
+            {% endif %}
+            {% if page_obj.has_next %}
+            <a class="btn secondary" href="?{% if querystring_sem_pagina %}{{ querystring_sem_pagina }}&{% endif %}page={{ page_obj.next_page_number }}">Proxima</a>
+            <a class="btn secondary" href="?{% if querystring_sem_pagina %}{{ querystring_sem_pagina }}&{% endif %}page={{ page_obj.paginator.num_pages }}">Ultima</a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endif %}
 {% else %}
 <p class="empty">Nenhuma medicao cadastrada.</p>
 {% endif %}

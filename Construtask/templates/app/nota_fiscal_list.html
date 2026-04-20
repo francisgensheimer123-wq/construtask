@@ -12,13 +12,14 @@
     </div>
     <div style="display:flex; gap:10px;">
         <a class="btn secondary" href="{% url 'nota_fiscal_export' %}?q={{ busca|urlencode }}">Exportar Excel</a>
+        <a class="btn secondary" href="{% url 'nota_fiscal_lista_pdf' %}?q={{ busca|urlencode }}">Exportar PDF</a>
         <a class="btn" href="{% url 'nota_fiscal_create' %}">Nova Nota Fiscal</a>
     </div>
 </div>
 
 <section class="panel" style="margin-bottom:18px;">
     <form method="get" class="toolbar" style="justify-content:flex-start; flex-wrap:wrap;">
-        <input type="text" name="q" value="{{ busca }}" placeholder="Buscar por numero, fornecedor ou CNPJ" style="max-width:320px;">
+        <input type="text" name="q" value="{{ busca }}" placeholder="Buscar por número, fornecedor ou CNPJ" style="max-width:320px;">
         <input type="text" name="fornecedor" value="{{ fornecedor_filtro }}" placeholder="Fornecedor" style="max-width:220px;">
         <input type="text" name="contrato" value="{{ contrato_filtro }}" placeholder="Contrato/Pedido origem" style="max-width:220px;">
         <input type="date" name="data_inicio" value="{{ data_inicio }}" style="max-width:170px;">
@@ -46,18 +47,22 @@
 </section>
 
 {% if notas_fiscais %}
-<table class="compact-table">
+<!-- Controla a rolagem horizontal da tabela principal de notas fiscais. -->
+<div class="table-scroll">
+<table class="compact-table" style="min-width:1300px;">
     <thead>
         <tr>
             <th>ID</th>
-            <th>Numero da Nota</th>
+            <th>Número da Nota</th>
             <th>Obra</th>
             <th>Status</th>
             <th>Origem</th>
-            <th>Fornecedor</th>
-            <th class="text-right">Valor</th>
-            <th>Data</th>
-            <th>Acoes</th>
+             <th>Fornecedor</th>
+             <th class="text-right">Valor</th>
+            <th>Emissao</th>
+            <th>Vencimento</th>
+            <th>Cadastro</th>
+              <th>Ações</th>
         </tr>
     </thead>
     <tbody>
@@ -68,15 +73,18 @@
             <td>{% if nota.obra %}{{ nota.obra.codigo }}{% else %}-{% endif %}</td>
             <td>{{ nota.get_status_display }}</td>
             <td>
-                {% if nota.medicao %}Medicao {{ nota.medicao.numero_da_medicao }}
+                {% if nota.medicao %}Medição {{ nota.medicao.numero_da_medicao }}
                 {% elif nota.pedido_compra %}Pedido {{ nota.pedido_compra.numero }}
                 {% else %}-{% endif %}
             </td>
             <td>{{ nota.fornecedor }}</td>
             <td class="money">{{ nota.valor_total|money_br }}</td>
             <td>{{ nota.data_emissao|date:"d/m/Y" }}</td>
+            <td>{{ nota.data_vencimento|date:"d/m/Y"|default:"-" }}</td>
+            <td>{{ nota.criado_em|date:"d/m/Y H:i" }}</td>
             <td>
                 <div style="display:flex; gap:8px; align-items:center;">
+                    <a href="#" onclick="event.preventDefault(); abrirRateios('{% url 'nota_fiscal_dados' nota.pk %}');">Rateios</a>
                     <a href="{% url 'nota_fiscal_update' nota.pk %}">Editar</a>
                     <form method="post" action="{% url 'nota_fiscal_delete' %}" onsubmit="return confirm('Excluir este registro?');" style="display:inline;">
                         {% csrf_token %}
@@ -89,7 +97,108 @@
         {% endfor %}
     </tbody>
 </table>
+</div>
 {% else %}
-<p class="empty">Nenhuma nota fiscal cadastrada.</p>
+  <p class="empty">Nenhuma nota fiscal cadastrada.</p>
+  {% endif %}
+
+<div id="modal-rateios" class="modal-notas hidden">
+  <div class="modal-notas-content">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px;">
+      <div>
+        <h3 id="modal-rateios-titulo" style="margin:0;">Rateios da Nota Fiscal</h3>
+        <p id="modal-rateios-subtitulo" class="muted" style="margin:6px 0 0;"></p>
+      </div>
+      <button type="button" class="btn secondary" onclick="fecharRateios()">Fechar</button>
+    </div>
+    <div id="modal-rateios-corpo"></div>
+  </div>
+</div>
+
+<style>
+/* Controla abrir e fechar do modal de rateios. */
+.modal-notas.hidden { display:none; }
+/* Controla o overlay escuro do modal de rateios. */
+.modal-notas {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+    z-index: 1000;
+    padding: 24px;
+}
+/* Controla o tamanho útil e a rolagem interna do conteúdo do modal. */
+.modal-notas-content {
+    max-width: 980px;
+    margin: 0 auto;
+    background: linear-gradient(180deg, rgba(56,56,56,.98) 0%, rgba(34,34,34,.98) 100%);
+    color: var(--white);
+    border: 1px solid rgba(200,200,200,.14);
+    border-top: 4px solid var(--graphite-soft);
+    border-radius: 16px;
+    padding: 20px;
+    max-height: calc(100vh - 48px);
+    overflow: auto;
+}
+</style>
+<script>
+function fecharRateios() {
+  document.getElementById('modal-rateios').classList.add('hidden');
+}
+
+function renderRateios(payload) {
+  const corpo = document.getElementById('modal-rateios-corpo');
+  document.getElementById('modal-rateios-titulo').textContent = `Rateios da Nota ${payload.numero}`;
+  document.getElementById('modal-rateios-subtitulo').textContent = `${payload.fornecedor} | Emissao: ${payload.data_emissao} | Vencimento: ${payload.data_vencimento} | Cadastro: ${payload.data_cadastro}`;
+  const linhas = (payload.rateios || []).map((item) => `
+    <tr>
+      <td>${item.centro_custo}</td>
+      <td class="money">${item.valor}</td>
+    </tr>
+  `).join('');
+  corpo.innerHTML = `
+    <div class="panel" style="margin-bottom:12px;">
+      <strong>Descrição:</strong> ${payload.descricao}<br>
+      <strong>Valor Total:</strong> ${payload.valor_total}
+    </div>
+    <table class="compact-table">
+      <thead>
+        <tr>
+          <th>Centro de Custo</th>
+          <th class="text-right">Valor Rateado</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${linhas || '<tr><td colspan="2">Nenhum rateio registrado.</td></tr>'}
+      </tbody>
+    </table>
+  `;
+}
+
+async function abrirRateios(url) {
+  const resposta = await fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}});
+  if (!resposta.ok) {
+     alert('Não foi possível carregar os rateios.');
+    return;
+  }
+  renderRateios(await resposta.json());
+  document.getElementById('modal-rateios').classList.remove('hidden');
+}
+</script>
+{% if is_paginated %}
+<div class="panel" style="margin-top:16px;">
+    <div class="toolbar" style="justify-content:space-between; gap:12px; flex-wrap:wrap;">
+        <span class="muted">Pagina {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            {% if page_obj.has_previous %}
+            <a class="btn secondary" href="?{% if querystring_sem_pagina %}{{ querystring_sem_pagina }}&{% endif %}page=1">Primeira</a>
+            <a class="btn secondary" href="?{% if querystring_sem_pagina %}{{ querystring_sem_pagina }}&{% endif %}page={{ page_obj.previous_page_number }}">Anterior</a>
+            {% endif %}
+            {% if page_obj.has_next %}
+            <a class="btn secondary" href="?{% if querystring_sem_pagina %}{{ querystring_sem_pagina }}&{% endif %}page={{ page_obj.next_page_number }}">Proxima</a>
+            <a class="btn secondary" href="?{% if querystring_sem_pagina %}{{ querystring_sem_pagina }}&{% endif %}page={{ page_obj.paginator.num_pages }}">Ultima</a>
+            {% endif %}
+        </div>
+    </div>
+</div>
 {% endif %}
-{% endblock %}
+  {% endblock %}
