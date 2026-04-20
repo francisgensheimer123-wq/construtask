@@ -222,11 +222,11 @@ class AuditEvent(models.Model):
         ]
 
     ACAO_CHOICES = (
-        ("CREATE", "CriaÃ§Ã£o"),
-        ("UPDATE", "AtualizaÃ§Ã£o"),
-        ("DELETE", "ExclusÃ£o"),
-        ("APPROVE", "AprovaÃ§Ã£o"),
-        ("REJECT", "RejeiÃ§Ã£o"),
+        ("CREATE", "Criação"),
+        ("UPDATE", "Atualização"),
+        ("DELETE", "Exclusão"),
+        ("APPROVE", "Aprovação"),
+        ("REJECT", "Rejeição"),
         ("UPLOAD", "Upload de arquivo"),
     )
 
@@ -235,7 +235,7 @@ class AuditEvent(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True)
     acao = models.CharField(max_length=20, choices=ACAO_CHOICES)
     entidade_app = models.CharField(max_length=50)  # ex: 'Construtask.Obra'
-    entidade_label = models.CharField(max_length=100)  # ex: 'Obra OBJ-001'
+    entidade_label = models.CharField(max_length=900)  # ex: 'Obra OBJ-001'
     objeto_id = models.PositiveIntegerField()
     antes = models.JSONField(null=True, blank=True)
     depois = models.JSONField(null=True, blank=True)
