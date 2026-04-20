@@ -178,8 +178,6 @@ DECIMAL_SEPARATOR = ','
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
-STATIC_ROOT.mkdir(parents=True, exist_ok=True)
-
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 MEDIA_STORAGE_BACKEND = os.environ.get("DJANGO_MEDIA_STORAGE_BACKEND", "django.core.files.storage.FileSystemStorage")
