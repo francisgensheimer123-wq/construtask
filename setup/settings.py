@@ -59,6 +59,7 @@ elif DEBUG:
     SECRET_KEY = "django-insecure-development-key"
 else:
     raise ImproperlyConfigured("Defina DJANGO_SECRET_KEY em ambiente nao local.")
+
 CONSTRUTASK_ENVIRONMENT = os.environ.get("CONSTRUTASK_ENVIRONMENT", "development" if DEBUG else "production").lower()
 CONSTRUTASK_ADMIN_SUPERUSER_USERNAME = os.environ.get("CONSTRUTASK_ADMIN_SUPERUSER_USERNAME", "Construtask")
 ALLOWED_HOSTS = _env_list("ALLOWED_HOSTS", "127.0.0.1,localhost")
@@ -75,7 +76,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'Construtask',
-    "mptt"
+    "mptt",
 ]
 
 MIDDLEWARE = [
@@ -116,7 +117,6 @@ TEMPLATES = [
 WSGI_APPLICATION = 'setup.wsgi.application'
 
 if os.environ.get("DATABASE_URL"):
-    
     # Ambiente Railway / Produção
     DATABASES = {
         "default": dj_database_url.parse(
@@ -125,26 +125,7 @@ if os.environ.get("DATABASE_URL"):
             conn_health_checks=False,
         )
     }
-
-# --- CELERY ---
-CELERY_BROKER_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
-CELERY_RESULT_BACKEND = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
-
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TASK_SERIALIZER = 'json'
-CELERY_RESULT_SERIALIZER = 'json'
-CELERY_TIMEZONE = TIME_ZONE  # já usa 'America/Sao_Paulo'
-
-CELERY_TASK_SOFT_TIME_LIMIT = 300   # 5 min
-CELERY_TASK_TIME_LIMIT = 360        # 6 min (mata se travar)
-CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
-
-# Evita tasks duplicadas em caso de falha
-CELERY_TASK_ACKS_LATE = True
-CELERY_WORKER_PREFETCH_MULTIPLIER = 1
-
 else:
-
     # Ambiente local (SQLite)
     DATABASES = {
         "default": {
@@ -178,7 +159,6 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'pt-br'
 TIME_ZONE = "America/Sao_Paulo"
-
 
 USE_I18N = True
 USE_L10N = True
@@ -277,6 +257,22 @@ if not DEBUG:
     SECURE_HSTS_INCLUDE_SUBDOMAINS = os.environ.get("SECURE_HSTS_INCLUDE_SUBDOMAINS", "False").lower() in {"1", "true", "yes", "on"}
     SECURE_HSTS_PRELOAD = os.environ.get("SECURE_HSTS_PRELOAD", "False").lower() in {"1", "true", "yes", "on"}
     SECURE_SSL_REDIRECT = os.environ.get("SECURE_SSL_REDIRECT", "True").lower() in {"1", "true", "yes", "on"}
+
+
+# ---------------------------------------------------------------------------
+# Celery
+# ---------------------------------------------------------------------------
+CELERY_BROKER_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+CELERY_RESULT_BACKEND = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_TIMEZONE = TIME_ZONE
+CELERY_TASK_SOFT_TIME_LIMIT = 300   # 5 min: lança SoftTimeLimitExceeded
+CELERY_TASK_TIME_LIMIT = 360        # 6 min: mata o worker se travar
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+CELERY_TASK_ACKS_LATE = True
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1
 
 
 LOGGING = {
