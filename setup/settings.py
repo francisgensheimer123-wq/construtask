@@ -126,6 +126,23 @@ if os.environ.get("DATABASE_URL"):
         )
     }
 
+# --- CELERY ---
+CELERY_BROKER_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE  # já usa 'America/Sao_Paulo'
+
+CELERY_TASK_SOFT_TIME_LIMIT = 300   # 5 min
+CELERY_TASK_TIME_LIMIT = 360        # 6 min (mata se travar)
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+
+# Evita tasks duplicadas em caso de falha
+CELERY_TASK_ACKS_LATE = True
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+
 else:
 
     # Ambiente local (SQLite)
