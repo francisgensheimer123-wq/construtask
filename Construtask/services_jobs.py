@@ -3,6 +3,7 @@ from io import StringIO
 
 from django.core.files.base import ContentFile
 from django.db import transaction
+from django.db.models import F
 from django.utils import timezone
 
 from .application.financeiro import registrar_fechamento_mensal
@@ -122,7 +123,7 @@ def processar_jobs_pendentes(*, limite=10):
                 JobAssincrono.objects.filter(pk__in=pks).update(
                     status="EM_EXECUCAO",
                     iniciado_em=_tz.now(),
-                    tentativas=models.F("tentativas") + 1,
+                    tentativas=F("tentativas") + 1,
                 )
     else:
         jobs = list(JobAssincrono.objects.filter(status="PENDENTE").order_by("criado_em")[:limite])
