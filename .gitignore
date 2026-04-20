@@ -36,3 +36,4 @@ db.sqlite3-journal
 # Rar
 *.rar
 *.zip
+.tmp_pptx/
