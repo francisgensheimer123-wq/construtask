@@ -3,7 +3,6 @@ from io import StringIO
 
 from django.core.files.base import ContentFile
 from django.db import transaction
-from django.db.models import F
 from django.utils import timezone
 
 from .application.financeiro import registrar_fechamento_mensal
@@ -11,6 +10,7 @@ from .models import JobAssincrono, Obra, PlanoContas
 from .queries.financeiro import construir_dados_fechamento_mensal, construir_dados_projecao_financeira
 from .services import importar_plano_contas_excel
 from .services_alertas import resumo_alertas_operacionais, sincronizar_alertas_operacionais_obra
+from .importacao_cronograma import CronogramaService
 
 
 JOB_HANDLERS = {}
@@ -123,7 +123,7 @@ def processar_jobs_pendentes(*, limite=10):
                 JobAssincrono.objects.filter(pk__in=pks).update(
                     status="EM_EXECUCAO",
                     iniciado_em=_tz.now(),
-                    tentativas=F("tentativas") + 1,
+                    tentativas=models.F("tentativas") + 1,
                 )
     else:
         jobs = list(JobAssincrono.objects.filter(status="PENDENTE").order_by("criado_em")[:limite])
@@ -243,3 +243,37 @@ def executar_job_relatorio_financeiro(job):
         return metadata
 
     raise ValueError("Tipo de relatorio financeiro nao suportado.")
+
+
+@registrar_job_handler("IMPORTAR_CRONOGRAMA")
+def executar_job_importar_cronograma(job):
+    obra = job.obra or Obra.objects.get(pk=job.parametros["obra_id"])
+
+    if not job.arquivo_entrada:
+        raise ValueError("Job de importacao de cronograma sem arquivo de entrada.")
+
+    titulo = job.parametros.get("titulo") or None
+    criar_baseline = job.parametros.get("criar_baseline", False)
+    responsavel = job.solicitado_por
+
+    with job.arquivo_entrada.open("rb") as arquivo:
+        plano = CronogramaService.importar_xlsx(
+            arquivo=arquivo,
+            obra=obra,
+            responsavel=responsavel,
+            titulo=titulo,
+            criar_baseline=criar_baseline,
+        )
+
+    resumo = getattr(plano, "_resumo_importacao", {})
+    return {
+        "obra_id": obra.pk,
+        "plano_fisico_id": plano.pk,
+        "titulo": plano.titulo,
+        "total_linhas": resumo.get("total_linhas", 0),
+        "atividades_validas": resumo.get("atividades_validas", 0),
+        "itens_criados": resumo.get("itens_criados", 0),
+        "sem_datas": resumo.get("sem_datas", 0),
+        "com_codigo_eap": resumo.get("com_codigo_eap", 0),
+        "eap_reconhecida": resumo.get("eap_reconhecida", 0),
+    }
