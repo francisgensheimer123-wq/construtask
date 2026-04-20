@@ -96,12 +96,69 @@ def executar_job(job):
     return job
 
 
+import logging as _logging
+
+_job_worker_logger = _logging.getLogger("construtask.jobs.worker")
+
+
 def processar_jobs_pendentes(*, limite=10):
-    jobs = list(JobAssincrono.objects.filter(status="PENDENTE").order_by("criado_em")[:limite])
+    from django.conf import settings
+    from django.utils import timezone as _tz
+
+    # SQLite (dev) não suporta select_for_update com skip_locked
+    usar_lock = settings.DATABASES["default"]["ENGINE"] != "django.db.backends.sqlite3"
+
+    if usar_lock:
+        from django.db import transaction
+        with transaction.atomic():
+            jobs = list(
+                JobAssincrono.objects
+                .select_for_update(skip_locked=True)
+                .filter(status="PENDENTE")
+                .order_by("criado_em")[:limite]
+            )
+            pks = [j.pk for j in jobs]
+            if pks:
+                JobAssincrono.objects.filter(pk__in=pks).update(
+                    status="EM_EXECUCAO",
+                    iniciado_em=_tz.now(),
+                    tentativas=models.F("tentativas") + 1,
+                )
+    else:
+        jobs = list(JobAssincrono.objects.filter(status="PENDENTE").order_by("criado_em")[:limite])
+
     processados = []
     for job in jobs:
-        processados.append(executar_job(job))
+        job.refresh_from_db()
+        try:
+            _executar_job_seguro(job)
+        except Exception:
+            pass
+        processados.append(job)
     return processados
+
+
+def _executar_job_seguro(job):
+    from django.utils import timezone as _tz
+    handler = JOB_HANDLERS.get(job.tipo)
+    if not handler:
+        job.status = "FALHOU"
+        job.concluido_em = _tz.now()
+        job.erro = f"Handler nao registrado para tipo '{job.tipo}'."
+        job.save(update_fields=["status", "concluido_em", "erro", "atualizado_em"])
+        return
+    try:
+        resultado = handler(job)
+        job.status = "CONCLUIDO"
+        job.concluido_em = _tz.now()
+        job.resultado = resultado or {}
+        job.save(update_fields=["status", "concluido_em", "resultado", "arquivo_resultado", "atualizado_em"])
+    except Exception as exc:
+        _job_worker_logger.exception(f"[Job {job.pk}] Falha ao executar job '{job.tipo}'.")
+        job.status = "FALHOU"
+        job.concluido_em = _tz.now()
+        job.erro = str(exc)
+        job.save(update_fields=["status", "concluido_em", "erro", "atualizado_em"])
 
 
 def _salvar_csv_job(job, nome_arquivo, cabecalhos, linhas):
