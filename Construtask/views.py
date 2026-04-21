@@ -2699,7 +2699,7 @@ class HomeView(TemplateView):
                 "nivel": "critico" if resumo_alertas["nota_sem_rateio"] else "alto",
             },
             {
-                "label": "Contratos com saldo crÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­tico",
+                "label": "Contratos com saldo crítico",
                 "valor": len(context["alertas"]),
                 "nivel": "critico",
             },
