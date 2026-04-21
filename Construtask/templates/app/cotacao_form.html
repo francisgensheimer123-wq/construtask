@@ -40,8 +40,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="form-page-shell">
-<div class="panel cotacao-form-page cotacao-sheet" style="overflow-x:auto;">
+<div class="panel cotacao-form-page cotacao-sheet" style="overflow-x:auto; margin: 0;">
     <h2>Nova Cotacao Comparativa</h2>
     <p>Compare fornecedores lado a lado, defina o vencedor e registre a proposta de cada um na mesma tela.</p>
     <form method="post" enctype="multipart/form-data">
@@ -175,7 +174,6 @@
             <a class="btn secondary" href="{% url 'cotacao_list' %}">Voltar</a>
         </div>
     </form>
-</div>
 </div>
 
 <script>
