@@ -11,7 +11,7 @@ from .models import (
     AlertaOperacionalHistorico,
     Compromisso,
     ExecucaoRegraOperacional,
-    Medicao,
+    Medição,
     NotaFiscal,
     NotaFiscalCentroCusto,
     ParametroAlertaEmpresa,
@@ -25,11 +25,11 @@ from .models_risco import Risco
 CODIGO_ALERTA_PLANEJAMENTO_SUPRIMENTOS = "PLAN-SUP-001"
 TITULO_ALERTA_PLANEJAMENTO_SUPRIMENTOS = "Atividade planejada sem solicitacao de compra antecipada"
 
-CODIGO_ALERTA_CONTRATO_SEM_MEDICAO = "CONT-MED-001"
-TITULO_ALERTA_CONTRATO_SEM_MEDICAO = "Contrato ativo sem medicao registrada"
+CODIGO_ALERTA_CONTRATO_SEM_Medição = "CONT-MED-001"
+TITULO_ALERTA_CONTRATO_SEM_Medição = "Contrato ativo sem medição registrada"
 
-CODIGO_ALERTA_MEDICAO_SEM_NOTA = "MED-NF-001"
-TITULO_ALERTA_MEDICAO_SEM_NOTA = "Medicao sem nota fiscal vinculada"
+CODIGO_ALERTA_Medição_SEM_NOTA = "MED-NF-001"
+TITULO_ALERTA_Medição_SEM_NOTA = "Medição sem nota fiscal vinculada"
 
 CODIGO_ALERTA_NOTA_SEM_RATEIO = "NF-RAT-001"
 TITULO_ALERTA_NOTA_SEM_RATEIO = "Nota fiscal sem rateio completo"
@@ -102,24 +102,24 @@ CATALOGO_REGRAS_OPERACIONAIS = [
         "resolver_valor": lambda parametros: parametros.planejamento_suprimentos_janela_dias,
     },
     {
-        "codigo": CODIGO_ALERTA_CONTRATO_SEM_MEDICAO,
-        "titulo": TITULO_ALERTA_CONTRATO_SEM_MEDICAO,
+        "codigo": CODIGO_ALERTA_CONTRATO_SEM_Medição,
+        "titulo": TITULO_ALERTA_CONTRATO_SEM_Medição,
         "frente": "Governanca contratual",
-        "gatilho": "Contrato ativo sem medicao apos a tolerancia definida.",
+        "gatilho": "Contrato ativo sem Medição apos a tolerancia definida.",
         "impacto": "Mostra perda de ritmo contratual e falta de lastro de execucao.",
-        "recomendacao": "Cobrar medicao, status fisico e evidencia de execucao do contrato.",
+        "recomendacao": "Cobrar Medição, status fisico e evidencia de execucao do contrato.",
         "tipo_parametro": "dias",
-        "resolver_valor": lambda parametros: parametros.contrato_sem_medicao_dias,
+        "resolver_valor": lambda parametros: parametros.contrato_sem_Medição_dias,
     },
     {
-        "codigo": CODIGO_ALERTA_MEDICAO_SEM_NOTA,
-        "titulo": TITULO_ALERTA_MEDICAO_SEM_NOTA,
+        "codigo": CODIGO_ALERTA_Medição_SEM_NOTA,
+        "titulo": TITULO_ALERTA_Medição_SEM_NOTA,
         "frente": "Faturamento e documentos",
-        "gatilho": "Medicao aprovada sem nota fiscal dentro do prazo operacional.",
+        "gatilho": "Medição aprovada sem nota fiscal dentro do prazo operacional.",
         "impacto": "Expõe gargalo entre execucao, faturamento e documentacao fiscal.",
         "recomendacao": "Cobrar emissao da nota e amarrar o faturamento ao fluxo documental.",
         "tipo_parametro": "dias",
-        "resolver_valor": lambda parametros: parametros.medicao_sem_nota_dias,
+        "resolver_valor": lambda parametros: parametros.Medição_sem_nota_dias,
     },
     {
         "codigo": CODIGO_ALERTA_NOTA_SEM_RATEIO,
@@ -598,7 +598,7 @@ def sincronizar_alertas_planejamento_suprimentos(obra):
             dias_para_inicio = max((item.data_inicio_prevista - hoje).days, 0)
             referencia = f"{item.pk}:{centro.pk}"
             evidencia = {
-                "plano_numero": plano.numero or "",
+                "plano_número": plano.número or "",
                 "atividade_id": item.pk,
                 "codigo_atividade": item.codigo_atividade,
                 "atividade": item.atividade,
@@ -630,7 +630,7 @@ def sincronizar_alertas_planejamento_suprimentos(obra):
     )
 
 
-def sincronizar_alertas_contrato_sem_medicao(obra):
+def sincronizar_alertas_contrato_sem_Medição(obra):
     parametros = _parametros_alerta(obra)
     hoje = timezone.localdate()
     referencias_ativas = set()
@@ -645,79 +645,79 @@ def sincronizar_alertas_contrato_sem_medicao(obra):
         )
         .select_related("obra")
         .distinct()
-        .order_by("data_prevista_inicio", "data_assinatura", "numero")
+        .order_by("data_prevista_inicio", "data_assinatura", "número")
     )
 
     for contrato in contratos:
         data_base = contrato.data_prevista_inicio or contrato.data_assinatura
         if not data_base:
             continue
-        dias_sem_medicao = max((hoje - data_base).days, 0)
-        if dias_sem_medicao < parametros.contrato_sem_medicao_dias:
+        dias_sem_Medição = max((hoje - data_base).days, 0)
+        if dias_sem_Medição < parametros.contrato_sem_Medição_dias:
             continue
         referencia = str(contrato.pk)
         registros[referencia] = {
-            "titulo": TITULO_ALERTA_CONTRATO_SEM_MEDICAO,
-            "descricao": f"O contrato {contrato.numero} esta ativo ha {dias_sem_medicao} dia(s) sem medicao registrada.",
-            "severidade": _severidade_por_idade(dias_sem_medicao),
+            "titulo": TITULO_ALERTA_CONTRATO_SEM_Medição,
+            "descricao": f"O contrato {contrato.número} esta ativo ha {dias_sem_Medição} dia(s) sem Medição registrada.",
+            "severidade": _severidade_por_idade(dias_sem_Medição),
             "status": "ABERTO",
             "entidade_tipo": "Compromisso",
             "entidade_id": contrato.pk,
             "evidencias": {
-                "contrato_numero": contrato.numero,
+                "contrato_número": contrato.número,
                 "fornecedor": contrato.fornecedor,
                 "data_base": data_base.strftime("%d/%m/%Y"),
-                "dias_sem_medicao": dias_sem_medicao,
+                "dias_sem_Medição": dias_sem_Medição,
             },
             "data_referencia": data_base,
             "encerrado_em": None,
         }
 
-    return _sync_registros_alerta(obra, CODIGO_ALERTA_CONTRATO_SEM_MEDICAO, referencias_ativas, registros)
+    return _sync_registros_alerta(obra, CODIGO_ALERTA_CONTRATO_SEM_Medição, referencias_ativas, registros)
 
 
-def sincronizar_alertas_medicao_sem_nota(obra):
+def sincronizar_alertas_Medição_sem_nota(obra):
     parametros = _parametros_alerta(obra)
     hoje = timezone.localdate()
     referencias_ativas = set()
     registros = {}
 
     medicoes = (
-        Medicao.objects.filter(
+        Medição.objects.filter(
             obra=obra,
             status__in=["CONFERIDA", "APROVADA", "FATURADA"],
             notas_fiscais__isnull=True,
         )
         .select_related("contrato")
         .distinct()
-        .order_by("data_medicao", "numero_da_medicao")
+        .order_by("data_Medição", "número_da_Medição")
     )
 
-    for medicao in medicoes:
-        data_base = medicao.data_medicao
+    for Medição in medicoes:
+        data_base = Medição.data_Medição
         dias_sem_nota = max((hoje - data_base).days, 0)
-        if dias_sem_nota < parametros.medicao_sem_nota_dias:
+        if dias_sem_nota < parametros.Medição_sem_nota_dias:
             continue
-        referencia = str(medicao.pk)
+        referencia = str(Medição.pk)
         registros[referencia] = {
-            "titulo": TITULO_ALERTA_MEDICAO_SEM_NOTA,
-            "descricao": f"A medicao {medicao.numero_da_medicao} esta em {medicao.get_status_display()} ha {dias_sem_nota} dia(s) sem nota fiscal vinculada.",
+            "titulo": TITULO_ALERTA_Medição_SEM_NOTA,
+            "descricao": f"A Medição {Medição.número_da_Medição} esta em {Medição.get_status_display()} ha {dias_sem_nota} dia(s) sem nota fiscal vinculada.",
             "severidade": _severidade_por_idade(dias_sem_nota),
             "status": "ABERTO",
-            "entidade_tipo": "Medicao",
-            "entidade_id": medicao.pk,
+            "entidade_tipo": "Medição",
+            "entidade_id": Medição.pk,
             "evidencias": {
-                "medicao_numero": medicao.numero_da_medicao,
-                "contrato_numero": medicao.contrato.numero if medicao.contrato_id else "",
-                "status": medicao.get_status_display(),
-                "data_medicao": data_base.strftime("%d/%m/%Y"),
+                "Medição_número": Medição.número_da_Medição,
+                "contrato_número": Medição.contrato.número if Medição.contrato_id else "",
+                "status": Medição.get_status_display(),
+                "data_Medição": data_base.strftime("%d/%m/%Y"),
                 "dias_sem_nota": dias_sem_nota,
             },
             "data_referencia": data_base,
             "encerrado_em": None,
         }
 
-    return _sync_registros_alerta(obra, CODIGO_ALERTA_MEDICAO_SEM_NOTA, referencias_ativas, registros)
+    return _sync_registros_alerta(obra, CODIGO_ALERTA_Medição_SEM_NOTA, referencias_ativas, registros)
 
 
 def sincronizar_alertas_nota_sem_rateio(obra):
@@ -742,13 +742,13 @@ def sincronizar_alertas_nota_sem_rateio(obra):
         referencia = str(nota.pk)
         registros[referencia] = {
             "titulo": TITULO_ALERTA_NOTA_SEM_RATEIO,
-            "descricao": f"A nota fiscal {nota.numero} possui rateio pendente de {faltante.quantize(Decimal('0.01'))}.",
+            "descricao": f"A nota fiscal {nota.número} possui rateio pendente de {faltante.quantize(Decimal('0.01'))}.",
             "severidade": "CRITICA" if percentual_pendente >= Decimal("50.00") else "ALTA",
             "status": "ABERTO",
             "entidade_tipo": "NotaFiscal",
             "entidade_id": nota.pk,
             "evidencias": {
-                "nota_numero": nota.numero,
+                "nota_número": nota.número,
                 "fornecedor": nota.fornecedor,
                 "data_emissao": nota.data_emissao.strftime("%d/%m/%Y") if nota.data_emissao else "",
                 "valor_total": str(nota.valor_total or Decimal("0.00")),
@@ -814,7 +814,7 @@ def sincronizar_alertas_nc_sem_evolucao(obra):
         .exclude(status__in=["ENCERRADA", "CANCELADA"])
         .annotate(ultima_evolucao=Max("historico__timestamp"))
         .select_related("responsavel")
-        .order_by("data_abertura", "numero")
+        .order_by("data_abertura", "número")
     )
 
     for nc in nao_conformidades:
@@ -825,13 +825,13 @@ def sincronizar_alertas_nc_sem_evolucao(obra):
         referencia = str(nc.pk)
         registros[referencia] = {
             "titulo": TITULO_ALERTA_NC_SEM_EVOLUCAO,
-            "descricao": f"A nao conformidade {nc.numero} esta sem evolucao registrada ha {dias_sem_evolucao} dia(s).",
+            "descricao": f"A nao conformidade {nc.número} esta sem evolucao registrada ha {dias_sem_evolucao} dia(s).",
             "severidade": _severidade_por_idade(dias_sem_evolucao),
             "status": "ABERTO",
             "entidade_tipo": "NaoConformidade",
             "entidade_id": nc.pk,
             "evidencias": {
-                "numero": nc.numero,
+                "número": nc.número,
                 "status": nc.get_status_display(),
                 "responsavel": str(nc.responsavel) if nc.responsavel else "",
                 "data_abertura": nc.data_abertura.strftime("%d/%m/%Y") if nc.data_abertura else "",
@@ -1057,7 +1057,7 @@ def sincronizar_alertas_compromissos_acima_orcado(obra):
         Compromisso.objects.filter(obra=obra, status__in=["EM_APROVACAO", "APROVADO", "EM_EXECUCAO"])
         .prefetch_related("itens__centro_custo")
         .select_related("centro_custo")
-        .order_by("numero")
+        .order_by("número")
     )
 
     for compromisso in compromissos:
@@ -1069,13 +1069,13 @@ def sincronizar_alertas_compromissos_acima_orcado(obra):
                     referencia = f"{compromisso.pk}:{item.pk}"
                     registros[referencia] = {
                         "titulo": TITULO_ALERTA_COMPROMISSO_ACIMA_ORCADO,
-                        "descricao": f"O item {item.centro_custo.codigo} do compromisso {compromisso.numero} supera o valor orcado da EAP vinculada.",
+                        "descricao": f"O item {item.centro_custo.codigo} do compromisso {compromisso.número} supera o valor orcado da EAP vinculada.",
                         "severidade": "CRITICA",
                         "status": "ABERTO",
                         "entidade_tipo": "CompromissoItem",
                         "entidade_id": item.pk,
                         "evidencias": {
-                            "compromisso_numero": compromisso.numero,
+                            "compromisso_número": compromisso.número,
                             "centro_custo_codigo": item.centro_custo.codigo,
                             "valor_item": str(item.valor_total),
                             "valor_orcado": str(orcado),
@@ -1090,13 +1090,13 @@ def sincronizar_alertas_compromissos_acima_orcado(obra):
                 referencia = str(compromisso.pk)
                 registros[referencia] = {
                     "titulo": TITULO_ALERTA_COMPROMISSO_ACIMA_ORCADO,
-                    "descricao": f"O compromisso {compromisso.numero} supera o valor orcado do centro de custo vinculado.",
+                    "descricao": f"O compromisso {compromisso.número} supera o valor orcado do centro de custo vinculado.",
                     "severidade": "CRITICA",
                     "status": "ABERTO",
                     "entidade_tipo": "Compromisso",
                     "entidade_id": compromisso.pk,
                     "evidencias": {
-                        "compromisso_numero": compromisso.numero,
+                        "compromisso_número": compromisso.número,
                         "centro_custo_codigo": compromisso.centro_custo.codigo,
                         "valor_compromisso": str(compromisso.valor_contratado),
                         "valor_orcado": str(orcado),
@@ -1133,8 +1133,8 @@ def sincronizar_alertas_acumulo_riscos(obra):
 def sincronizar_alertas_operacionais_obra(obra):
     sincronizadores = [
         sincronizar_alertas_planejamento_suprimentos,
-        sincronizar_alertas_contrato_sem_medicao,
-        sincronizar_alertas_medicao_sem_nota,
+        sincronizar_alertas_contrato_sem_Medição,
+        sincronizar_alertas_Medição_sem_nota,
         sincronizar_alertas_nota_sem_rateio,
         sincronizar_alertas_risco_vencido,
         sincronizar_alertas_nc_sem_evolucao,
@@ -1191,27 +1191,27 @@ def resumo_executivo_alertas_operacionais(obra):
         },
         {
             "frente": "Suprimentos e mobilizacao",
-            "total": resumo_alertas["planejamento_suprimentos"] + resumo_alertas["contrato_sem_medicao"],
+            "total": resumo_alertas["planejamento_suprimentos"] + resumo_alertas["contrato_sem_Medição"],
             "nivel": "critico"
-            if (resumo_alertas["planejamento_suprimentos"] + resumo_alertas["contrato_sem_medicao"]) >= 8
+            if (resumo_alertas["planejamento_suprimentos"] + resumo_alertas["contrato_sem_Medição"]) >= 8
             else "alto"
-            if (resumo_alertas["planejamento_suprimentos"] + resumo_alertas["contrato_sem_medicao"]) >= 4
+            if (resumo_alertas["planejamento_suprimentos"] + resumo_alertas["contrato_sem_Medição"]) >= 4
             else "medio"
-            if (resumo_alertas["planejamento_suprimentos"] + resumo_alertas["contrato_sem_medicao"]) >= 1
+            if (resumo_alertas["planejamento_suprimentos"] + resumo_alertas["contrato_sem_Medição"]) >= 1
             else "baixo",
             "acao": "Antecipar compras, contratos e frentes criticas dos proximos ciclos.",
         },
         {
             "frente": "Financeiro sem lastro fisico",
-            "total": resumo_alertas["custo_sem_avanco"] + resumo_alertas["medicao_sem_nota"] + resumo_alertas["nota_sem_rateio"],
+            "total": resumo_alertas["custo_sem_avanco"] + resumo_alertas["Medição_sem_nota"] + resumo_alertas["nota_sem_rateio"],
             "nivel": "critico"
-            if (resumo_alertas["custo_sem_avanco"] + resumo_alertas["medicao_sem_nota"] + resumo_alertas["nota_sem_rateio"]) >= 8
+            if (resumo_alertas["custo_sem_avanco"] + resumo_alertas["Medição_sem_nota"] + resumo_alertas["nota_sem_rateio"]) >= 8
             else "alto"
-            if (resumo_alertas["custo_sem_avanco"] + resumo_alertas["medicao_sem_nota"] + resumo_alertas["nota_sem_rateio"]) >= 4
+            if (resumo_alertas["custo_sem_avanco"] + resumo_alertas["Medição_sem_nota"] + resumo_alertas["nota_sem_rateio"]) >= 4
             else "medio"
-            if (resumo_alertas["custo_sem_avanco"] + resumo_alertas["medicao_sem_nota"] + resumo_alertas["nota_sem_rateio"]) >= 1
+            if (resumo_alertas["custo_sem_avanco"] + resumo_alertas["Medição_sem_nota"] + resumo_alertas["nota_sem_rateio"]) >= 1
             else "baixo",
-            "acao": "Revisar medicao, nota e apropriacao para garantir evidencias de execucao.",
+            "acao": "Revisar Medição, nota e apropriacao para garantir evidencias de execucao.",
         },
         {
             "frente": "Riscos e qualidade",
@@ -1241,13 +1241,13 @@ def resumo_executivo_alertas_operacionais(obra):
         },
         {
             "titulo": "Suprimentos x Execucao",
-            "quantidade": resumo_alertas["planejamento_suprimentos"] + resumo_alertas["contrato_sem_medicao"] + resumo_alertas["medicao_sem_nota"],
+            "quantidade": resumo_alertas["planejamento_suprimentos"] + resumo_alertas["contrato_sem_Medição"] + resumo_alertas["Medição_sem_nota"],
             "nivel": "critico"
-            if (resumo_alertas["planejamento_suprimentos"] + resumo_alertas["contrato_sem_medicao"] + resumo_alertas["medicao_sem_nota"]) >= 8
+            if (resumo_alertas["planejamento_suprimentos"] + resumo_alertas["contrato_sem_Medição"] + resumo_alertas["Medição_sem_nota"]) >= 8
             else "alto"
-            if (resumo_alertas["planejamento_suprimentos"] + resumo_alertas["contrato_sem_medicao"] + resumo_alertas["medicao_sem_nota"]) >= 4
+            if (resumo_alertas["planejamento_suprimentos"] + resumo_alertas["contrato_sem_Medição"] + resumo_alertas["Medição_sem_nota"]) >= 4
             else "medio"
-            if (resumo_alertas["planejamento_suprimentos"] + resumo_alertas["contrato_sem_medicao"] + resumo_alertas["medicao_sem_nota"]) >= 1
+            if (resumo_alertas["planejamento_suprimentos"] + resumo_alertas["contrato_sem_Medição"] + resumo_alertas["Medição_sem_nota"]) >= 1
             else "baixo",
             "descricao": "Frentes futuras, contratos e medicoes com risco de ruptura operacional.",
         },
@@ -1280,8 +1280,8 @@ def resumo_alertas_operacionais(obra):
     )
     return {
         "planejamento_suprimentos": alertas.filter(codigo_regra=CODIGO_ALERTA_PLANEJAMENTO_SUPRIMENTOS).count(),
-        "contrato_sem_medicao": alertas.filter(codigo_regra=CODIGO_ALERTA_CONTRATO_SEM_MEDICAO).count(),
-        "medicao_sem_nota": alertas.filter(codigo_regra=CODIGO_ALERTA_MEDICAO_SEM_NOTA).count(),
+        "contrato_sem_Medição": alertas.filter(codigo_regra=CODIGO_ALERTA_CONTRATO_SEM_Medição).count(),
+        "Medição_sem_nota": alertas.filter(codigo_regra=CODIGO_ALERTA_Medição_SEM_NOTA).count(),
         "nota_sem_rateio": alertas.filter(codigo_regra=CODIGO_ALERTA_NOTA_SEM_RATEIO).count(),
         "risco_vencido": alertas.filter(codigo_regra=CODIGO_ALERTA_RISCO_VENCIDO).count(),
         "nc_sem_evolucao": alertas.filter(codigo_regra=CODIGO_ALERTA_NC_SEM_EVOLUCAO).count(),

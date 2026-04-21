@@ -931,7 +931,7 @@ class Compromisso(models.Model):
         ]
 
     TIPO_CHOICES = (
-        ("CONTRATO", "Contrato (ServiÃ§o)"),
+        ("CONTRATO", "Contrato (Serviço)"),
         ("PEDIDO_COMPRA", "Pedido de Compra (Material)"),
     )
 
@@ -1082,7 +1082,7 @@ class AditivoContrato(models.Model):
 
     def clean(self):
         if self.contrato_id and self.contrato.tipo != "CONTRATO":
-            raise ValidationError("Aditivos contratuais sÃ³ podem ser vinculados a contratos.")
+            raise ValidationError("Aditivos contratuais só podem ser vinculados a contratos.")
 
         if self.tipo == "PRAZO":
             if self.delta_dias in (None, ""):
@@ -1197,8 +1197,8 @@ class CompromissoItem(models.Model):
 
 class Medicao(models.Model):
     class Meta:
-        verbose_name = "MediÃ§Ã£o"
-        verbose_name_plural = "MediÃ§Ãµes"
+        verbose_name = "Medição"
+        verbose_name_plural = "Medições"
         ordering = ["-data_medicao"]
         indexes = [
             models.Index(fields=["obra", "status", "data_medicao"]),
@@ -1322,9 +1322,9 @@ class MedicaoItem(models.Model):
             item_contrato = self.medicao.contrato.itens.filter(centro_custo=self.centro_custo).first()
             if item_contrato:
                 if self.unidade and self.unidade != item_contrato.unidade:
-                    raise ValidationError("A unidade da mediÃ§Ã£o deve ser igual Ã  unidade definida no contrato.")
+                    raise ValidationError("A unidade da medição deve ser igual à  unidade definida no contrato.")
                 if self.valor_unitario and self.valor_unitario != item_contrato.valor_unitario:
-                    raise ValidationError("O valor unitÃ¡rio da mediÃ§Ã£o deve ser igual ao valor unitÃ¡rio definido no contrato.")
+                    raise ValidationError("O valor unitário da medição deve ser igual ao valor unitário definido no contrato.")
 
     def save(self, *args, **kwargs):
         if self.medicao_id and self.medicao.contrato_id:
