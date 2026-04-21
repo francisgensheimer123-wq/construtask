@@ -9,7 +9,7 @@ from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
 from django.views import View
 
-from .models import Empresa, Obra, ParametroAlertaEmpresa, ParametroComunicacaoEmpresa, UsuarioEmpresa
+from .models import Empresa, Obra, ParametroAlertaEmpresa, ParametroComunicacaoEmpresa, UsuarioEmpresa, PlanoEmpresa
 from .permissions import (
     PERMISSOES_MODULO_ACAO,
     atualizar_permissoes_usuario_empresa,
@@ -23,6 +23,8 @@ from .domain import gerar_numero_documento
 from .application.saas import contexto_base_saas
 from .services_alertas import catalogo_alertas_empresa
 from .services_lgpd import registrar_acesso_dado_pessoal
+
+from .services_tenant import TenantService, LimitePlanoExcedido
 
 User = get_user_model()
 
@@ -329,8 +331,11 @@ class UsuarioEmpresaListView(View):
             detalhes="Consulta administrativa da area de usuarios da empresa.",
         )
         
+        status_plano = TenantService.status_plano(empresa)
+
         contexto = {
             "empresa": empresa,
+            "status_plano": status_plano,
             "usuarios_empresa": usuarios_empresa,
             "obras_da_empresa": obras_da_empresa,
             "obra_form": obra_form,
@@ -458,6 +463,12 @@ class UsuarioEmpresaListView(View):
         if User.objects.filter(username=username).exists():
             messages.error(request, "Ja existe um usuario com este username.")
             return redirect("empresa_admin")
+            
+        try:
+            TenantService.verificar_limite_usuario(empresa)
+        except LimitePlanoExcedido as e:
+            messages.error(request, str(e))
+            return redirect("empresa_admin")            
         
         user = User.objects.create_user(
             username=username,
@@ -486,6 +497,12 @@ class UsuarioEmpresaListView(View):
         form = EmpresaAdminForm(request.POST)
         
         if form.is_valid():
+            try:
+                TenantService.verificar_limite_obra(empresa)
+            except LimitePlanoExcedido as e:
+                messages.error(request, str(e))
+                return redirect("empresa_admin")
+                        
             # Gerar codigo unico (loop para garantir unicidade)
             codigo = None
             for tentativa in range(100):
@@ -611,8 +628,14 @@ class SistemaAdminView(View):
             return redirect("home")
 
         empresa = self._resolver_empresa(request)
+
+        plano_empresa = getattr(empresa, "plano", None) if empresa else None
+        status_plano = TenantService.status_plano(empresa) if empresa else None
+
         contexto = {
             "empresa": empresa,
+            "plano_empresa": plano_empresa,
+            "status_plano": status_plano,            
             "empresas": Empresa.objects.filter(ativo=True).order_by("nome"),
             "admins_empresa": self._admins_empresa_queryset(empresa),
         }
@@ -631,6 +654,21 @@ class SistemaAdminView(View):
         acao = request.POST.get("acao")
         if acao == "criar_admin_empresa":
             return self._criar_admin_empresa(request, empresa)
+        
+        if acao == "definir_plano":
+            plano_nome = request.POST.get("plano_nome", "STARTER")
+            max_usuarios = request.POST.get("max_usuarios") or None
+            max_obras = request.POST.get("max_obras") or None
+
+            plano, _ = PlanoEmpresa.objects.get_or_create(empresa=empresa)
+            plano.nome = plano_nome
+            plano.max_usuarios = int(max_usuarios) if max_usuarios else None
+            plano.max_obras = int(max_obras) if max_obras else None
+            plano.save()
+
+            messages.success(request, f"Plano {plano.get_nome_display()} salvo com sucesso.")
+            return redirect(f"{reverse_lazy('sistema_admin')}?empresa={empresa.pk}")
+
         messages.error(request, "Acao de sistema nao reconhecida.")
         return redirect(f"{reverse_lazy('sistema_admin')}?empresa={empresa.pk}")
 

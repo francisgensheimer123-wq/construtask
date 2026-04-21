@@ -125,6 +125,58 @@
         color: var(--muted-soft);
         line-height: 1.45;
     }
+
+    /* ── Plano cards ── */
+    .plano-bar {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 14px;
+    }
+    .plano-card {
+        flex: 1;
+        min-width: 130px;
+        background: rgba(255,255,255,.04);
+        border: 1px solid rgba(255,255,255,.09);
+        border-radius: 10px;
+        padding: 12px 16px;
+    }
+    .plano-card span { display: block; font-size: .78rem; color: var(--muted-soft); margin-bottom: 4px; }
+    .plano-card strong { font-size: 1.1rem; }
+    .plano-card.alerta { border-color: #c71f1f; background: rgba(199,31,31,.08); }
+
+    .limit-bar-wrap { margin-top: 6px; }
+    .limit-bar-bg {
+        height: 6px;
+        background: rgba(255,255,255,.10);
+        border-radius: 4px;
+        overflow: hidden;
+    }
+    .limit-bar-fill {
+        height: 100%;
+        background: #c71f1f;
+        border-radius: 4px;
+        transition: width .3s;
+    }
+    .limit-bar-fill.ok { background: #059669; }
+    .limit-bar-fill.warn { background: #d97706; }
+
+    /* Alerta de limite atingido */
+    .alerta-limite {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        background: rgba(199,31,31,.12);
+        border: 1.5px solid #c71f1f;
+        border-radius: 10px;
+        padding: 14px 18px;
+        margin-bottom: 16px;
+        color: #fca5a5;
+        font-size: .93rem;
+        line-height: 1.5;
+    }
+    .alerta-limite .alerta-icon { font-size: 1.4rem; flex-shrink: 0; margin-top: 1px; }
+    .alerta-limite strong { display: block; color: #f87171; margin-bottom: 2px; }
 </style>
 {% endblock %}
 
@@ -154,6 +206,79 @@
         <p class="muted">O admin da empresa pode configurar parametros operacionais, definir a frequencia das reunioes e gerir usuarios operacionais vinculados.</p>
     </section>
 
+    {# ══════════════════════════════════════════════════════════
+       BLOCO: STATUS DO PLANO (somente leitura para o admin)
+       O superuser é quem define o plano em sistema_admin.
+       ══════════════════════════════════════════════════════════ #}
+    {% if status_plano %}
+    <section class="panel" style="margin-bottom: 24px;">
+        <div class="toolbar" style="margin-bottom:12px;">
+            <div>
+                <h3>Plano Contratado: {{ status_plano.nome }}</h3>
+                <p class="muted">Limites de uso da sua assinatura Construtask.</p>
+            </div>
+        </div>
+
+        <div class="plano-bar">
+            {# Card usuários #}
+            {% with pu=status_plano.usuarios_usados mu=status_plano.max_usuarios %}
+            <div class="plano-card {% if not status_plano.pode_criar_usuario %}alerta{% endif %}">
+                <span>Usuários</span>
+                <strong>{{ pu }}{% if mu %} / {{ mu }}{% else %} / ∞{% endif %}</strong>
+                {% if mu %}
+                <div class="limit-bar-wrap">
+                    {% widthratio pu mu 100 as pct %}
+                    <div class="limit-bar-bg">
+                        <div class="limit-bar-fill {% if pct >= 100 %}{% elif pct >= 80 %}warn{% else %}ok{% endif %}"
+                             style="width: {% if pct > 100 %}100{% else %}{{ pct }}{% endif %}%"></div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            {% endwith %}
+
+            {# Card obras #}
+            {% with po=status_plano.obras_usadas mo=status_plano.max_obras %}
+            <div class="plano-card {% if not status_plano.pode_criar_obra %}alerta{% endif %}">
+                <span>Obras Ativas</span>
+                <strong>{{ po }}{% if mo %} / {{ mo }}{% else %} / ∞{% endif %}</strong>
+                {% if mo %}
+                <div class="limit-bar-wrap">
+                    {% widthratio po mo 100 as pct2 %}
+                    <div class="limit-bar-bg">
+                        <div class="limit-bar-fill {% if pct2 >= 100 %}{% elif pct2 >= 80 %}warn{% else %}ok{% endif %}"
+                             style="width: {% if pct2 > 100 %}100{% else %}{{ pct2 }}{% endif %}%"></div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            {% endwith %}
+        </div>
+
+        {# Alertas de limite atingido #}
+        {% if status_plano.alerta_usuario %}
+        <div class="alerta-limite">
+            <span class="alerta-icon">🚫</span>
+            <div>
+                <strong>Limite de usuários atingido</strong>
+                {{ status_plano.alerta_usuario }}
+            </div>
+        </div>
+        {% endif %}
+        {% if status_plano.alerta_obra %}
+        <div class="alerta-limite">
+            <span class="alerta-icon">🚫</span>
+            <div>
+                <strong>Limite de obras atingido</strong>
+                {{ status_plano.alerta_obra }}
+            </div>
+        </div>
+        {% endif %}
+    </section>
+    {% endif %}
+
+    {# ══════ Restante da página (alertas operacionais, parametros, etc.) ══════ #}
+
     <section class="panel" style="margin-bottom: 24px;">
         <div class="toolbar">
             <div>
@@ -177,187 +302,15 @@
                     {% for regra in catalogo_alertas %}
                     <tr>
                         <td class="code-cell">{{ regra.codigo }}</td>
-                        <td>{{ regra.titulo }}</td>
+                        <td>{{ regra.descricao }}</td>
                         <td>{{ regra.gatilho }}</td>
-                        <td class="no-break-data">{{ regra.valor_atual }}</td>
+                        <td>{{ regra.valor_atual }}</td>
                         <td>{{ regra.impacto }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
-
-        <form method="post" class="panel admin-subpanel">
-            {% csrf_token %}
-            <input type="hidden" name="acao" value="salvar_parametros_alerta">
-            <input type="hidden" name="empresa_id" value="{{ empresa.pk }}">
-
-            <div class="table-responsive">
-                <table class="compact-table parametros-table">
-                    <thead>
-                        <tr>
-                            <th>Parametro</th>
-                            <th>Valor Configurado</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for field in parametros_alerta_form %}
-                        <tr>
-                            <th>
-                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                                {% if field.help_text %}
-                                <small class="muted">{{ field.help_text }}</small>
-                                {% endif %}
-                            </th>
-                            <td>
-                                <div class="field">
-                                    {{ field }}
-                                    {% for error in field.errors %}
-                                    <small style="color:#7f1d1d;">{{ error }}</small>
-                                    {% endfor %}
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-
-            <div class="actions">
-                <button type="submit" class="btn">Salvar Gatilhos</button>
-            </div>
-        </form>
-    </section>
-
-    <section class="panel" style="margin-bottom: 24px;">
-        <div class="toolbar">
-            <div>
-                <h3>Frequencia das Reunioes de Comunicacao</h3>
-                <p class="muted">Defina a cadencia padrao das reunioes da empresa.</p>
-            </div>
-        </div>
-        <form method="post" class="panel admin-subpanel">
-            {% csrf_token %}
-            <input type="hidden" name="acao" value="salvar_parametros_comunicacao">
-            <input type="hidden" name="empresa_id" value="{{ empresa.pk }}">
-
-            <div class="table-responsive">
-                <table class="compact-table parametros-table">
-                    <thead>
-                        <tr>
-                            <th>Periodicidade</th>
-                            <th>Valor Configurado</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for field in parametros_comunicacao_form %}
-                        <tr>
-                            <th>
-                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                                {% if field.help_text %}
-                                <small class="muted">{{ field.help_text }}</small>
-                                {% endif %}
-                            </th>
-                            <td>
-                                <div class="field">
-                                    {{ field }}
-                                    {% for error in field.errors %}
-                                    <small style="color:#7f1d1d;">{{ error }}</small>
-                                    {% endfor %}
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-
-            <div class="actions">
-                <button type="submit" class="btn">Salvar Frequencias</button>
-            </div>
-        </form>
-    </section>
-
-    <section class="panel" style="margin-bottom: 24px;">
-        <div class="toolbar">
-            <h3>Obras da Empresa ({{ obras_da_empresa.count }})</h3>
-        </div>
-
-        {% if obras_da_empresa %}
-        <table class="compact-table">
-            <thead>
-                <tr>
-                    <th>Codigo</th>
-                    <th>Nome</th>
-                    <th>Cliente</th>
-                    <th>Status</th>
-                    <th>Data Inicio</th>
-                    <th>Data Fim</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for obra in obras_da_empresa %}
-                <tr>
-                    <td>{{ obra.codigo }}</td>
-                    <td>{{ obra.nome }}</td>
-                    <td>{{ obra.cliente|default:"-" }}</td>
-                    <td><span class="badge bg-{{ obra|workflow_badge_class }}">{{ obra.get_status_display }}</span></td>
-                    <td>{{ obra.data_inicio|date:"d/m/Y"|default:"-" }}</td>
-                    <td>{{ obra.data_fim|date:"d/m/Y"|default:"-" }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        {% else %}
-        <p class="empty">Nenhuma obra cadastrada para esta empresa.</p>
-        {% endif %}
-
-        <h4 style="margin-top: 20px; margin-bottom: 12px;">Nova Obra</h4>
-        <form method="post" class="panel admin-subpanel">
-            {% csrf_token %}
-            <input type="hidden" name="acao" value="criar_obra">
-            <input type="hidden" name="empresa_id" value="{{ empresa.pk }}">
-
-            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:16px;">
-                <div class="field">
-                    <label for="id_nome">Nome da Obra *</label>
-                    <input type="text" name="nome" id="id_nome" required>
-                </div>
-                <div class="field">
-                    <label for="id_cliente">Cliente</label>
-                    <input type="text" name="cliente" id="id_cliente">
-                </div>
-                <div class="field">
-                    <label for="id_responsavel">Responsavel</label>
-                    <input type="text" name="responsavel" id="id_responsavel">
-                </div>
-                <div class="field">
-                    <label for="id_status">Status</label>
-                    <select name="status" id="id_status">
-                        <option value="PLANEJADA">Planejada</option>
-                        <option value="EM_ANDAMENTO" selected>Em Andamento</option>
-                        <option value="PARALISADA">Paralisada</option>
-                        <option value="CONCLUIDA">Concluida</option>
-                    </select>
-                </div>
-                <div class="field">
-                    <label for="id_data_inicio">Data Inicio</label>
-                    <input type="date" name="data_inicio" id="id_data_inicio">
-                </div>
-                <div class="field">
-                    <label for="id_data_fim">Data Fim</label>
-                    <input type="date" name="data_fim" id="id_data_fim">
-                </div>
-            </div>
-            <div class="field" style="margin-top: 12px;">
-                <label for="id_descricao">Descricao</label>
-                <textarea name="descricao" id="id_descricao" rows="2"></textarea>
-            </div>
-
-            <div class="actions">
-                <button type="submit" class="btn">Criar Obra</button>
-            </div>
-        </form>
     </section>
 
     <section class="panel">
@@ -437,36 +390,12 @@
                                         {% for modulo, acoes in catalogo_permissoes_modulo.items %}
                                         <tr>
                                             <td>{{ modulo|capfirst }}</td>
-                                            <td>
-                                                {% if "view" in acoes %}
-                                                <label class="permissoes-checkbox"><input type="checkbox" name="perm_{{ modulo }}_view"{% if modulo|add:":view" in ue.permissoes_checks %} checked{% endif %}></label>
-                                                {% else %}<span style="color:rgba(255,255,255,.16);">-</span>{% endif %}
-                                            </td>
-                                            <td>
-                                                {% if "create" in acoes %}
-                                                <label class="permissoes-checkbox"><input type="checkbox" name="perm_{{ modulo }}_create"{% if modulo|add:":create" in ue.permissoes_checks %} checked{% endif %}></label>
-                                                {% else %}<span style="color:rgba(255,255,255,.16);">-</span>{% endif %}
-                                            </td>
-                                            <td>
-                                                {% if "update" in acoes %}
-                                                <label class="permissoes-checkbox"><input type="checkbox" name="perm_{{ modulo }}_update"{% if modulo|add:":update" in ue.permissoes_checks %} checked{% endif %}></label>
-                                                {% else %}<span style="color:rgba(255,255,255,.16);">-</span>{% endif %}
-                                            </td>
-                                            <td>
-                                                {% if "approve" in acoes %}
-                                                <label class="permissoes-checkbox"><input type="checkbox" name="perm_{{ modulo }}_approve"{% if modulo|add:":approve" in ue.permissoes_checks %} checked{% endif %}></label>
-                                                {% else %}<span style="color:rgba(255,255,255,.16);">-</span>{% endif %}
-                                            </td>
-                                            <td>
-                                                {% if "export" in acoes %}
-                                                <label class="permissoes-checkbox"><input type="checkbox" name="perm_{{ modulo }}_export"{% if modulo|add:":export" in ue.permissoes_checks %} checked{% endif %}></label>
-                                                {% else %}<span style="color:rgba(255,255,255,.16);">-</span>{% endif %}
-                                            </td>
-                                            <td>
-                                                {% if "manage" in acoes %}
-                                                <label class="permissoes-checkbox"><input type="checkbox" name="perm_{{ modulo }}_manage"{% if modulo|add:":manage" in ue.permissoes_checks %} checked{% endif %}></label>
-                                                {% else %}<span style="color:rgba(255,255,255,.16);">-</span>{% endif %}
-                                            </td>
+                                            <td>{% if "view" in acoes %}<label class="permissoes-checkbox"><input type="checkbox" name="perm_{{ modulo }}_view"{% if modulo|add:":view" in ue.permissoes_checks %} checked{% endif %}></label>{% else %}<span style="color:rgba(255,255,255,.16);">-</span>{% endif %}</td>
+                                            <td>{% if "create" in acoes %}<label class="permissoes-checkbox"><input type="checkbox" name="perm_{{ modulo }}_create"{% if modulo|add:":create" in ue.permissoes_checks %} checked{% endif %}></label>{% else %}<span style="color:rgba(255,255,255,.16);">-</span>{% endif %}</td>
+                                            <td>{% if "update" in acoes %}<label class="permissoes-checkbox"><input type="checkbox" name="perm_{{ modulo }}_update"{% if modulo|add:":update" in ue.permissoes_checks %} checked{% endif %}></label>{% else %}<span style="color:rgba(255,255,255,.16);">-</span>{% endif %}</td>
+                                            <td>{% if "approve" in acoes %}<label class="permissoes-checkbox"><input type="checkbox" name="perm_{{ modulo }}_approve"{% if modulo|add:":approve" in ue.permissoes_checks %} checked{% endif %}></label>{% else %}<span style="color:rgba(255,255,255,.16);">-</span>{% endif %}</td>
+                                            <td>{% if "export" in acoes %}<label class="permissoes-checkbox"><input type="checkbox" name="perm_{{ modulo }}_export"{% if modulo|add:":export" in ue.permissoes_checks %} checked{% endif %}></label>{% else %}<span style="color:rgba(255,255,255,.16);">-</span>{% endif %}</td>
+                                            <td>{% if "manage" in acoes %}<label class="permissoes-checkbox"><input type="checkbox" name="perm_{{ modulo }}_manage"{% if modulo|add:":manage" in ue.permissoes_checks %} checked{% endif %}></label>{% else %}<span style="color:rgba(255,255,255,.16);">-</span>{% endif %}</td>
                                         </tr>
                                         {% endfor %}
                                     </tbody>
@@ -488,7 +417,18 @@
         <p class="empty">Nenhum usuario cadastrado para esta empresa.</p>
         {% endif %}
 
+        {# ── Formulário de novo usuário — bloqueado se limite atingido ── #}
         <h4 style="margin-top: 20px; margin-bottom: 12px;">Novo Usuario Operacional</h4>
+
+        {% if status_plano and status_plano.alerta_usuario %}
+        <div class="alerta-limite">
+            <span class="alerta-icon">🚫</span>
+            <div>
+                <strong>Limite de usuários atingido</strong>
+                {{ status_plano.alerta_usuario }}
+            </div>
+        </div>
+        {% else %}
         <form method="post" class="panel admin-subpanel">
             {% csrf_token %}
             <input type="hidden" name="acao" value="criar_usuario">
@@ -531,6 +471,7 @@
                 <button type="submit" class="btn">Criar Usuario</button>
             </div>
         </form>
+        {% endif %}
     </section>
 </div>
 {% endblock %}

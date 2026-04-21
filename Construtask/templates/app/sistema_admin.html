@@ -53,6 +53,89 @@
     <section class="panel" style="margin-bottom: 24px;">
         <div class="toolbar">
             <div>
+                <h3>Plano de Assinatura</h3>
+                <p class="muted">Defina o plano contratado pela empresa. Os limites de usuarios e obras sao aplicados automaticamente.</p>
+            </div>
+            {% if plano_empresa %}
+            <div>
+                <span class="badge bg-success">{{ plano_empresa.get_nome_display }}</span>
+            </div>
+            {% endif %}
+        </div>
+
+        {# Cartões de uso atual #}
+        {% if status_plano %}
+        <div class="cards" style="margin-bottom: 16px;">
+            <div class="card">
+                <span>Plano Atual</span>
+                <strong>{{ status_plano.nome }}</strong>
+            </div>
+            <div class="card">
+                <span>Usuarios</span>
+                <strong>
+                    {{ status_plano.usuarios_usados }}
+                    {% if status_plano.max_usuarios %}/ {{ status_plano.max_usuarios }}{% else %}/ Ilimitado{% endif %}
+                </strong>
+            </div>
+            <div class="card">
+                <span>Obras Ativas</span>
+                <strong>
+                    {{ status_plano.obras_usadas }}
+                    {% if status_plano.max_obras %}/ {{ status_plano.max_obras }}{% else %}/ Ilimitado{% endif %}
+                </strong>
+            </div>
+        </div>
+
+        {# Alertas de limite atingido #}
+        {% if status_plano.alerta_usuario %}
+        <div class="message error" style="margin-bottom:12px;">
+            ⚠️ {{ status_plano.alerta_usuario }}
+        </div>
+        {% endif %}
+        {% if status_plano.alerta_obra %}
+        <div class="message error" style="margin-bottom:12px;">
+            ⚠️ {{ status_plano.alerta_obra }}
+        </div>
+        {% endif %}
+        {% endif %}
+
+        {# Formulário de definição/troca de plano #}
+        <form method="post" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:16px; align-items:end;">
+            {% csrf_token %}
+            <input type="hidden" name="acao" value="definir_plano">
+            <input type="hidden" name="empresa_id" value="{{ empresa.pk }}">
+
+            <div class="field">
+                <label for="id_plano_nome">Plano</label>
+                <select name="plano_nome" id="id_plano_nome">
+                    <option value="STARTER"      {% if plano_empresa.nome == "STARTER" %}selected{% endif %}>Starter — R$ 490/mês (8 usuários / 3 obras)</option>
+                    <option value="PROFESSIONAL" {% if plano_empresa.nome == "PROFESSIONAL" %}selected{% endif %}>Professional — R$ 1.190/mês (23 usuários / 9 obras)</option>
+                    <option value="BUSINESS"     {% if plano_empresa.nome == "BUSINESS" %}selected{% endif %}>Business — R$ 2.490/mês (50 usuários / 18 obras)</option>
+                    <option value="ENTERPRISE"   {% if plano_empresa.nome == "ENTERPRISE" %}selected{% endif %}>Enterprise — R$ 4.990/mês (Ilimitado)</option>
+                </select>
+            </div>
+
+            <div class="field">
+                <label for="id_max_usuarios">Limite Usuarios (vazio = padrão do plano)</label>
+                <input type="number" name="max_usuarios" id="id_max_usuarios" min="1"
+                       placeholder="Auto" value="{{ plano_empresa.max_usuarios|default:'' }}">
+            </div>
+
+            <div class="field">
+                <label for="id_max_obras">Limite Obras (vazio = padrão do plano)</label>
+                <input type="number" name="max_obras" id="id_max_obras" min="1"
+                       placeholder="Auto" value="{{ plano_empresa.max_obras|default:'' }}">
+            </div>
+
+            <div class="field" style="align-self:end;">
+                <button type="submit" class="btn">Salvar Plano</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="panel" style="margin-bottom: 24px;">
+        <div class="toolbar">
+            <div>
                 <h3>Base Operacional SaaS</h3>
                 <p class="muted">Diagnostico de banco, storage, backup e configuracao segura para sustentacao da plataforma.</p>
             </div>
@@ -141,6 +224,12 @@
         <p class="muted">Nenhum admin da empresa cadastrado ate o momento.</p>
         {% endif %}
 
+        {# Alerta: limite de usuarios atingido #}
+        {% if status_plano and status_plano.alerta_usuario %}
+        <div class="message error" style="margin-bottom:16px;">
+            ⚠️ {{ status_plano.alerta_usuario }}
+        </div>
+        {% else %}
         <form method="post" class="panel admin-subpanel">
             {% csrf_token %}
             <input type="hidden" name="acao" value="criar_admin_empresa">
@@ -163,6 +252,7 @@
                 <button type="submit" class="btn">Criar Admin da Empresa</button>
             </div>
         </form>
+        {% endif %}
     </section>
     {% endif %}
 </div>

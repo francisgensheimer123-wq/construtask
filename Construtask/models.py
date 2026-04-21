@@ -27,6 +27,107 @@ cnpj_validator = RegexValidator(
 )
 
 
+class PlanoEmpresa(models.Model):
+    """
+    Define os limites SaaS de cada empresa (tier de assinatura).
+    Criado/editado exclusivamente pelo superuser Construtask via sistema_admin.
+    """
+
+    class Meta:
+        verbose_name = "Plano da Empresa"
+        verbose_name_plural = "Planos das Empresas"
+
+    PLANO_CHOICES = (
+        ("STARTER", "Starter"),
+        ("PROFESSIONAL", "Professional"),
+        ("BUSINESS", "Business"),
+        ("ENTERPRISE", "Enterprise"),
+    )
+
+    # Limites por plano conforme tabela de preços Construtask
+    LIMITES_PADRAO = {
+        "STARTER":      {"max_usuarios": 8,   "max_obras": 3,   "preco_mensal": 490},
+        "PROFESSIONAL": {"max_usuarios": 23,  "max_obras": 9,   "preco_mensal": 1190},
+        "BUSINESS":     {"max_usuarios": 50,  "max_obras": 18,  "preco_mensal": 2490},
+        "ENTERPRISE":   {"max_usuarios": None, "max_obras": None, "preco_mensal": 4990},
+    }
+
+    nome = models.CharField(
+        max_length=20,
+        choices=PLANO_CHOICES,
+        default="STARTER",
+        unique=False,   # cada empresa tem sua própria linha
+        verbose_name="Plano",
+    )
+    empresa = models.OneToOneField(
+        "Empresa",
+        on_delete=models.CASCADE,
+        related_name="plano",
+        verbose_name="Empresa",
+    )
+    # Limites customizados — None = ilimitado
+    max_usuarios = models.PositiveIntegerField(
+        null=True, blank=True,
+        help_text="Máximo de usuários ativos. Nulo = ilimitado (Enterprise).",
+    )
+    max_obras = models.PositiveIntegerField(
+        null=True, blank=True,
+        help_text="Máximo de obras ativas. Nulo = ilimitado (Enterprise).",
+    )
+    ativo = models.BooleanField(default=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.empresa.nome} — {self.get_nome_display()}"
+
+    def save(self, *args, **kwargs):
+        """Preenche os limites padrão do plano se não informados."""
+        limites = self.LIMITES_PADRAO.get(self.nome, {})
+        if self.max_usuarios is None and "max_usuarios" in limites:
+            self.max_usuarios = limites["max_usuarios"]
+        if self.max_obras is None and "max_obras" in limites:
+            self.max_obras = limites["max_obras"]
+        super().save(*args, **kwargs)
+
+    # ── helpers de verificação ──────────────────────────────
+
+    def usuarios_ativos(self):
+        """Conta usuários ativos vinculados à empresa (exclui superusers)."""
+        return self.empresa.usuarios_empresa.filter(
+            usuario__is_active=True,
+            usuario__is_superuser=False,
+        ).count()
+
+    def obras_ativas(self):
+        """Conta obras com status diferente de encerrado/cancelado."""
+        return self.empresa.obras.exclude(status__in=["ENCERRADA", "CANCELADA"]).count()
+
+    def pode_criar_usuario(self):
+        """Retorna True se ainda há vaga no plano."""
+        if self.max_usuarios is None:
+            return True
+        return self.usuarios_ativos() < self.max_usuarios
+
+    def pode_criar_obra(self):
+        """Retorna True se ainda há vaga no plano."""
+        if self.max_obras is None:
+            return True
+        return self.obras_ativas() < self.max_obras
+
+    def mensagem_limite_usuario(self):
+        return (
+            f"Você chegou ao limite de {self.max_usuarios} usuário(s) para seu plano atual "
+            f"({self.get_nome_display()}). Entre em contato com a Construtask e faça o upgrade do seu plano!"
+        )
+
+    def mensagem_limite_obra(self):
+        return (
+            f"Você chegou ao limite de {self.max_obras} obra(s) para seu plano atual "
+            f"({self.get_nome_display()}). Entre em contato com a Construtask e faça o upgrade do seu plano!"
+        )
+
+
 class Empresa(models.Model):
     """
     Modelo Tenant para suportar mÃºltiplas empresas (Multi-tenant).

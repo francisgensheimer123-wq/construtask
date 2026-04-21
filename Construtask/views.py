@@ -39,7 +39,7 @@ from .forms import (
     obter_centros_da_origem_nota,
     obter_centros_do_contrato,
 )
-from .models import AditivoContrato, AlertaOperacional, AnexoOperacional, Compromisso, CompromissoItem, FechamentoMensal, HistoricoOperacional, Medicao, MedicaoItem, NotaFiscal, NotaFiscalCentroCusto, Obra, OrcamentoBaseline, OrcamentoBaselineItem, PlanoContas
+from .models import AditivoContrato, AlertaOperacional, PlanoEmpresa, AnexoOperacional, Compromisso, CompromissoItem, FechamentoMensal, HistoricoOperacional, Medicao, MedicaoItem, NotaFiscal, NotaFiscalCentroCusto, Obra, OrcamentoBaseline, OrcamentoBaselineItem, PlanoContas
 from .models_aquisicoes import Cotacao, OrdemCompra, SolicitacaoCompra
 from .models_qualidade import NaoConformidade
 from .models_risco import Risco
@@ -89,6 +89,8 @@ from .application.financeiro import (
 )
 from .services_jobs import listar_jobs_recentes
 from .text_normalization import corrigir_mojibake
+
+from .services_tenant import TenantService, LimitePlanoExcedido #inserido por mim
 
 _STATIC_APP_DIR = os.path.join(os.path.dirname(__file__), "static", "app")
 _PDF_LOGO_PATH = os.path.join(_STATIC_APP_DIR, "logo-construtask.png")

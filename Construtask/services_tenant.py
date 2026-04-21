@@ -3,6 +3,14 @@ from django.core.exceptions import PermissionDenied
 from .permissions import can_access_obra, get_empresa_do_usuario, get_obras_permitidas
 
 
+class LimitePlanoExcedido(Exception):
+    """
+    Levantada quando uma ação viola os limites do plano SaaS da empresa.
+    Carrega a mensagem amigável que deve ser exibida ao usuário.
+    """
+    pass
+
+
 class TenantService:
     """Wrapper de compatibilidade sobre a camada oficial de permissões."""
 
@@ -69,3 +77,96 @@ class TenantService:
         except Obra.DoesNotExist:
             session.pop("obra_contexto_id", None)
             return None
+
+    # ── Verificações de limite de plano ────────────────────────────────────
+
+    @classmethod
+    def _get_plano(cls, empresa):
+        """
+        Retorna o PlanoEmpresa vinculado, ou None se não existir.
+        Usa hasattr para evitar ImportError circular — o modelo é resolvido
+        em tempo de execução.
+        """
+        try:
+            return empresa.plano
+        except Exception:
+            return None
+
+    @classmethod
+    def verificar_limite_usuario(cls, empresa):
+        """
+        Levanta LimitePlanoExcedido se a empresa já atingiu o teto de usuários
+        do plano contratado.
+
+        Uso típico (em views/services de criação de usuário):
+            TenantService.verificar_limite_usuario(empresa)
+        """
+        plano = cls._get_plano(empresa)
+        if plano is None:
+            # Sem plano configurado → superuser não restringiu ainda, libera
+            return
+        if not plano.pode_criar_usuario():
+            raise LimitePlanoExcedido(plano.mensagem_limite_usuario())
+
+    @classmethod
+    def verificar_limite_obra(cls, empresa):
+        """
+        Levanta LimitePlanoExcedido se a empresa já atingiu o teto de obras
+        do plano contratado.
+
+        Uso típico (em views/services de criação de obra):
+            TenantService.verificar_limite_obra(empresa)
+        """
+        plano = cls._get_plano(empresa)
+        if plano is None:
+            return
+        if not plano.pode_criar_obra():
+            raise LimitePlanoExcedido(plano.mensagem_limite_obra())
+
+    @classmethod
+    def status_plano(cls, empresa):
+        """
+        Retorna um dict com informações do plano para uso em templates/contexto:
+
+        {
+            "nome": "Professional",
+            "max_usuarios": 23,
+            "usuarios_usados": 10,
+            "max_obras": 9,
+            "obras_usadas": 4,
+            "pode_criar_usuario": True,
+            "pode_criar_obra": True,
+            "alerta_usuario": None | "<mensagem>",
+            "alerta_obra": None | "<mensagem>",
+        }
+        """
+        plano = cls._get_plano(empresa)
+        if plano is None:
+            return {
+                "nome": "Sem plano",
+                "max_usuarios": None,
+                "usuarios_usados": 0,
+                "max_obras": None,
+                "obras_usadas": 0,
+                "pode_criar_usuario": True,
+                "pode_criar_obra": True,
+                "alerta_usuario": None,
+                "alerta_obra": None,
+            }
+
+        usuarios_usados = plano.usuarios_ativos()
+        obras_usadas = plano.obras_ativas()
+        pode_usuario = plano.pode_criar_usuario()
+        pode_obra = plano.pode_criar_obra()
+
+        return {
+            "nome": plano.get_nome_display(),
+            "max_usuarios": plano.max_usuarios,
+            "usuarios_usados": usuarios_usados,
+            "max_obras": plano.max_obras,
+            "obras_usadas": obras_usadas,
+            "pode_criar_usuario": pode_usuario,
+            "pode_criar_obra": pode_obra,
+            "alerta_usuario": None if pode_usuario else plano.mensagem_limite_usuario(),
+            "alerta_obra": None if pode_obra else plano.mensagem_limite_obra(),
+        }
