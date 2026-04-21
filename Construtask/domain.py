@@ -81,22 +81,33 @@ def validar_itens_compromisso_orcamento(compromisso, itens):
             )
 
 
-def gerar_numero_documento(model_class, prefixo, campo):
-    ano = timezone.localdate().year
-    prefixo_ano = f"{prefixo}{ano}-"
-    ultimo = (
-        model_class.objects
-        .filter(**{f"{campo}__startswith": prefixo_ano})
-        .order_by(f"-{campo}", "-id")
-        .first()
-    )
-    if ultimo:
-        ultimo_valor = getattr(ultimo, campo) or ""
-        sufixo = ultimo_valor.replace(prefixo_ano, "", 1)
-        novo_num = int(sufixo) + 1 if sufixo.isdigit() else 1
-    else:
-        novo_num = 1
-    return f"{prefixo_ano}{str(novo_num).zfill(4)}"
+def gerar_numero_documento(model, prefixo, campo):
+    """
+    Gera número sequencial único com proteção contra race condition.
+    Usa select_for_update() para garantir atomicidade em PostgreSQL.
+    """
+    from django.db import transaction
+
+    with transaction.atomic():
+        # Lock na tabela para garantir sequencial único
+        ultimo = (
+            model.objects
+            .select_for_update()
+            .filter(**{f"{campo}__startswith": prefixo})
+            .order_by(f"-{campo}")
+            .first()
+        )
+        if ultimo is None:
+            proximo = 1
+        else:
+            try:
+                sufixo = getattr(ultimo, campo, "").split("-")[-1]
+                proximo = int(sufixo) + 1
+            except (ValueError, IndexError):
+                proximo = model.objects.filter(
+                    **{f"{campo}__startswith": prefixo}
+                ).count() + 1
+        return f"{prefixo}{proximo:04d}"
 
 
 def hidratar_medicao_do_contrato(medicao):

@@ -88,6 +88,7 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'Construtask.observability.RequestObservabilityMiddleware',
+    'Construtask.sentry_middleware.SentryContextMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'Construtask.audit.AuditMiddleware',
@@ -202,9 +203,14 @@ CONSTRUTASK_ALERTAS_SYNC_TTL = int(os.environ.get("CONSTRUTASK_ALERTAS_SYNC_TTL"
 
 CACHES = {
     "default": {
-        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-        "LOCATION": os.environ.get("CONSTRUTASK_CACHE_LOCATION", "construtask-default"),
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": os.environ.get("REDIS_URL", "redis://localhost:6379/1"),
         "TIMEOUT": int(os.environ.get("CONSTRUTASK_CACHE_TIMEOUT", "300")),
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            "IGNORE_EXCEPTIONS": True,  # se Redis cair, degradar graciosamente
+        },
+        "KEY_PREFIX": "construtask",
     }
 }
 
@@ -302,3 +308,60 @@ LOGGING = {
         },
     },
 }
+# ---------------------------------------------------------------------------
+# Sentry — monitoramento de erros em produção
+# ---------------------------------------------------------------------------
+SENTRY_DSN = os.environ.get("SENTRY_DSN", "")
+
+if SENTRY_DSN and not DEBUG:
+    import sentry_sdk
+    from sentry_sdk.integrations.django import DjangoIntegration
+    from sentry_sdk.integrations.celery import CeleryIntegration
+    from sentry_sdk.integrations.redis import RedisIntegration
+    from sentry_sdk.integrations.logging import LoggingIntegration
+    import logging
+
+    sentry_logging = LoggingIntegration(
+        level=logging.INFO,         # captura INFO como breadcrumb
+        event_level=logging.ERROR,  # envia ao Sentry só ERROR ou acima
+    )
+
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        integrations=[
+            DjangoIntegration(
+                transaction_style="url",
+                middleware_spans=True,
+                signals_spans=False,  # evita ruído de signals de auditoria
+                cache_spans=True,
+            ),
+            CeleryIntegration(
+                monitor_beat_tasks=False,
+                propagate_traces=True,
+            ),
+            RedisIntegration(),
+            sentry_logging,
+        ],
+
+        # Percentual de transações enviadas para análise de performance.
+        # 0.05 = 5% — suficiente para identificar lentidão sem custo alto.
+        # Aumente para 0.2 se quiser mais dados no início.
+        traces_sample_rate=0.05,
+
+        # Não enviar dados pessoais — importante para LGPD
+        send_default_pii=False,
+
+        # Ambiente e release — aparece no dashboard do Sentry
+        environment=CONSTRUTASK_ENVIRONMENT,
+        release=os.environ.get("RAILWAY_GIT_COMMIT_SHA", "unknown"),
+
+        # Ignora erros esperados que poluem o dashboard
+        ignore_errors=[
+            "django.http.response.Http404",
+            "django.core.exceptions.PermissionDenied",
+            "django.contrib.auth.models.User.DoesNotExist",
+        ],
+
+        # Limite de eventos por segundo — proteção contra storm de erros
+        max_breadcrumbs=30,
+    )

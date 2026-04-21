@@ -47,7 +47,9 @@ def obter_contexto_central_alertas(obra_contexto, filtros):
     if not obra_contexto:
         return contexto
 
-    sincronizar_alertas_operacionais_obra(obra_contexto)
+# Sincronização assíncrona via Celery — não bloqueia a requisição
+    from ..tasks import task_sincronizar_alertas_obra
+    task_sincronizar_alertas_obra.delay(obra_contexto.pk)
     painel_alertas = resumo_executivo_alertas_operacionais(obra_contexto)
     parametros_alerta = ParametroAlertaEmpresa.obter_ou_criar(obra_contexto.empresa)
     alertas = list(queryset_alertas_central(obra_contexto, filtros))
@@ -91,7 +93,8 @@ def obter_dados_painel_executivo_alertas(request):
     if not obra_contexto:
         return dados
 
-    sincronizar_alertas_operacionais_obra(obra_contexto)
+    from ..tasks import task_sincronizar_alertas_obra
+    task_sincronizar_alertas_obra.delay(obra_contexto.pk)
     painel_alertas = resumo_executivo_alertas_operacionais(obra_contexto)
     indicadores_dashboard = IndicadoresService.resumo_obra(obra_contexto)
     parametros_alerta = ParametroAlertaEmpresa.obter_ou_criar(obra_contexto.empresa)

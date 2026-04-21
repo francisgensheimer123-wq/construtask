@@ -1397,8 +1397,8 @@ class MedicaoItem(models.Model):
     valor_total = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal("0.00"))
 
     class Meta:
-        verbose_name = "Item da MediÃ§Ã£o"
-        verbose_name_plural = "Itens da MediÃ§Ã£o"
+        verbose_name = "Item da Medição"
+        verbose_name_plural = "Itens da Medição"
 
     def __str__(self):
         return f"{self.medicao.numero_da_medicao} - {self.centro_custo.codigo}"
@@ -1633,20 +1633,20 @@ class Documento(models.Model):
     )
 
     STATUS_SEMANTICO = {
-        "RASCUNHO": ("EM_ELABORACAO", "Em elaboraÃ§Ã£o", "secondary"),
-        "EM_REVISAO": ("SUBMETIDO_VALIDACAO", "Submetido para validaÃ§Ã£o", "warning"),
+        "RASCUNHO": ("EM_ELABORACAO", "Em elaboração", "secondary"),
+        "EM_REVISAO": ("SUBMETIDO_VALIDACAO", "Submetido para validação", "warning"),
         "APROVADO": ("VALIDADO", "Validado", "success"),
         "OBSOLETO": ("ENCERRADO", "Encerrado", "dark"),
     }
 
     TIPO_CHOICES = (
         ("PROCEDIMENTO", "Procedimento"),
-        ("INSTRUCAO", "InstruÃ§Ã£o de Trabalho"),
+        ("INSTRUCAO", "Instrução de Trabalho"),
         ("REGISTRO", "Registro de Qualidade"),
         ("MANUAL", "Manual"),
-        ("POLITICA", "PolÃ­tica"),
+        ("POLITICA", "Política"),
         ("ROTEIRO", "Roteiro/Checklist"),
-        ("FORMULARIO", "FormulÃ¡rio"),
+        ("FORMULARIO", "Formulário"),
         ("OUTRO", "Outro"),
     )
 
@@ -1682,34 +1682,39 @@ class Documento(models.Model):
         super().save(*args, **kwargs)
 
     def gerar_codigo(self):
-        """Gera cÃ³digo Ãºnico para o documento."""
-        from datetime import datetime
-        prefixos = {
-            "PROCEDIMENTO": "PRO",
-            "INSTRUCAO": "INS",
-            "REGISTRO": "REG",
-            "MANUAL": "MAN",
-            "POLITICA": "POL",
-            "ROTEIRO": "ROT",
-            "FORMULARIO": "FOR",
-            "OUTRO": "OUT",
-        }
-        prefixo = prefixos.get(self.tipo_documento, "DOC")
-        ano = datetime.now().year
-        ultimos = Documento.objects.filter(
-            codigo_documento__startswith=f"{prefixo}-{ano}"
-        ).order_by("-codigo_documento")
-        
-        if ultimos.exists():
-            ultimo_codigo = ultimos.first().codigo_documento
-            partes = ultimo_codigo.split("-")
-            if len(partes) >= 3:
+            from django.db import transaction
+
+            prefixos = {
+                "PROCEDIMENTO": "PRO",
+                "INSTRUCAO": "INS",
+                "REGISTRO": "REG",
+                "MANUAL": "MAN",
+                "POLITICA": "POL",
+                "ROTEIRO": "ROT",
+                "FORMULARIO": "FOR",
+                "OUTRO": "OUT",
+            }
+            prefixo = prefixos.get(self.tipo_documento, "DOC")
+            ano = timezone.now().year
+            prefixo_ano = f"{prefixo}-{ano}-"
+
+            with transaction.atomic():
+                ultimo = (
+                    Documento.objects
+                    .select_for_update()
+                    .filter(codigo_documento__startswith=prefixo_ano)
+                    .order_by("-codigo_documento")
+                    .first()
+                )
+                if ultimo is None:
+                    return f"{prefixo_ano}0001"
                 try:
-                    numero = int(partes[2]) + 1
-                    return f"{prefixo}-{ano}-{numero:04d}"
-                except ValueError:
-                    pass
-        return f"{prefixo}-{ano}-0001"
+                    numero = int(ultimo.codigo_documento.split("-")[-1]) + 1
+                except (ValueError, IndexError):
+                    numero = Documento.objects.filter(
+                        codigo_documento__startswith=prefixo_ano
+                    ).count() + 1
+                return f"{prefixo_ano}{numero:04d}"
 
     def pode_revisar(self):
         return self.status == "RASCUNHO"
