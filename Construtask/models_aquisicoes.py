@@ -149,7 +149,7 @@ class Cotacao(models.Model):
     STATUS_CHOICES = (
         ("RASCUNHO", "Rascunho"),
         ("EM_APROVACAO", "Em Aprovacao"),
-        ("EM_ANALISE", "Em AnÃ¡lise"),
+        ("EM_ANALISE", "Em Análise"),
         ("APROVADA", "Aprovada"),
         ("REJEITADA", "Rejeitada"),
         ("CANCELADA", "Cancelada"),
