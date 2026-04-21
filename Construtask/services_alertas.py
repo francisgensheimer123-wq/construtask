@@ -23,46 +23,46 @@ from .models_risco import Risco
 
 
 CODIGO_ALERTA_PLANEJAMENTO_SUPRIMENTOS = "PLAN-SUP-001"
-TITULO_ALERTA_PLANEJAMENTO_SUPRIMENTOS = "Atividade planejada sem solicitacao de compra antecipada"
+TITULO_ALERTA_PLANEJAMENTO_SUPRIMENTOS = "Atividade planejada sem solicitação de compra antecipada"
 
 CODIGO_ALERTA_CONTRATO_SEM_MEDICAO = "CONT-MED-001"
-TITULO_ALERTA_CONTRATO_SEM_MEDICAO = "Contrato ativo sem medicao registrada"
+TITULO_ALERTA_CONTRATO_SEM_MEDICAO = "Contrato ativo sem medição registrada"
 
 CODIGO_ALERTA_MEDICAO_SEM_NOTA = "MED-NF-001"
-TITULO_ALERTA_MEDICAO_SEM_NOTA = "Medicao sem nota fiscal vinculada"
+TITULO_ALERTA_MEDICAO_SEM_NOTA = "Medição sem nota fiscal vinculada"
 
 CODIGO_ALERTA_NOTA_SEM_RATEIO = "NF-RAT-001"
 TITULO_ALERTA_NOTA_SEM_RATEIO = "Nota fiscal sem rateio completo"
 
 CODIGO_ALERTA_RISCO_VENCIDO = "RISK-DUE-001"
-TITULO_ALERTA_RISCO_VENCIDO = "Risco com prazo vencido sem tratamento concluido"
+TITULO_ALERTA_RISCO_VENCIDO = "Risco com prazo vencido sem tratamento concluído"
 
 CODIGO_ALERTA_NC_SEM_EVOLUCAO = "NC-EVO-001"
-TITULO_ALERTA_NC_SEM_EVOLUCAO = "Nao conformidade sem evolucao recente"
+TITULO_ALERTA_NC_SEM_EVOLUCAO = "Não conformidade sem evolução recente"
 
 CODIGO_ALERTA_ATIVIDADE_SEM_AVANCO = "PLAN-PROG-001"
-TITULO_ALERTA_ATIVIDADE_SEM_AVANCO = "Atividade iniciada sem avanço fisico registrado"
+TITULO_ALERTA_ATIVIDADE_SEM_AVANCO = "Atividade iniciada sem avanço físico registrado"
 
 CODIGO_ALERTA_DESVIO_PRAZO = "PLAN-PROG-002"
-TITULO_ALERTA_DESVIO_PRAZO = "Avanco fisico abaixo do tempo decorrido"
+TITULO_ALERTA_DESVIO_PRAZO = "Avanço físico abaixo do tempo decorrido"
 
 CODIGO_ALERTA_ESTOURO_PRAZO = "PLAN-PROG-003"
-TITULO_ALERTA_ESTOURO_PRAZO = "Projecao de termino alem do prazo da obra"
+TITULO_ALERTA_ESTOURO_PRAZO = "Projeção de término além do prazo da obra"
 
 CODIGO_ALERTA_DESVIO_CUSTO = "COST-PROG-001"
 TITULO_ALERTA_DESVIO_CUSTO = "Custo realizado acima do previsto proporcional"
 
 CODIGO_ALERTA_CUSTO_SEM_AVANCO = "COST-PROG-002"
-TITULO_ALERTA_CUSTO_SEM_AVANCO = "Lancamento de custo sem avanço fisico correspondente"
+TITULO_ALERTA_CUSTO_SEM_AVANCO = "Lançamento de custo sem avanço físico correspondente"
 
 CODIGO_ALERTA_COMPROMISSO_ACIMA_ORCADO = "COST-BUD-001"
-TITULO_ALERTA_COMPROMISSO_ACIMA_ORCADO = "Compromisso acima do valor orcado"
+TITULO_ALERTA_COMPROMISSO_ACIMA_ORCADO = "Compromisso acima do valor orçado"
 
 CODIGO_ALERTA_MULTIPLOS_RISCOS = "RISK-ACC-001"
-TITULO_ALERTA_MULTIPLOS_RISCOS = "Acumulo de riscos operacionais nao tratados"
+TITULO_ALERTA_MULTIPLOS_RISCOS = "Acumulo de riscos operacionais não tratados"
 
 CODIGO_ALERTA_DESVIO_COMBINADO = "COMB-001"
-TITULO_ALERTA_DESVIO_COMBINADO = "Desvio simultaneo de prazo e custo na atividade"
+TITULO_ALERTA_DESVIO_COMBINADO = "Desvio simultâneo de prazo e custo na atividade"
 
 
 SEVERIDADE_ORDEM = {"CRITICA": 4, "ALTA": 3, "MEDIA": 2, "BAIXA": 1}
@@ -94,10 +94,10 @@ CATALOGO_REGRAS_OPERACIONAIS = [
     {
         "codigo": CODIGO_ALERTA_PLANEJAMENTO_SUPRIMENTOS,
         "titulo": TITULO_ALERTA_PLANEJAMENTO_SUPRIMENTOS,
-        "frente": "Suprimentos e mobilizacao",
-        "gatilho": "Atividade futura sem solicitacao compativel vinculada.",
-        "impacto": "Antecipa ruptura de suprimentos e atraso de mobilizacao.",
-        "recomendacao": "Antecipar solicitacao, cotacao e contratacao das frentes proximas.",
+        "frente": "Suprimentos e mobilização",
+        "gatilho": "Atividade futura sem solicitação compativel vinculada.",
+        "impacto": "Antecipa ruptura de suprimentos e atraso de mobilização.",
+        "recomendacao": "Antecipar solicitação, cotação e contratação das frentes proximas.",
         "tipo_parametro": "dias",
         "resolver_valor": lambda parametros: parametros.planejamento_suprimentos_janela_dias,
     },
