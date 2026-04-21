@@ -6,6 +6,7 @@ from django.urls import reverse_lazy
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import CreateView, DetailView, ListView
 from django.utils import timezone
+from django.db import IntegrityError
 
 from .forms import (
     CotacaoAnexoFormSet,
@@ -188,6 +189,38 @@ class FornecedorCreateView(LoginRequiredMixin, CreateView):
         fornecedor = form.save(commit=False)
         fornecedor.empresa = get_empresa_do_usuario(self.request.user)
         fornecedor.save()
+        messages.success(self.request, "Fornecedor cadastrado com sucesso.")
+        return redirect(self.success_url)
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["empresa"] = get_empresa_do_usuario(self.request.user)
+        return kwargs
+    
+    def form_valid(self, form):
+        _exigir_permissao_aquisicoes(self.request, "create")
+        empresa = get_empresa_do_usuario(self.request.user)
+        if not empresa:
+            messages.error(
+                self.request,
+                "Seu usuário não está vinculado a nenhuma empresa. "
+                "Entre em contato com o administrador do sistema."
+            )
+            return redirect("home")
+
+        fornecedor = form.save(commit=False)
+        fornecedor.empresa = empresa
+
+        try:
+            fornecedor.save()
+        except IntegrityError:
+            messages.error(
+                self.request,
+                "Já existe um fornecedor cadastrado com este CNPJ "
+                "para a sua empresa."
+            )
+            return self.form_invalid(form)
+
         messages.success(self.request, "Fornecedor cadastrado com sucesso.")
         return redirect(self.success_url)
 

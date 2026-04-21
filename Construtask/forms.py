@@ -958,6 +958,31 @@ class FornecedorForm(NormalizeTextFieldsMixin, forms.ModelForm):
         model = Fornecedor
         fields = ["razao_social", "nome_fantasia", "cnpj", "contato", "telefone", "email", "ativo"]
 
+    def __init__(self, *args, **kwargs):
+        self.empresa = kwargs.pop("empresa", None)
+        super().__init__(*args, **kwargs)
+
+    def clean_cnpj(self):
+        from .models_aquisicoes import Fornecedor
+
+        cnpj = self.cleaned_data.get("cnpj")
+        if not cnpj or not self.empresa:
+            return cnpj
+
+        qs = Fornecedor.objects.filter(
+            empresa=self.empresa,
+            cnpj=cnpj,
+        )
+        # Excluir o próprio objeto em caso de edição
+        if self.instance and self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+
+        if qs.exists():
+            raise forms.ValidationError(
+                "Já existe um fornecedor cadastrado com este CNPJ "
+                "para a sua empresa."
+            )
+        return cnpj
 
 class SolicitacaoCompraForm(NormalizeTextFieldsMixin, forms.ModelForm):
     text_fields_to_normalize = ("titulo", "descricao", "status", "observacoes")
