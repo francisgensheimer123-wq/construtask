@@ -206,10 +206,6 @@
         <p class="muted">O admin da empresa pode configurar parametros operacionais, definir a frequencia das reunioes e gerir usuarios operacionais vinculados.</p>
     </section>
 
-    {# ══════════════════════════════════════════════════════════
-       BLOCO: STATUS DO PLANO (somente leitura para o admin)
-       O superuser é quem define o plano em sistema_admin.
-       ══════════════════════════════════════════════════════════ #}
     {% if status_plano %}
     <section class="panel" style="margin-bottom: 24px;">
         <div class="toolbar" style="margin-bottom:12px;">
@@ -277,8 +273,6 @@
     </section>
     {% endif %}
 
-    {# ══════ Restante da página (alertas operacionais, parametros, etc.) ══════ #}
-
     <section class="panel" style="margin-bottom: 24px;">
         <div class="toolbar">
             <div>
@@ -312,6 +306,56 @@
             </table>
         </div>
     </section>
+
+        <h4 style="margin-top: 20px; margin-bottom: 12px;">Nova Obra</h4>
+        <form method="post" class="panel admin-subpanel">
+            {% csrf_token %}
+            <input type="hidden" name="acao" value="criar_obra">
+            <input type="hidden" name="empresa_id" value="{{ empresa.pk }}">
+
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:16px;">
+                <div class="field">
+                    <label for="id_nome">Nome da Obra *</label>
+                    <input type="text" name="nome" id="id_nome" required>
+                </div>
+                <div class="field">
+                    <label for="id_cliente">Cliente</label>
+                    <input type="text" name="cliente" id="id_cliente">
+                </div>
+                <div class="field">
+                    <label for="id_responsavel">Responsavel</label>
+                    <input type="text" name="responsavel" id="id_responsavel">
+                </div>
+                <div class="field">
+                    <label for="id_status">Status</label>
+                    <select name="status" id="id_status">
+                        <option value="PLANEJADA">Planejada</option>
+                        <option value="EM_ANDAMENTO" selected>Em Andamento</option>
+                        <option value="PARALISADA">Paralisada</option>
+                        <option value="CONCLUIDA">Concluida</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label for="id_data_inicio">Data Inicio</label>
+                    <input type="date" name="data_inicio" id="id_data_inicio">
+                </div>
+                <div class="field">
+                    <label for="id_data_fim">Data Fim</label>
+                    <input type="date" name="data_fim" id="id_data_fim">
+                </div>
+            </div>
+            <div class="field" style="margin-top: 12px;">
+                <label for="id_descricao">Descricao</label>
+                <textarea name="descricao" id="id_descricao" rows="2"></textarea>
+            </div>
+
+            <div class="actions">
+                <button type="submit" class="btn">Criar Obra</button>
+            </div>
+        </form>
+    </section>
+
+
 
     <section class="panel">
         <div class="toolbar">
