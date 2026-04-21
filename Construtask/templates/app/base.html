@@ -31,50 +31,84 @@
         }
         a { color: var(--muted-soft); }
         a:hover { color: var(--white); }
-        header { background: linear-gradient(135deg, #000000 0%, #181818 38%, #2c2c2c 68%, #8b0000 100%); color: var(--white); padding: 18px 32px 20px; border-bottom: 4px solid var(--red-dark); box-shadow: 0 18px 40px rgba(0,0,0,.34); }
-        .brand { display:flex; align-items:flex-end; justify-content:space-between; gap:24px; flex-wrap:nowrap; width:100%; }
-        .brand img { max-width: 460px; width: 100%; height: auto; display:block; object-fit: contain; }
-        .brand nav { padding-bottom: 10px; flex: 1 1 auto; min-width: 0; }
-        .nav-main { display:grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items:center; gap:14px; width:100%; }
-        .nav-context { display:inline-flex; gap:8px; align-items:center; flex-wrap:nowrap; min-width: 0; }
-        .nav-context select { min-width: 240px !important; max-width: 240px; width: 240px; }
-        .nav-links { display:flex; align-items:center; justify-content:center; gap:10px 12px; flex-wrap:nowrap; min-width: 0; }
-        .nav-meta { display:flex; align-items:center; justify-content:flex-end; gap:12px; white-space:nowrap; }
+        header { background: linear-gradient(135deg, #000000 0%, #181818 38%, #2c2c2c 68%, #8b0000 100%); color: var(--white); padding: 14px 24px 16px; border-bottom: 4px solid var(--red-dark); box-shadow: 0 18px 40px rgba(0,0,0,.34); }
+        .brand { display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:nowrap; width:100%; }
+        .brand img { max-width: 240px; width: 100%; height: auto; display:block; object-fit: contain; flex-shrink: 0; }
+        .brand nav { flex: 1 1 0; min-width: 0; }
+        .nav-main { display:flex; align-items:center; gap:8px; width:100%; flex-wrap:nowrap; min-width:0; justify-content: flex-end; }
+        .nav-context { display:inline-flex; gap:6px; align-items:center; flex-shrink: 0; }
+        .nav-context select { min-width: 140px; max-width: 190px; width: auto; padding:5px 8px; border-radius:8px; border:1px solid #d1d5db; font-size: 0.83rem; }
+        .nav-links { display:flex; align-items:center; gap:5px; flex-wrap:nowrap; flex-shrink: 1; min-width: 0; overflow: hidden; }
+        .nav-meta { display:flex; align-items:center; gap:8px; white-space:nowrap; flex-shrink: 0; }
         .nav-dropdown { position: relative; display: inline-flex; align-items: center; }
         .nav-dropdown-menu {
             position: absolute;
-            top: calc(100% + 10px);
+            top: calc(100% + 8px);
             right: 0;
             min-width: 180px;
             display: none;
             flex-direction: column;
-            gap: 6px;
-            padding: 10px;
+            gap: 4px;
+            padding: 8px;
             border-radius: 12px;
             border: 1px solid rgba(255,255,255,.14);
             background: linear-gradient(180deg, rgba(44,44,44,.98) 0%, rgba(20,20,20,.98) 100%);
             box-shadow: 0 18px 32px rgba(0,0,0,.34);
-            z-index: 30;
+            z-index: 100;
         }
         .nav-dropdown:hover .nav-dropdown-menu,
         .nav-dropdown:focus-within .nav-dropdown-menu { display: flex; }
-        .nav-dropdown-menu .nav-link { padding: 9px 12px; border-radius: 10px; }
+        .nav-dropdown-menu .nav-link { padding: 8px 12px; border-radius: 10px; width: 100%; box-sizing: border-box; }
+        /* Wrapper do menu de modulos colapsavel */
+        .nav-modules-wrapper { position: relative; display: inline-flex; flex-shrink: 1; min-width: 0; }
+        .nav-modules-toggle {
+            display: none;
+            cursor: pointer;
+            color: #f3f4f6;
+            font-weight: 700;
+            padding: 7px 12px;
+            border-radius: 999px;
+            border: 1px solid rgba(192,57,43,0.46);
+            background: linear-gradient(180deg, rgba(61,61,61,.96) 0%, rgba(33,33,33,.98) 100%);
+            white-space: nowrap;
+            font-size: 0.88rem;
+            user-select: none;
+        }
+        .nav-modules-drawer {
+            display: none;
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            min-width: 200px;
+            flex-direction: column;
+            gap: 4px;
+            padding: 8px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,.14);
+            background: linear-gradient(180deg, rgba(44,44,44,.99) 0%, rgba(16,16,16,.99) 100%);
+            box-shadow: 0 20px 40px rgba(0,0,0,.5);
+            z-index: 100;
+        }
+        .nav-modules-wrapper:hover .nav-modules-drawer,
+        .nav-modules-wrapper:focus-within .nav-modules-drawer { display: flex; }
+        .nav-modules-drawer .nav-link { padding: 9px 12px; border-radius: 10px; width: 100%; box-sizing: border-box; }
         .nav-link {
             color: #f3f4f6;
             text-decoration: none;
             font-weight: 700;
-            padding: 8px 14px;
+            padding: 7px 11px;
             border-radius: 999px;
             transition: background .2s ease, color .2s ease, border-color .2s ease, filter .2s ease;
             border: 1px solid rgba(192, 57, 43, 0.46);
             background: linear-gradient(180deg, rgba(61,61,61,.96) 0%, rgba(33,33,33,.98) 100%);
             box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
             white-space: nowrap;
+            font-size: 0.88rem;
         }
-        .nav-link:hover { color: var(--white); background: linear-gradient(180deg, rgba(77,77,77,.98) 0%, rgba(39,39,39,.98) 100%); border-color: rgba(255, 255, 255, 0.16); filter: brightness(1.05); }
-        .nav-link.group { background: linear-gradient(180deg, rgba(61,61,61,.96) 0%, rgba(33,33,33,.98) 100%); border: 1px solid rgba(192, 57, 43, 0.46); box-shadow: inset 0 1px 0 rgba(255,255,255,.04); }
+        .nav-link:hover { color: var(--white); background: linear-gradient(180deg, rgba(77,77,77,.98) 0%, rgba(39,39,39,.98) 100%); border-color: rgba(255,255,255,0.16); filter: brightness(1.05); }
+        .nav-link.group { background: linear-gradient(180deg, rgba(61,61,61,.96) 0%, rgba(33,33,33,.98) 100%); border: 1px solid rgba(192,57,43,0.46); }
         .nav-link.utility { font-weight: 700; }
-        .nav-user { color:#d1d5db; font-weight:600; }
+        .nav-user { color:#d1d5db; font-weight:600; font-size: 0.88rem; }
         .nav-divider { color:#9ca3af; }
         main { max-width: none; width: 100%; margin: 0; padding: 28px 18px 48px; box-sizing: border-box; }
         main.main-wide-left { max-width: none; width: 100%; margin: 0; padding-right: 24px; }
@@ -400,19 +434,35 @@
         input[name='valor_total'],
         input[name='valor_contratado'],
         input[name='valor_medido'] { text-align: right; }
+        /* Telas intermediarias: oculta links individuais, mostra botao Modulos */
+        @media (max-width: 1280px) {
+            .brand img { max-width: 180px; }
+            .nav-context select { min-width: 120px; max-width: 160px; font-size: 0.8rem; }
+            .nav-link { padding: 6px 9px; font-size: 0.82rem; }
+        }
+        @media (max-width: 1080px) {
+            /* Oculta os links de modulos individuais */
+            .nav-links { display: none; }
+            /* Mostra o botao hamburguer de modulos */
+            .nav-modules-toggle { display: inline-flex; align-items: center; gap: 6px; }
+        }
         @media (max-width: 800px) {
             .grid-2 { grid-template-columns: 1fr; }
             .row { grid-template-columns: 1fr; }
             .row > [class*="col-"] { grid-column: span 1; }
             .selector-item { grid-template-columns: 36px 1fr; }
-            .brand nav { padding-bottom: 0; }
-            .brand { flex-wrap: wrap; }
+            .brand { flex-wrap: wrap; gap: 10px; }
+            .brand img { max-width: 160px; }
+            .brand nav { width: 100%; }
+            .nav-main { flex-wrap: wrap; gap: 8px; justify-content: flex-start; }
+            .nav-context { flex-wrap: wrap; }
+            .nav-context select { min-width: 100%; max-width: 100%; }
+            .nav-links { display: none; }
+            .nav-modules-toggle { display: inline-flex; align-items: center; gap: 6px; }
+            .nav-meta { flex-wrap: wrap; gap: 6px; }
+            .nav-modules-drawer { position: fixed; top: auto; right: 8px; left: 8px; min-width: 0; width: auto; }
+            .nav-dropdown-menu { position: fixed; right: 8px; min-width: 180px; }
             .detail-list li { grid-template-columns: 1fr; }
-            .nav-main { grid-template-columns: 1fr; }
-            .nav-links,
-            .nav-meta { justify-content:flex-start; }
-            .nav-links { flex-wrap: wrap; }
-            .nav-dropdown-menu { position: static; display: flex; margin-top: 8px; min-width: 0; width: 100%; }
             .toolbar { flex-direction: column; align-items: stretch; }
         }
     </style>
@@ -442,18 +492,36 @@
                         <button type="submit" class="btn secondary" style="padding:7px 10px;">Aplicar</button>
                     </form>
                     {% endif %}
+                    <!-- Links de modulos: visiveis em telas largas -->
                     <div class="nav-links">
-                    <a class="nav-link utility" href="{% url 'home' %}">Painel</a>
-                    {% if is_admin_sistema %}
-                    <a class="nav-link utility" href="{% url 'observabilidade_dashboard' %}">Observabilidade</a>
-                    {% endif %}
-                    <a class="nav-link group" href="{% url 'modulo_grupo' 'planejamento' %}">Planejamento</a>
-                    <a class="nav-link group" href="{% url 'modulo_grupo' 'qualidade' %}">Qualidade</a>
-                    <a class="nav-link group" href="{% url 'modulo_grupo' 'aquisicoes' %}">Aquisições</a>
+                        <a class="nav-link utility" href="{% url 'home' %}">Painel</a>
+                        {% if is_admin_sistema %}
+                        <a class="nav-link utility" href="{% url 'observabilidade_dashboard' %}">Observabilidade</a>
+                        {% endif %}
+                        <a class="nav-link group" href="{% url 'modulo_grupo' 'planejamento' %}">Planejamento</a>
+                        <a class="nav-link group" href="{% url 'modulo_grupo' 'qualidade' %}">Qualidade</a>
+                        <a class="nav-link group" href="{% url 'modulo_grupo' 'aquisicoes' %}">Aquisições</a>
                         <a class="nav-link group" href="{% url 'modulo_grupo' 'comunicacoes' %}">Comunicações</a>
                         <a class="nav-link group" href="{% url 'modulo_grupo' 'relatorios' %}">Relatórios</a>
-                    <a class="nav-link group" href="{% url 'modulo_grupo' 'juridico' %}">Jurídico</a>
-                    <a class="nav-link group" href="{% url 'modulo_grupo' 'financeiro' %}">Financeiro</a>
+                        <a class="nav-link group" href="{% url 'modulo_grupo' 'juridico' %}">Jurídico</a>
+                        <a class="nav-link group" href="{% url 'modulo_grupo' 'financeiro' %}">Financeiro</a>
+                    </div>
+                    <!-- Botao de modulos colapsado: visivel em telas medias/pequenas -->
+                    <div class="nav-modules-wrapper">
+                        <span class="nav-modules-toggle">&#9776; Módulos</span>
+                        <div class="nav-modules-drawer">
+                            <a class="nav-link utility" href="{% url 'home' %}">Painel</a>
+                            {% if is_admin_sistema %}
+                            <a class="nav-link utility" href="{% url 'observabilidade_dashboard' %}">Observabilidade</a>
+                            {% endif %}
+                            <a class="nav-link group" href="{% url 'modulo_grupo' 'planejamento' %}">Planejamento</a>
+                            <a class="nav-link group" href="{% url 'modulo_grupo' 'qualidade' %}">Qualidade</a>
+                            <a class="nav-link group" href="{% url 'modulo_grupo' 'aquisicoes' %}">Aquisições</a>
+                            <a class="nav-link group" href="{% url 'modulo_grupo' 'comunicacoes' %}">Comunicações</a>
+                            <a class="nav-link group" href="{% url 'modulo_grupo' 'relatorios' %}">Relatórios</a>
+                            <a class="nav-link group" href="{% url 'modulo_grupo' 'juridico' %}">Jurídico</a>
+                            <a class="nav-link group" href="{% url 'modulo_grupo' 'financeiro' %}">Financeiro</a>
+                        </div>
                     </div>
                     <div class="nav-meta">
                     {% if is_admin_sistema %}
