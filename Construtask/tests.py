@@ -3,6 +3,7 @@ from decimal import Decimal
 from datetime import timedelta
 from io import BytesIO
 from io import StringIO
+import os
 from unittest.mock import patch
 
 import pandas as pd
@@ -599,6 +600,23 @@ class DomainTests(BaseFinanceTestCase):
 
         numero = gerar_numero_documento(Compromisso, "CTR-", "numero")
         self.assertEqual(numero, f"CTR-{date.today().year}-0002")
+
+    def test_gera_numero_documento_reinicia_sequencia_em_novo_ano(self):
+        Compromisso.objects.create(
+            tipo="CONTRATO",
+            centro_custo=self.analitico,
+            descricao="Contrato legado",
+            fornecedor="Fornecedor A",
+            cnpj="12.345.678/0001-90",
+            responsavel="Maria",
+            telefone="11999999999",
+            valor_contratado=Decimal("10.00"),
+            data_assinatura="2025-03-01",
+            numero=f"CTR-{date.today().year - 1}-0042",
+        )
+
+        numero = gerar_numero_documento(Compromisso, "CTR-", "numero")
+        self.assertEqual(numero, f"CTR-{date.today().year}-0001")
 
     def test_hidrata_medicao_a_partir_do_contrato(self):
         contrato = Compromisso.objects.create(
@@ -4177,6 +4195,26 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
         self.assertContains(response, "TEST-001")
         self.assertContains(response, "Catalogo das Regras")
 
+    @override_settings(CONSTRUTASK_ASYNC_ALERT_SYNC_ENABLED=True)
+    def test_central_alertas_operacionais_carrega_com_fila_indisponivel(self):
+        AlertaOperacional.objects.create(
+            obra=self.obra,
+            codigo_regra="TEST-QUEUE-001",
+            titulo="Alerta com fila indisponivel",
+            descricao="Descricao operacional",
+            severidade="ALTA",
+            referencia="REF-QUEUE-1",
+        )
+
+        with patch(
+            "Construtask.tasks.task_sincronizar_alertas_obra.delay",
+            side_effect=RuntimeError("broker indisponivel"),
+        ):
+            response = self.client.get(reverse("alerta_operacional_list"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "TEST-QUEUE-001")
+
     def test_central_alertas_operacionais_filtra_por_prazo_vencido(self):
         AlertaOperacional.objects.create(
             obra=self.obra,
@@ -6433,6 +6471,24 @@ class HardeningProducaoTests(BaseFinanceTestCase):
         ALLOWED_HOSTS=["construtask.example.com"],
         SECURE_PROXY_SSL_HEADER=("HTTP_X_FORWARDED_PROTO", "https"),
         SECURE_SSL_REDIRECT=True,
+        CACHES={
+            "default": {
+                "BACKEND": "django_redis.cache.RedisCache",
+                "LOCATION": "redis://cache.example.com:6379/1",
+                "TIMEOUT": 300,
+                "OPTIONS": {
+                    "CLIENT_CLASS": "django_redis.client.DefaultClient",
+                    "IGNORE_EXCEPTIONS": False,
+                    "LOG_IGNORED_EXCEPTIONS": False,
+                },
+                "KEY_PREFIX": "construtask",
+            },
+            "critical": {
+                "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+                "LOCATION": "construtask-critical",
+                "TIMEOUT": 300,
+            },
+        },
     )
     def test_validar_base_saas_reconhece_storage_persistente_explicito_em_producao(self):
         backup = OperacaoBackupSaaS.objects.create(
@@ -6451,7 +6507,10 @@ class HardeningProducaoTests(BaseFinanceTestCase):
         )
 
         stdout = StringIO()
-        call_command("validar_base_saas", "--json", stdout=stdout)
+        with patch.dict(os.environ, {"REDIS_URL": "redis://cache.example.com:6379/0"}):
+            with patch("django_redis.get_redis_connection") as get_redis_connection:
+                get_redis_connection.return_value.ping.return_value = True
+                call_command("validar_base_saas", "--json", stdout=stdout)
         payload = stdout.getvalue()
         self.assertIn('"backend_path": "Construtask.storage_backends.PersistentMediaStorage"', payload)
         self.assertIn('"status": "ok"', payload)
@@ -6474,6 +6533,8 @@ class HardeningProducaoTests(BaseFinanceTestCase):
         payload = stdout.getvalue()
         self.assertIn('"status": "error"', payload)
         self.assertIn('construtask.E007', payload)
+        self.assertIn('construtask.E008', payload)
+        self.assertIn('construtask.E009', payload)
         self.assertIn('"readiness"', payload)
 
 import json

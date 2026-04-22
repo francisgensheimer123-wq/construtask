@@ -9,12 +9,12 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin as DjangoLoginRequiredMixin
 from django.contrib.auth.views import LoginView, LogoutView
-from django.core.cache import cache
 from django.db.models import Q
 from django.http import HttpResponseRedirect
 from django.urls import reverse_lazy
 from django.utils import timezone
 
+from .cache_utils import critical_cache_delete, critical_cache_get, critical_cache_set
 from .permissions import get_empresa_do_usuario
 
 
@@ -46,7 +46,7 @@ class ConstrutaskLoginView(LoginView):
         return f"construtask:login-lock:{self._client_ip()}:{self._identifier()}"
 
     def _lock_state(self):
-        return cache.get(self._cache_key()) or {"tentativas": 0, "bloqueado_ate": None}
+        return critical_cache_get(self._cache_key()) or {"tentativas": 0, "bloqueado_ate": None}
 
     def _lock_message(self, bloqueado_ate):
         if not bloqueado_ate:
@@ -60,16 +60,16 @@ class ConstrutaskLoginView(LoginView):
             if request.method == "POST":
                 form = self.get_form()
                 form.add_error(None, self._lock_message(bloqueado_ate))
-                return self.form_invalid(form)
+                return self.render_to_response(self.get_context_data(form=form))
         elif bloqueado_ate:
-            cache.delete(self._cache_key())
+            critical_cache_delete(self._cache_key())
         return super().dispatch(request, *args, **kwargs)
 
     def get_success_url(self):
         return self.request.GET.get("next", reverse_lazy("obra_list"))
 
     def form_valid(self, form):
-        cache.delete(self._cache_key())
+        critical_cache_delete(self._cache_key())
         return super().form_valid(form)
 
     def form_invalid(self, form):
@@ -82,7 +82,7 @@ class ConstrutaskLoginView(LoginView):
             if tentativas >= max_tentativas:
                 bloqueado_ate = timezone.now() + timedelta(minutes=lockout_minutes)
                 form.add_error(None, self._lock_message(bloqueado_ate))
-            cache.set(
+            critical_cache_set(
                 self._cache_key(),
                 {"tentativas": tentativas, "bloqueado_ate": bloqueado_ate},
                 timeout=lockout_minutes * 60,

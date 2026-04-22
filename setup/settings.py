@@ -10,9 +10,9 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
-from pathlib import Path
 import json
 import os
+from pathlib import Path
 
 import dj_database_url
 from django.core.exceptions import ImproperlyConfigured
@@ -207,22 +207,42 @@ CONSTRUTASK_SLOW_REQUEST_THRESHOLD_MS = int(os.environ.get("CONSTRUTASK_SLOW_REQ
 CONSTRUTASK_HOME_CACHE_TTL = int(os.environ.get("CONSTRUTASK_HOME_CACHE_TTL", "120"))
 CONSTRUTASK_PLANEJAMENTO_CACHE_TTL = int(os.environ.get("CONSTRUTASK_PLANEJAMENTO_CACHE_TTL", "180"))
 CONSTRUTASK_ALERTAS_SYNC_TTL = int(os.environ.get("CONSTRUTASK_ALERTAS_SYNC_TTL", "120"))
+CONSTRUTASK_ASYNC_ALERT_SYNC_ENABLED = _env_bool("CONSTRUTASK_ASYNC_ALERT_SYNC_ENABLED", not DEBUG)
 
 _REDIS_BASE = os.environ.get("REDIS_URL", "redis://localhost:6379")
+_cache_backend = os.environ.get("CONSTRUTASK_CACHE_BACKEND", "").strip()
+if not _cache_backend:
+    _cache_backend = "django_redis.cache.RedisCache" if os.environ.get("REDIS_URL") else "django.core.cache.backends.locmem.LocMemCache"
+_cache_timeout = int(os.environ.get("CONSTRUTASK_CACHE_TIMEOUT", "300"))
+_cache_ignore_exceptions = _env_bool("CONSTRUTASK_CACHE_IGNORE_EXCEPTIONS", DEBUG)
 
 CACHES = {
-    "default": {
-        "BACKEND": "django_redis.cache.RedisCache",
+    "critical": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "construtask-critical",
+        "TIMEOUT": _cache_timeout,
+    }
+}
+
+if _cache_backend == "django_redis.cache.RedisCache":
+    CACHES["default"] = {
+        "BACKEND": _cache_backend,
         "LOCATION": f"{_REDIS_BASE.rstrip('/')}/1",  # DB 1 para cache
-        "TIMEOUT": int(os.environ.get("CONSTRUTASK_CACHE_TIMEOUT", "300")),
+        "TIMEOUT": _cache_timeout,
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
-            "IGNORE_EXCEPTIONS": True,
-            "LOG_IGNORED_EXCEPTIONS": True,   # <-- loga no logger django_redis
+            "IGNORE_EXCEPTIONS": _cache_ignore_exceptions,
+            "LOG_IGNORED_EXCEPTIONS": _cache_ignore_exceptions,
         },
         "KEY_PREFIX": "construtask",
     }
-}
+else:
+    CACHES["default"] = {
+        "BACKEND": _cache_backend,
+        "LOCATION": os.environ.get("CONSTRUTASK_CACHE_LOCATION", "construtask-default"),
+        "TIMEOUT": _cache_timeout,
+        "KEY_PREFIX": "construtask",
+    }
 
 CELERY_BROKER_URL = f"{_REDIS_BASE.rstrip('/')}/0"       # DB 0 para Celery
 CELERY_RESULT_BACKEND = f"{_REDIS_BASE.rstrip('/')}/0"
@@ -273,8 +293,8 @@ if not DEBUG:
         SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
         USE_X_FORWARDED_HOST = True
     SECURE_HSTS_SECONDS = int(os.environ.get("SECURE_HSTS_SECONDS", "3600"))
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = os.environ.get("SECURE_HSTS_INCLUDE_SUBDOMAINS", "False").lower() in {"1", "true", "yes", "on"}
-    SECURE_HSTS_PRELOAD = os.environ.get("SECURE_HSTS_PRELOAD", "False").lower() in {"1", "true", "yes", "on"}
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = os.environ.get("SECURE_HSTS_INCLUDE_SUBDOMAINS", "True").lower() in {"1", "true", "yes", "on"}
+    SECURE_HSTS_PRELOAD = os.environ.get("SECURE_HSTS_PRELOAD", "True").lower() in {"1", "true", "yes", "on"}
     SECURE_SSL_REDIRECT = os.environ.get("SECURE_SSL_REDIRECT", "True").lower() in {"1", "true", "yes", "on"}
 
 

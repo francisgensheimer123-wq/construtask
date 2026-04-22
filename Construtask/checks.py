@@ -1,3 +1,5 @@
+import os
+
 from django.conf import settings
 from django.core.checks import Error, Tags, register
 from django.db import connections
@@ -59,6 +61,20 @@ def construtask_saas_checks(app_configs, **kwargs):
             Error(
                 "Configure SECURE_PROXY_SSL_HEADER para operacao atras de proxy HTTPS.",
                 id="construtask.E006",
+            )
+        )
+    if settings.CACHES["default"]["BACKEND"] != "django_redis.cache.RedisCache":
+        errors.append(
+            Error(
+                "A operacao SaaS em producao exige cache compartilhado em Redis.",
+                id="construtask.E008",
+            )
+        )
+    if not os.environ.get("REDIS_URL"):
+        errors.append(
+            Error(
+                "Defina REDIS_URL para cache compartilhado e execucao de jobs asincronos.",
+                id="construtask.E009",
             )
         )
     return errors

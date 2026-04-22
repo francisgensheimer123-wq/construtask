@@ -1,3 +1,4 @@
+import os
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -242,12 +243,68 @@ def _check_security():
     }
 
 
+def _check_cache_infra():
+    ambiente_produtivo = not settings.DEBUG
+    backend = settings.CACHES["default"]["BACKEND"]
+    redis_url = os.environ.get("REDIS_URL", "").strip()
+
+    if not ambiente_produtivo:
+        detalhe = "Cache local pronto para desenvolvimento." if backend != "django_redis.cache.RedisCache" else "Cache Redis configurado para desenvolvimento."
+        return {
+            "status": "ok",
+            "titulo": "Cache e fila",
+            "detalhe": detalhe,
+            "backend": backend,
+            "redis_url_configurada": bool(redis_url),
+        }
+
+    if backend != "django_redis.cache.RedisCache":
+        return {
+            "status": "error",
+            "titulo": "Cache e fila",
+            "detalhe": "Em producao, a aplicacao exige cache compartilhado em Redis.",
+            "backend": backend,
+            "redis_url_configurada": bool(redis_url),
+        }
+
+    if not redis_url:
+        return {
+            "status": "error",
+            "titulo": "Cache e fila",
+            "detalhe": "Defina REDIS_URL para cache compartilhado e execucao de jobs.",
+            "backend": backend,
+            "redis_url_configurada": False,
+        }
+
+    try:
+        from django_redis import get_redis_connection
+
+        get_redis_connection("default").ping()
+    except Exception as exc:
+        return {
+            "status": "error",
+            "titulo": "Cache e fila",
+            "detalhe": f"Nao foi possivel validar o Redis operacional: {exc}",
+            "backend": backend,
+            "redis_url_configurada": True,
+        }
+
+    return {
+        "status": "ok",
+        "titulo": "Cache e fila",
+        "detalhe": "Redis operacional validado para cache compartilhado e jobs.",
+        "backend": backend,
+        "redis_url_configurada": True,
+    }
+
+
 def diagnostico_base_saas():
     checks = {
         "database": _check_database(),
         "storage": _check_storage(),
         "backup": _check_backup(),
         "security": _check_security(),
+        "cache": _check_cache_infra(),
     }
     status = _status_principal([item["status"] for item in checks.values()])
     return {

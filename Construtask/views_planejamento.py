@@ -11,7 +11,6 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
-from django.core.cache import cache
 from django.db.models import Count, Prefetch, Q, Sum
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect
@@ -23,6 +22,7 @@ from .application.planejamento import (
     consolidar_arvore_cronograma,
     peso_item_planejado,
 )
+from .cache_utils import request_local_get_or_set, resilient_cache_delete, resilient_cache_get_or_set
 from .forms import PlanoFisicoItemForm
 from .importacao_cronograma import CronogramaService, MapeamentoService
 from .models import PlanoContas
@@ -37,56 +37,60 @@ def _planejamento_cache_ttl():
     return max(30, int(getattr(settings, "CONSTRUTASK_PLANEJAMENTO_CACHE_TTL", 180)))
 
 
-def _cache_get_or_set_planejamento(chave, builder, ttl=None):
-    valor = cache.get(chave)
-    if valor is not None:
-        return valor
-    valor = builder()
-    cache.set(chave, valor, ttl or _planejamento_cache_ttl())
-    return valor
+def _cache_get_or_set_planejamento(chave, builder, ttl=None, request=None):
+    return request_local_get_or_set(
+        request,
+        chave,
+        lambda: resilient_cache_get_or_set(chave, builder, timeout=ttl or _planejamento_cache_ttl()),
+    )
 
 
 def _limpar_cache_plano(plano):
     if not plano:
         return
-    cache.delete(f"planejamento:analise:{plano.pk}")
-    cache.delete(f"planejamento:arvore:{plano.pk}")
-    cache.delete(f"planejamento:divergencias:{plano.pk}")
-    cache.delete(f"planejamento:curva_planejada:{plano.pk}")
-    cache.delete(f"planejamento:curva_realizada:{plano.pk}")
-    cache.delete(f"planejamento:resumo_mapeamento:{plano.obra_id}")
+    resilient_cache_delete(f"planejamento:analise:{plano.pk}")
+    resilient_cache_delete(f"planejamento:arvore:{plano.pk}")
+    resilient_cache_delete(f"planejamento:divergencias:{plano.pk}")
+    resilient_cache_delete(f"planejamento:curva_planejada:{plano.pk}")
+    resilient_cache_delete(f"planejamento:curva_realizada:{plano.pk}")
+    resilient_cache_delete(f"planejamento:resumo_mapeamento:{plano.obra_id}")
 
 
-def _obter_analise_vinculos_cached(plano):
+def _obter_analise_vinculos_cached(plano, request=None):
     return _cache_get_or_set_planejamento(
         f"planejamento:analise:{plano.pk}",
         lambda: MapeamentoService.analisar_vinculos(plano),
+        request=request,
     )
 
 
-def _obter_arvore_cronograma_cached(plano, analise_vinculos):
+def _obter_arvore_cronograma_cached(plano, analise_vinculos, request=None):
     return _cache_get_or_set_planejamento(
         f"planejamento:arvore:{plano.pk}",
         lambda: consolidar_arvore_cronograma(plano, analise_vinculos=analise_vinculos),
+        request=request,
     )
 
 
-def _obter_divergencias_plano_cached(plano, analise_vinculos):
+def _obter_divergencias_plano_cached(plano, analise_vinculos, request=None):
     return _cache_get_or_set_planejamento(
         f"planejamento:divergencias:{plano.pk}",
         lambda: MapeamentoService.verificar_divergencias(plano.pk, analise=analise_vinculos),
+        request=request,
     )
 
 
-def _obter_curvas_cronograma_cached(plano):
+def _obter_curvas_cronograma_cached(plano, request=None):
     return {
         "planejada": _cache_get_or_set_planejamento(
             f"planejamento:curva_planejada:{plano.pk}",
             lambda: CronogramaService.gerar_curva_s_planejada(plano.pk),
+            request=request,
         ),
         "realizada": _cache_get_or_set_planejamento(
             f"planejamento:curva_realizada:{plano.pk}",
             lambda: CronogramaService.gerar_curva_s_realizada(plano.pk),
+            request=request,
         ),
     }
 
@@ -121,6 +125,7 @@ def _resumo_mapeamento_obra(obra):
     return _cache_get_or_set_planejamento(
         f"planejamento:resumo_mapeamento:{obra.pk}",
         lambda: _calcular_resumo_mapeamento_obra(obra),
+        request=None,
     )
 
 
@@ -315,8 +320,8 @@ class PlanoFisicoDetailView(DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         plano = self.object
-        analise_vinculos = _obter_analise_vinculos_cached(plano)
-        itens = _obter_arvore_cronograma_cached(plano, analise_vinculos)
+        analise_vinculos = _obter_analise_vinculos_cached(plano, request=self.request)
+        itens = _obter_arvore_cronograma_cached(plano, analise_vinculos, request=self.request)
         folhas = [item for item in itens if not item.tem_filhos_exibicao]
         raizes = [item for item in itens if item.parent_id is None]
 
@@ -348,11 +353,11 @@ class PlanoFisicoDetailView(DetailView):
             [item for item in itens if item.dias_desvio_exibicao > 0],
             key=lambda item: (-item.dias_desvio_exibicao, item.sort_order, item.pk),
         )[:10]
-        context["divergencias"] = _obter_divergencias_plano_cached(plano, analise_vinculos)
+        context["divergencias"] = _obter_divergencias_plano_cached(plano, analise_vinculos, request=self.request)
         context["tem_divergencias"] = bool(context["divergencias"])
 
         try:
-            curvas = _obter_curvas_cronograma_cached(plano)
+            curvas = _obter_curvas_cronograma_cached(plano, request=self.request)
             context["curva_planejada"] = curvas["planejada"]
             context["curva_realizada"] = curvas["realizada"]
         except Exception:
@@ -498,15 +503,15 @@ class PlanoFisicoDashboardView(TemplateView):
         context["baseline_ativo"] = baseline_ativo
 
         if baseline_ativo:
-            analise_vinculos = _obter_analise_vinculos_cached(baseline_ativo)
-            itens = _obter_arvore_cronograma_cached(baseline_ativo, analise_vinculos)
+            analise_vinculos = _obter_analise_vinculos_cached(baseline_ativo, request=self.request)
+            itens = _obter_arvore_cronograma_cached(baseline_ativo, analise_vinculos, request=self.request)
             context["total_atividades"] = len(itens)
             context["total_macros"] = len([item for item in itens if item.is_marco])
             context["atividades_atrasadas"] = len([item for item in itens if item.dias_desvio_exibicao > 0])
-            curvas = _obter_curvas_cronograma_cached(baseline_ativo)
+            curvas = _obter_curvas_cronograma_cached(baseline_ativo, request=self.request)
             context["curva_planejada"] = curvas["planejada"]
             context["curva_realizada"] = curvas["realizada"]
-            divergencias = _obter_divergencias_plano_cached(baseline_ativo, analise_vinculos)
+            divergencias = _obter_divergencias_plano_cached(baseline_ativo, analise_vinculos, request=self.request)
             context["divergencias"] = divergencias[:10]
             context["total_divergencias"] = len(divergencias)
 

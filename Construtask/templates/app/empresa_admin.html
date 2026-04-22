@@ -307,6 +307,88 @@
         </div>
     </section>
 
+    <section class="panel" style="margin-bottom: 24px;">
+        <div class="toolbar">
+            <div>
+                <h3>Parametros Operacionais dos Alertas</h3>
+                <p class="muted">Ajuste as tolerancias usadas pelas regras automaticas da empresa.</p>
+            </div>
+        </div>
+        <form method="post" class="panel admin-subpanel">
+            {% csrf_token %}
+            <input type="hidden" name="acao" value="salvar_parametros_alerta">
+            <input type="hidden" name="empresa_id" value="{{ empresa.pk }}">
+            <div class="table-responsive">
+                <table class="compact-table parametros-table">
+                    <tbody>
+                        {% for field in parametros_alerta_form %}
+                        <tr>
+                            <th scope="row">
+                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                {% if field.help_text %}
+                                <small class="muted">{{ field.help_text }}</small>
+                                {% endif %}
+                                {% if field.errors %}
+                                <small class="muted" style="color:#fca5a5;">{{ field.errors|join:", " }}</small>
+                                {% endif %}
+                            </th>
+                            <td>
+                                <div class="field">
+                                    {{ field }}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="actions">
+                <button type="submit" class="btn">Salvar Parametros de Alerta</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="panel" style="margin-bottom: 24px;">
+        <div class="toolbar">
+            <div>
+                <h3>Frequencia das Reunioes</h3>
+                <p class="muted">Configure a cadencia padrao das reunioes por horizonte de acompanhamento.</p>
+            </div>
+        </div>
+        <form method="post" class="panel admin-subpanel">
+            {% csrf_token %}
+            <input type="hidden" name="acao" value="salvar_parametros_comunicacao">
+            <input type="hidden" name="empresa_id" value="{{ empresa.pk }}">
+            <div class="table-responsive">
+                <table class="compact-table parametros-table">
+                    <tbody>
+                        {% for field in parametros_comunicacao_form %}
+                        <tr>
+                            <th scope="row">
+                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                {% if field.help_text %}
+                                <small class="muted">{{ field.help_text }}</small>
+                                {% endif %}
+                                {% if field.errors %}
+                                <small class="muted" style="color:#fca5a5;">{{ field.errors|join:", " }}</small>
+                                {% endif %}
+                            </th>
+                            <td>
+                                <div class="field">
+                                    {{ field }}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="actions">
+                <button type="submit" class="btn">Salvar Frequencias das Reunioes</button>
+            </div>
+        </form>
+    </section>
+
         <h4 style="margin-top: 20px; margin-bottom: 12px;">Nova Obra</h4>
         <form method="post" class="panel admin-subpanel">
             {% csrf_token %}

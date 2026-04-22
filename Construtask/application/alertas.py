@@ -1,3 +1,5 @@
+import logging
+
 from django.utils import timezone
 
 from ..models import ParametroAlertaEmpresa
@@ -12,9 +14,11 @@ from ..queries.alertas import (
     queryset_alertas_executivos,
     regras_disponiveis_alerta,
 )
-from ..services_alertas import resumo_executivo_alertas_operacionais, sincronizar_alertas_operacionais_obra
+from ..services_alertas import resumo_executivo_alertas_operacionais
 from ..services_aprovacao import can_assume_alert, can_close_alert, can_justify_alert
 from ..services_indicadores import IndicadoresService
+
+logger = logging.getLogger("construtask.request")
 
 
 def acoes_alerta_permitidas(user):
@@ -37,6 +41,27 @@ def _deve_sincronizar_alertas(obra_id: int) -> bool:
         # Redis indisponível: usar flag em memória por processo para limitar
         return False  # fail-safe: não dispara se cache inacessível
     
+def _agendar_sincronizacao_alertas(obra_contexto):
+    from django.conf import settings
+
+    if not getattr(settings, "CONSTRUTASK_ASYNC_ALERT_SYNC_ENABLED", True):
+        return
+
+    if not obra_contexto or not _deve_sincronizar_alertas(obra_contexto.pk):
+        return
+
+    from ..tasks import task_sincronizar_alertas_obra
+
+    try:
+        task_sincronizar_alertas_obra.delay(obra_contexto.pk)
+    except Exception:
+        logger.warning(
+            "Falha ao agendar sincronizacao assincrona de alertas",
+            extra={"obra_id": obra_contexto.pk},
+            exc_info=True,
+        )
+
+
 def obter_contexto_central_alertas(obra_contexto, filtros):
     contexto = {
         "obra_contexto": obra_contexto,
@@ -56,16 +81,12 @@ def obter_contexto_central_alertas(obra_contexto, filtros):
         },
     }
 
-    if obra_contexto and _deve_sincronizar_alertas(obra_contexto.pk):
-        from ..tasks import task_sincronizar_alertas_obra
-        task_sincronizar_alertas_obra.delay(obra_contexto.pk)
+    _agendar_sincronizacao_alertas(obra_contexto)
 
     if not obra_contexto:
         return contexto
     
 # Sincronização assíncrona via Celery — não bloqueia a requisição
-    from ..tasks import task_sincronizar_alertas_obra
-    task_sincronizar_alertas_obra.delay(obra_contexto.pk)
     painel_alertas = resumo_executivo_alertas_operacionais(obra_contexto)
     parametros_alerta = ParametroAlertaEmpresa.obter_ou_criar(obra_contexto.empresa)
     alertas = list(queryset_alertas_central(obra_contexto, filtros))
@@ -109,8 +130,7 @@ def obter_dados_painel_executivo_alertas(request):
     if not obra_contexto:
         return dados
 
-    from ..tasks import task_sincronizar_alertas_obra
-    task_sincronizar_alertas_obra.delay(obra_contexto.pk)
+    _agendar_sincronizacao_alertas(obra_contexto)
     painel_alertas = resumo_executivo_alertas_operacionais(obra_contexto)
     indicadores_dashboard = IndicadoresService.resumo_obra(obra_contexto)
     parametros_alerta = ParametroAlertaEmpresa.obter_ou_criar(obra_contexto.empresa)

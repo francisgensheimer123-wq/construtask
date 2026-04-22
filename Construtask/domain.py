@@ -1,3 +1,4 @@
+from datetime import date
 from decimal import Decimal, ROUND_HALF_UP
 
 from django.core.exceptions import ValidationError
@@ -88,12 +89,15 @@ def gerar_numero_documento(model, prefixo, campo):
     """
     from django.db import transaction
 
+    ano_atual = date.today().year
+    prefixo_anual = f"{prefixo}{ano_atual}-"
+
     with transaction.atomic():
         # Lock na tabela para garantir sequencial único
         ultimo = (
             model.objects
             .select_for_update()
-            .filter(**{f"{campo}__startswith": prefixo})
+            .filter(**{f"{campo}__startswith": prefixo_anual})
             .order_by(f"-{campo}")
             .first()
         )
@@ -105,9 +109,9 @@ def gerar_numero_documento(model, prefixo, campo):
                 proximo = int(sufixo) + 1
             except (ValueError, IndexError):
                 proximo = model.objects.filter(
-                    **{f"{campo}__startswith": prefixo}
+                    **{f"{campo}__startswith": prefixo_anual}
                 ).count() + 1
-        return f"{prefixo}{proximo:04d}"
+        return f"{prefixo_anual}{proximo:04d}"
 
 
 def hidratar_medicao_do_contrato(medicao):

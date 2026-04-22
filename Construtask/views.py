@@ -14,7 +14,6 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.core.cache import cache
 from django.db.models import Case, Count, DecimalField, ExpressionWrapper, F, Prefetch, Q, Sum, When
 from django.db.models.functions import Coalesce
 from django.db.models.deletion import ProtectedError
@@ -82,6 +81,7 @@ from .application.alertas import (
     obter_contexto_central_alertas,
     obter_dados_painel_executivo_alertas,
 )
+from .cache_utils import critical_cache_add, request_local_get_or_set, resilient_cache_get_or_set
 from .application.financeiro import (
     dados_fechamento_mensal_request,
     dados_projecao_financeira_request,
@@ -115,18 +115,17 @@ def _home_cache_ttl():
     return max(30, int(getattr(settings, "CONSTRUTASK_HOME_CACHE_TTL", 120)))
 
 
-def _cache_get_or_set_local(chave, builder, ttl=None):
-    valor = cache.get(chave)
-    if valor is not None:
-        return valor
-    valor = builder()
-    cache.set(chave, valor, ttl or _home_cache_ttl())
-    return valor
+def _cache_get_or_set_local(chave, builder, ttl=None, request=None):
+    return request_local_get_or_set(
+        request,
+        chave,
+        lambda: resilient_cache_get_or_set(chave, builder, timeout=ttl or _home_cache_ttl()),
+    )
 
 
 def _sincronizar_alertas_operacionais_rate_limited(obra):
     chave = f"alertas:sync:obra:{obra.pk}"
-    if cache.add(chave, True, max(30, int(getattr(settings, "CONSTRUTASK_ALERTAS_SYNC_TTL", 120)))):
+    if critical_cache_add(chave, True, max(30, int(getattr(settings, "CONSTRUTASK_ALERTAS_SYNC_TTL", 120)))):
         sincronizar_alertas_operacionais_obra(obra)
 
 
@@ -2504,10 +2503,12 @@ class HomeView(TemplateView):
         indicadores_exec = _cache_get_or_set_local(
             f"home:consolidado:{obra_contexto.pk}",
             lambda: IntegracaoService.consolidar_obra(obra_contexto),
+            request=self.request,
         )
         eva = _cache_get_or_set_local(
             f"home:eva:{obra_contexto.pk}",
             lambda: EVAService.calcular(obra_contexto),
+            request=self.request,
         )
         context["indicadores_exec"] = indicadores_exec
         plano_referencia = IntegracaoService.obter_plano_referencia(obra_contexto)
@@ -2643,6 +2644,7 @@ class HomeView(TemplateView):
                 em_tratamento=Count("id", filter=Q(status="EM_TRATAMENTO")),
                 fechados=Count("id", filter=Q(status="FECHADO")),
             ),
+            request=self.request,
         )
         context["resumo_riscos"] = resumo_riscos
         
@@ -2674,15 +2676,18 @@ class HomeView(TemplateView):
         painel_alertas = _cache_get_or_set_local(
             f"home:painel_alertas:{obra_contexto.pk}",
             lambda: resumo_executivo_alertas_operacionais(obra_contexto),
+            request=self.request,
         )
         resumo_alertas = painel_alertas["resumo_alertas"]
         alertas_recentes = _cache_get_or_set_local(
             f"home:alertas_recentes:{obra_contexto.pk}",
             lambda: listar_alertas_operacionais_ativos(obra_contexto, limit=8),
+            request=self.request,
         )
         alertas_planejamento_suprimentos = _cache_get_or_set_local(
             f"home:alertas_planejamento_suprimentos:{obra_contexto.pk}",
             lambda: listar_alertas_planejamento_suprimentos(obra_contexto, limit=6),
+            request=self.request,
         )
         context["alertas_operacionais"] = [
             {
@@ -5336,4 +5341,3 @@ def plano_contas_importar_view(request):
             messages.error(request, f"Erro ao importar: {str(e)}")
     
     return render(request, "app/plano_contas_importar.html", {"obra_contexto": obra_contexto})
-
