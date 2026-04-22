@@ -62,9 +62,16 @@ else:
 
 CONSTRUTASK_ENVIRONMENT = os.environ.get("CONSTRUTASK_ENVIRONMENT", "development" if DEBUG else "production").lower()
 CONSTRUTASK_ADMIN_SUPERUSER_USERNAME = os.environ.get("CONSTRUTASK_ADMIN_SUPERUSER_USERNAME", "Construtask")
-ALLOWED_HOSTS = _env_list("ALLOWED_HOSTS", "127.0.0.1,localhost")
-CSRF_TRUSTED_ORIGINS = _env_list("CSRF_TRUSTED_ORIGINS")
-
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.getenv("ALLOWED_HOSTS", "").split(",")
+    if host.strip()
+]
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",")
+    if origin.strip()
+]
 
 # Application definition
 
