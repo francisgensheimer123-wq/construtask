@@ -507,3 +507,43 @@ class HistoricoReuniaoComunicacaoAdmin(admin.ModelAdmin):
     list_filter = ("acao", "criado_em")
     search_fields = ("reuniao__numero", "usuario__username", "observacao")
     readonly_fields = ("criado_em",)
+
+
+from django.contrib import admin, messages
+from .models import OperacaoBackupSaaS
+
+
+@admin.register(OperacaoBackupSaaS)
+class OperacaoBackupSaaSAdmin(admin.ModelAdmin):
+    list_display  = ("tipo", "status", "provedor", "ambiente", "executado_em", "tamanho_bytes")
+    list_filter   = ("tipo", "status", "ambiente")
+    ordering      = ("-executado_em",)
+    readonly_fields = (
+        "tipo", "status", "provedor", "ambiente",
+        "identificador_artefato", "checksum", "tamanho_bytes",
+        "observacao", "executado_em", "solicitado_por",
+        "backup_referencia", "detalhes",
+    )
+    actions = ["disparar_backup_agora"]
+
+    @admin.action(description="▶ Executar backup PostgreSQL → R2 agora")
+    def disparar_backup_agora(self, request, queryset):
+        """
+        Dispara a task Celery de backup independente de quantos
+        registros estiverem selecionados — basta selecionar qualquer um.
+        """
+        try:
+            from .tasks import task_executar_backup_postgres
+            task = task_executar_backup_postgres.delay()
+            self.message_user(
+                request,
+                f"Backup enviado para fila Celery. Task ID: {task.id} — "
+                f"acompanhe o resultado nesta lista em instantes.",
+                level=messages.SUCCESS,
+            )
+        except Exception as exc:
+            self.message_user(
+                request,
+                f"Falha ao enfileirar backup: {exc}",
+                level=messages.ERROR,
+            )
