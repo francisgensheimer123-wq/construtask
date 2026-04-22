@@ -26,3 +26,14 @@ def task_sincronizar_alertas_obra(self, obra_id):
             pass
 
         raise self.retry(exc=exc)
+    
+@shared_task(bind=True, max_retries=1, default_retry_delay=300)
+def task_executar_backup_postgres(self):
+    from django.core.management import call_command
+    from io import StringIO
+    out = StringIO()
+    try:
+        call_command("executar_backup_r2", stdout=out)
+        return out.getvalue()[-500:]
+    except Exception as exc:
+        raise self.retry(exc=exc)
