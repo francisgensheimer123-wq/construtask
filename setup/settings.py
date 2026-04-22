@@ -43,7 +43,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-_secret_key_env = os.environ.get("DJANGO_SECRET_KEY")
+_secret_key_env = os.environ.get("DJANGO_SECRET_KEY") or os.environ.get("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 _debug_env = os.environ.get("DJANGO_DEBUG")
@@ -58,7 +58,9 @@ if _secret_key_env:
 elif DEBUG:
     SECRET_KEY = "django-insecure-development-key"
 else:
-    raise ImproperlyConfigured("Defina DJANGO_SECRET_KEY em ambiente nao local.")
+    raise ImproperlyConfigured(
+        "Defina DJANGO_SECRET_KEY ou SECRET_KEY em ambiente nao local."
+    )
 
 CONSTRUTASK_ENVIRONMENT = os.environ.get("CONSTRUTASK_ENVIRONMENT", "development" if DEBUG else "production").lower()
 CONSTRUTASK_ADMIN_SUPERUSER_USERNAME = os.environ.get("CONSTRUTASK_ADMIN_SUPERUSER_USERNAME", "Construtask")
