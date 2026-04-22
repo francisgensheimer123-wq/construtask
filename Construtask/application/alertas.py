@@ -25,7 +25,18 @@ def acoes_alerta_permitidas(user):
         "pode_reabrir_alerta": can_close_alert(user),
     }
 
-
+def _deve_sincronizar_alertas(obra_id: int) -> bool:
+    """Retorna True apenas se o debounce TTL expirou ou cache indisponível mas com fallback seguro."""
+    from django.core.cache import cache
+    from django.conf import settings
+    chave = f"alertas:sync:obra:{obra_id}"
+    ttl = max(30, int(getattr(settings, "CONSTRUTASK_ALERTAS_SYNC_TTL", 120)))
+    try:
+        return cache.add(chave, True, ttl)
+    except Exception:
+        # Redis indisponível: usar flag em memória por processo para limitar
+        return False  # fail-safe: não dispara se cache inacessível
+    
 def obter_contexto_central_alertas(obra_contexto, filtros):
     contexto = {
         "obra_contexto": obra_contexto,
@@ -44,9 +55,14 @@ def obter_contexto_central_alertas(obra_contexto, filtros):
             "encerrados": 0,
         },
     }
+
+    if obra_contexto and _deve_sincronizar_alertas(obra_contexto.pk):
+        from ..tasks import task_sincronizar_alertas_obra
+        task_sincronizar_alertas_obra.delay(obra_contexto.pk)
+
     if not obra_contexto:
         return contexto
-
+    
 # Sincronização assíncrona via Celery — não bloqueia a requisição
     from ..tasks import task_sincronizar_alertas_obra
     task_sincronizar_alertas_obra.delay(obra_contexto.pk)

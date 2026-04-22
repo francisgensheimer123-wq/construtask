@@ -208,18 +208,24 @@ CONSTRUTASK_HOME_CACHE_TTL = int(os.environ.get("CONSTRUTASK_HOME_CACHE_TTL", "1
 CONSTRUTASK_PLANEJAMENTO_CACHE_TTL = int(os.environ.get("CONSTRUTASK_PLANEJAMENTO_CACHE_TTL", "180"))
 CONSTRUTASK_ALERTAS_SYNC_TTL = int(os.environ.get("CONSTRUTASK_ALERTAS_SYNC_TTL", "120"))
 
+_REDIS_BASE = os.environ.get("REDIS_URL", "redis://localhost:6379")
+
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": os.environ.get("REDIS_URL", "redis://localhost:6379/1"),
+        "LOCATION": f"{_REDIS_BASE.rstrip('/')}/1",  # DB 1 para cache
         "TIMEOUT": int(os.environ.get("CONSTRUTASK_CACHE_TIMEOUT", "300")),
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
-            "IGNORE_EXCEPTIONS": True,  # se Redis cair, degradar graciosamente
+            "IGNORE_EXCEPTIONS": True,
+            "LOG_IGNORED_EXCEPTIONS": True,   # <-- loga no logger django_redis
         },
         "KEY_PREFIX": "construtask",
     }
 }
+
+CELERY_BROKER_URL = f"{_REDIS_BASE.rstrip('/')}/0"       # DB 0 para Celery
+CELERY_RESULT_BACKEND = f"{_REDIS_BASE.rstrip('/')}/0"
 
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 5000
 
@@ -313,6 +319,10 @@ LOGGING = {
             "level": os.environ.get("CONSTRUTASK_ERROR_LOG_LEVEL", "INFO"),
             "propagate": False,
         },
+    },    "django_redis": {
+        "handlers": ["console"],
+        "level": "WARNING",
+        "propagate": False,
     },
 }
 # ---------------------------------------------------------------------------
