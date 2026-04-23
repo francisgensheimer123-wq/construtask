@@ -14,6 +14,7 @@ from django.views.generic import CreateView, DetailView, ListView, UpdateView
 
 from .forms import DocumentoForm, DocumentoRevisaoForm, DocumentoWorkflowForm
 from .models import AuditEvent, Documento, DocumentoRevisao, Obra
+from .pagination import DefaultPaginationMixin
 from .permissions import filtrar_por_empresa as _filtrar_por_empresa, get_empresa_operacional as _get_empresa_do_request
 from .services_aprovacao import can_approve_document, can_submit_for_approval
 
@@ -53,7 +54,7 @@ def _snapshot_revisao(revisao):
     }
 
 
-class DocumentoListView(ListView):
+class DocumentoListView(DefaultPaginationMixin, ListView):
     model = Documento
     template_name = "app/documento_list.html"
     context_object_name = "documentos"

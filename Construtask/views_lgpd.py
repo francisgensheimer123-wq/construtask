@@ -20,7 +20,7 @@ from .services_lgpd import (
     registrar_consentimento,
     revogar_consentimento,
 )
-from .views import _datahora_local, _pdf_relatorio_probatorio_response
+from .export_helpers import _datahora_local, _pdf_relatorio_probatorio_response
 
 
 class LgpdGovernancaView(LoginRequiredMixin, TemplateView):

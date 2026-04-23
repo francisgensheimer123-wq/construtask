@@ -31,7 +31,9 @@ from .permissions import (
     usuario_tem_permissao_modulo,
 )
 from .services_aprovacao import can_approve_document, can_submit_for_approval
-from .views import _datahora_local, _exportar_excel_response, _obter_grupos_navegacao, _pdf_relatorio_probatorio_response
+from .export_helpers import _datahora_local, _exportar_excel_response, _pdf_relatorio_probatorio_response
+from .navigation_helpers import _obter_grupos_navegacao
+from .pagination import DefaultPaginationMixin
 
 
 def _exigir_permissao_comunicacoes(request, acao):
@@ -136,7 +138,7 @@ def _resumo_exportacao_reuniao(reuniao, *, tipo_documento):
     }
 
 
-class ReuniaoComunicacaoListView(LoginRequiredMixin, ListView):
+class ReuniaoComunicacaoListView(LoginRequiredMixin, DefaultPaginationMixin, ListView):
     model = ReuniaoComunicacao
     template_name = "app/comunicacao_reuniao_list.html"
     context_object_name = "reunioes"

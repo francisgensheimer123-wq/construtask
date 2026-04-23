@@ -18,6 +18,7 @@ from .domain import (
     validar_medicao_contrato,
     validar_nota_fiscal,
 )
+from .tenant_querysets import TenantScopedManager
 
 
 # Validators
@@ -392,6 +393,7 @@ class JobAssincrono(models.Model):
     atualizado_em = models.DateTimeField(auto_now=True)
     arquivo_entrada = models.FileField(upload_to="jobs/input/", blank=True, null=True)
     arquivo_resultado = models.FileField(upload_to="jobs/output/", blank=True, null=True)
+    objects = TenantScopedManager()
 
     def __str__(self):
         return f"{self.get_tipo_display()} [{self.get_status_display()}]"
@@ -476,6 +478,7 @@ class MetricaRequisicao(models.Model):
     status_code = models.PositiveIntegerField()
     duracao_ms = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
     criado_em = models.DateTimeField(auto_now_add=True)
+    objects = TenantScopedManager()
 
     def __str__(self):
         return f"{self.metodo} {self.path} [{self.status_code}]"
@@ -513,6 +516,7 @@ class RastroErroAplicacao(models.Model):
     resolvido = models.BooleanField(default=False)
     criado_em = models.DateTimeField(auto_now_add=True)
     resolvido_em = models.DateTimeField(null=True, blank=True)
+    objects = TenantScopedManager()
 
     def __str__(self):
         return f"{self.classe_erro} em {self.path}"
@@ -1014,6 +1018,7 @@ class Obra(models.Model):
     data_inicio = models.DateField(null=True, blank=True)
     data_fim = models.DateField(null=True, blank=True)
     descricao = models.TextField(blank=True)
+    objects = TenantScopedManager()
 
     def __str__(self):
         return f"{self.codigo} - {self.nome}"
@@ -1672,6 +1677,7 @@ class Documento(models.Model):
     criado_por = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="documentos_criados")
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)
+    objects = TenantScopedManager()
 
     def __str__(self):
         return f"{self.codigo_documento} - {self.titulo}"
@@ -1846,5 +1852,4 @@ from .models_comunicacoes import (  # noqa: E402,F401
     ParametroComunicacaoEmpresa,
     ReuniaoComunicacao,
 )
-
 

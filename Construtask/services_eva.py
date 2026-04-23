@@ -66,7 +66,6 @@ class EVAService:
 
     @classmethod
     def _calcular_pv(cls, obra, data_referencia):
-        zero = Decimal("0.00")
         plano = (
             PlanoFisico.objects
             .filter(obra=obra)
@@ -75,29 +74,7 @@ class EVAService:
         )
         if not plano:
             return cls._pv_linear_legado(obra, data_referencia)
-
-        itens_ate_corte = PlanoFisicoItem.objects.filter(
-            plano=plano,
-            filhos__isnull=True,
-            data_fim_prevista__lte=data_referencia,
-        )
-        itens_em_andamento = PlanoFisicoItem.objects.filter(
-            plano=plano,
-            filhos__isnull=True,
-            data_inicio_prevista__lte=data_referencia,
-            data_fim_prevista__gt=data_referencia,
-        )
-
-        pv = itens_ate_corte.aggregate(total=Sum("valor_planejado"))["total"] or zero
-
-        for item in itens_em_andamento:
-            if item.data_inicio_prevista and item.data_fim_prevista and item.valor_planejado:
-                total_dias = (item.data_fim_prevista - item.data_inicio_prevista).days or 1
-                dias_decorridos = (data_referencia - item.data_inicio_prevista).days
-                proporcao = Decimal(str(min(dias_decorridos / total_dias, 1.0)))
-                pv += item.valor_planejado * proporcao
-
-        return pv
+        return IntegracaoService.calcular_valor_planejado_ate_data(obra, data_referencia)
 
     @classmethod
     def _pv_linear_legado(cls, obra, data_referencia):

@@ -21,12 +21,8 @@ from .models import AlertaOperacional
 from .permissions import get_obra_do_contexto as _obter_obra_contexto
 from .services_alertas import atualizar_status_alerta, obter_regra_operacional
 from .services_aprovacao import can_assume_alert, can_close_alert, can_justify_alert
-from .views import (
-    _exportar_excel_response,
-    _grafico_score_operacional,
-    _obter_grupos_navegacao,
-    _pdf_relatorio_probatorio_response,
-)
+from .export_helpers import _exportar_excel_response, _pdf_relatorio_probatorio_response
+from .navigation_helpers import _grafico_score_operacional, _obter_grupos_navegacao
 
 
 class CentralAlertasOperacionaisView(LoginRequiredMixin, TemplateView):

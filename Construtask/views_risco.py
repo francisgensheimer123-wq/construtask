@@ -12,6 +12,7 @@ from django.utils import timezone
 from django.views.generic import CreateView, DetailView, ListView, UpdateView
 
 from .models_risco import Risco, RiscoHistorico
+from .pagination import DefaultPaginationMixin
 from .permissions import (
     filtrar_por_empresa as _filtrar_por_empresa,
     get_empresa_operacional as _get_empresa_do_request,
@@ -31,12 +32,11 @@ def _registrar_historico(risco, usuario, acao, dados_anteriores=None, dados_novo
     )
 
 
-class RiscoListView(ListView):
+class RiscoListView(DefaultPaginationMixin, ListView):
     """Lista de riscos por obra."""
     model = Risco
     template_name = "app/risco_list.html"
     context_object_name = "riscos"
-    paginate_by = 20
 
     def get_queryset(self):
         empresa = _get_empresa_do_request(self.request)

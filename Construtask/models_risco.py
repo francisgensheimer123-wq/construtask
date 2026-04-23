@@ -6,6 +6,7 @@ from django.conf import settings
 from django.db import models
 
 from .domain import gerar_numero_documento
+from .tenant_querysets import TenantScopedManager
 
 
 class Risco(models.Model):
@@ -145,6 +146,7 @@ class Risco(models.Model):
     )
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)
+    objects = TenantScopedManager()
 
     def __str__(self):
         return f"{self.codigo or 'RIS-NOVO'} - {self.titulo} ({self.get_status_display()})"

@@ -29,16 +29,15 @@ from .permissions import (
 )
 from .services_aquisicoes import AquisicoesService
 from .services_lgpd import registrar_acesso_dado_pessoal
-from .views import (
+from .approval_helpers import (
     _aprovar_documento,
-    _datahora_local,
     _enviar_documento_para_aprovacao,
-    _exportar_excel_response,
     _obter_alcada_contexto,
-    _pdf_relatorio_probatorio_response,
     _retornar_documento_para_ajuste,
-    money_br,
 )
+from .export_helpers import _datahora_local, _exportar_excel_response, _pdf_relatorio_probatorio_response
+from .pagination import DefaultPaginationMixin
+from .templatetags.formatters import money_br
 
 
 def _obra_contexto(request):
@@ -151,7 +150,7 @@ def _get_cotacao_item_formset(request, *, solicitacao, data=None):
     return CotacaoItemFormSet(**kwargs), itens
 
 
-class FornecedorListView(LoginRequiredMixin, ListView):
+class FornecedorListView(LoginRequiredMixin, DefaultPaginationMixin, ListView):
     model = Fornecedor
     template_name = "app/fornecedor_list.html"
     context_object_name = "fornecedores"
@@ -225,7 +224,7 @@ class FornecedorCreateView(LoginRequiredMixin, CreateView):
         return redirect(self.success_url)
 
 
-class SolicitacaoCompraListView(LoginRequiredMixin, ListView):
+class SolicitacaoCompraListView(LoginRequiredMixin, DefaultPaginationMixin, ListView):
     model = SolicitacaoCompra
     template_name = "app/solicitacao_compra_list.html"
     context_object_name = "solicitacoes"
@@ -340,7 +339,7 @@ class SolicitacaoCompraDetailView(LoginRequiredMixin, DetailView):
         return redirect("solicitacao_compra_detail", pk=self.object.pk)
 
 
-class CotacaoListView(LoginRequiredMixin, ListView):
+class CotacaoListView(LoginRequiredMixin, DefaultPaginationMixin, ListView):
     model = Cotacao
     template_name = "app/cotacao_list.html"
     context_object_name = "cotacoes"
@@ -544,7 +543,7 @@ class CotacaoDetailView(LoginRequiredMixin, DetailView):
         return redirect("cotacao_detail", pk=self.object.pk)
 
 
-class OrdemCompraListView(LoginRequiredMixin, ListView):
+class OrdemCompraListView(LoginRequiredMixin, DefaultPaginationMixin, ListView):
     model = OrdemCompra
     template_name = "app/ordem_compra_list.html"
     context_object_name = "ordens_compra"

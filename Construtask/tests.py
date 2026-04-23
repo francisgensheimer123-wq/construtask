@@ -3,6 +3,7 @@ from decimal import Decimal
 from datetime import timedelta
 from io import BytesIO
 from io import StringIO
+import json
 import os
 from unittest.mock import patch
 
@@ -2617,6 +2618,72 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
         session = self.client.session
         session["obra_contexto_id"] = self.obra.pk
         session.save()
+
+    def test_tenant_scoped_manager_filtra_fornecedor_por_empresa_do_usuario(self):
+        empresa_externa = Empresa.objects.create(
+            nome="Empresa Externa",
+            nome_fantasia="Empresa Externa",
+            cnpj="98.765.432/0001-10",
+        )
+        Fornecedor.objects.create(
+            empresa=empresa_externa,
+            razao_social="Fornecedor Externo LTDA",
+            nome_fantasia="Fornecedor Externo",
+            cnpj="33.333.333/0001-33",
+        )
+
+        fornecedores = Fornecedor.objects.for_user(self.user)
+
+        self.assertQuerySetEqual(
+            fornecedores.order_by("id"),
+            [self.fornecedor.pk],
+            transform=lambda fornecedor: fornecedor.pk,
+        )
+
+    def test_tenant_scoped_manager_documentos_respeita_obras_permitidas_e_globais(self):
+        usuario_operacional = self._criar_usuario_operacional("documental", "ENGENHEIRO_OBRAS")
+        empresa_externa = Empresa.objects.create(
+            nome="Empresa Documental Externa",
+            nome_fantasia="Empresa Documental Externa",
+            cnpj="77.777.777/0001-77",
+        )
+        obra_externa = Obra.objects.create(
+            empresa=empresa_externa,
+            codigo="EXT-001",
+            nome="Obra Externa",
+        )
+        documento_obra = Documento.objects.create(
+            empresa=self.empresa,
+            obra=self.obra,
+            tipo_documento="PROCEDIMENTO",
+            codigo_documento="PRO-TESTE-0001",
+            titulo="Documento da obra permitida",
+            criado_por=self.user,
+        )
+        documento_global = Documento.objects.create(
+            empresa=self.empresa,
+            obra=None,
+            tipo_documento="PROCEDIMENTO",
+            codigo_documento="PRO-TESTE-0002",
+            titulo="Documento global",
+            criado_por=self.user,
+        )
+        Documento.objects.create(
+            empresa=empresa_externa,
+            obra=obra_externa,
+            tipo_documento="PROCEDIMENTO",
+            codigo_documento="PRO-TESTE-0003",
+            titulo="Documento externo",
+            criado_por=self.user,
+        )
+
+        documentos = Documento.objects.for_user(usuario_operacional)
+
+        self.assertQuerySetEqual(
+            documentos.order_by("codigo_documento"),
+            [documento_obra.pk, documento_global.pk],
+            transform=lambda documento: documento.pk,
+        )
 
     def _criar_usuario_operacional(self, username, papel_aprovacao):
         user_model = get_user_model()
@@ -6458,6 +6525,39 @@ class HardeningProducaoTests(BaseFinanceTestCase):
         self.assertContains(terceira, "Muitas tentativas de login")
 
     @override_settings(
+        CONSTRUTASK_LOGIN_MAX_ATTEMPTS=5,
+        CONSTRUTASK_LOGIN_LOCKOUT_MINUTES=15,
+        CONSTRUTASK_LOGIN_IP_MAX_ATTEMPTS=2,
+        CONSTRUTASK_LOGIN_IP_LOCKOUT_MINUTES=15,
+    )
+    def test_login_bloqueia_por_ip_mesmo_com_usuarios_diferentes(self):
+        self.client.logout()
+        usuario_a = get_user_model().objects.create_user(username="ip_lock_a", password="senha12345")
+        usuario_b = get_user_model().objects.create_user(username="ip_lock_b", password="senha12345")
+        usuario_c = get_user_model().objects.create_user(username="ip_lock_c", password="senha12345")
+
+        primeira = self.client.post(
+            reverse("login"),
+            {"username": usuario_a.username, "password": "senha_errada"},
+            REMOTE_ADDR="10.10.10.10",
+        )
+        segunda = self.client.post(
+            reverse("login"),
+            {"username": usuario_b.username, "password": "senha_errada"},
+            REMOTE_ADDR="10.10.10.10",
+        )
+        terceira = self.client.post(
+            reverse("login"),
+            {"username": usuario_c.username, "password": "senha12345"},
+            REMOTE_ADDR="10.10.10.10",
+        )
+
+        self.assertEqual(primeira.status_code, 200)
+        self.assertEqual(segunda.status_code, 200)
+        self.assertEqual(terceira.status_code, 200)
+        self.assertContains(terceira, "Muitas tentativas de login")
+
+    @override_settings(
         DEBUG=False,
         CONSTRUTASK_ENVIRONMENT="production",
         MEDIA_STORAGE_BACKEND="Construtask.storage_backends.PersistentMediaStorage",
@@ -6537,4 +6637,32 @@ class HardeningProducaoTests(BaseFinanceTestCase):
         self.assertIn('construtask.E009', payload)
         self.assertIn('"readiness"', payload)
 
-import json
+    @override_settings(
+        DEBUG=False,
+        CONSTRUTASK_ENVIRONMENT="production",
+        CONSTRUTASK_ADMIN_URL="painel-seguro/",
+        MEDIA_STORAGE_BACKEND="Construtask.storage_backends.PersistentMediaStorage",
+        CONSTRUTASK_MEDIA_PERSISTENT=True,
+        CONSTRUTASK_FILESYSTEM_MEDIA_ALLOWED_IN_PRODUCTION=False,
+        CONSTRUTASK_BACKUP_ENABLED=True,
+        CONSTRUTASK_BACKUP_PROVIDER="s3",
+        CONSTRUTASK_BACKUP_RETENTION_DAYS=30,
+        CONSTRUTASK_BACKUP_INTERVAL_HOURS=24,
+        ALLOWED_HOSTS=["construtask.example.com"],
+        CSRF_TRUSTED_ORIGINS=["https://construtask.example.com"],
+        SECURE_PROXY_SSL_HEADER=("HTTP_X_FORWARDED_PROTO", "https"),
+        SECURE_SSL_REDIRECT=True,
+        CELERY_BEAT_SCHEDULE={
+            "construtask-backup-postgres-r2": {
+                "task": "Construtask.tasks.task_executar_backup_postgres",
+                "schedule": timedelta(hours=24),
+            }
+        },
+    )
+    def test_validar_prontidao_producao_aceita_admin_customizado_e_agendamento_backup(self):
+        stdout = StringIO()
+        call_command("validar_prontidao_producao", "--json", stdout=stdout)
+        payload = stdout.getvalue()
+
+        self.assertNotIn("construtask.E010", payload)
+        self.assertNotIn("construtask.E011", payload)

@@ -4,6 +4,7 @@ from django.conf import settings
 from django.db import models
 
 from .domain import arredondar_moeda, calcular_total_item, gerar_numero_documento
+from .tenant_querysets import TenantScopedManager
 
 
 class Fornecedor(models.Model):
@@ -25,6 +26,7 @@ class Fornecedor(models.Model):
     anonimizado_em = models.DateTimeField(null=True, blank=True)
     descartado_em = models.DateTimeField(null=True, blank=True)
     criado_em = models.DateTimeField(auto_now_add=True)
+    objects = TenantScopedManager()
 
     @property
     def media_avaliacao(self):
@@ -110,6 +112,7 @@ class SolicitacaoCompra(models.Model):
         related_name="solicitacoes_compra_aprovadas",
     )
     criado_em = models.DateTimeField(auto_now_add=True)
+    objects = TenantScopedManager()
 
     def save(self, *args, **kwargs):
         if not self.numero:
@@ -184,6 +187,7 @@ class Cotacao(models.Model):
         related_name="cotacoes_aprovadas",
     )
     criado_em = models.DateTimeField(auto_now_add=True)
+    objects = TenantScopedManager()
 
     def save(self, *args, **kwargs):
         if not self.numero:
@@ -282,6 +286,7 @@ class OrdemCompra(models.Model):
         related_name="ordens_compra_aprovadas",
     )
     criado_em = models.DateTimeField(auto_now_add=True)
+    objects = TenantScopedManager()
 
     def save(self, *args, **kwargs):
         if not self.numero:
@@ -309,4 +314,3 @@ class OrdemCompraItem(models.Model):
             self.unidade = self.plano_contas.unidade or ""
         self.valor_total = calcular_total_item(self.quantidade, self.valor_unitario)
         super().save(*args, **kwargs)
-

@@ -77,4 +77,22 @@ def construtask_saas_checks(app_configs, **kwargs):
                 id="construtask.E009",
             )
         )
+    if (getattr(settings, "CONSTRUTASK_ADMIN_URL", "admin/").strip("/") or "admin") == "admin":
+        errors.append(
+            Error(
+                "Defina CONSTRUTASK_ADMIN_URL com um caminho administrativo nao previsivel em producao.",
+                id="construtask.E010",
+            )
+        )
+    if (
+        getattr(settings, "CONSTRUTASK_BACKUP_ENABLED", False)
+        and getattr(settings, "CONSTRUTASK_BACKUP_PROVIDER", "")
+        and "construtask-backup-postgres-r2" not in getattr(settings, "CELERY_BEAT_SCHEDULE", {})
+    ):
+        errors.append(
+            Error(
+                "A politica de backup esta habilitada, mas o agendamento recorrente do Celery Beat nao foi configurado.",
+                id="construtask.E011",
+            )
+        )
     return errors

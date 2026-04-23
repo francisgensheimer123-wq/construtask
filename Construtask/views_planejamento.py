@@ -27,6 +27,7 @@ from .forms import PlanoFisicoItemForm
 from .importacao_cronograma import CronogramaService, MapeamentoService
 from .models import PlanoContas
 from .models_planejamento import MapaCorrespondencia, PlanoFisico, PlanoFisicoItem
+from .pagination import DefaultPaginationMixin
 from .permissions import (
     filtrar_por_obra_contexto as _filtrar_por_obra_contexto,
     get_obra_do_contexto as _obter_obra_contexto,
@@ -171,11 +172,10 @@ def _parse_percentual_realizado(valor):
         raise ValueError("Percentual informado invalido.")
 
 
-class PlanoFisicoListView(ListView):
+class PlanoFisicoListView(DefaultPaginationMixin, ListView):
     model = PlanoFisico
     template_name = "app/plano_fisico_list.html"
     context_object_name = "planos"
-    paginate_by = 20
 
     def get_queryset(self):
         itens_qs = PlanoFisicoItem.objects.select_related("parent").only(

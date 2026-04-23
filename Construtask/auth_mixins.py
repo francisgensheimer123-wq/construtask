@@ -45,48 +45,77 @@ class ConstrutaskLoginView(LoginView):
     def _cache_key(self):
         return f"construtask:login-lock:{self._client_ip()}:{self._identifier()}"
 
-    def _lock_state(self):
-        return critical_cache_get(self._cache_key()) or {"tentativas": 0, "bloqueado_ate": None}
+    def _ip_cache_key(self):
+        return f"construtask:login-lock-ip:{self._client_ip()}"
+
+    def _lock_state(self, cache_key):
+        return critical_cache_get(cache_key) or {"tentativas": 0, "bloqueado_ate": None}
+
+    def _lock_config(self):
+        return {
+            self._cache_key(): {
+                "max_tentativas": max(int(getattr(settings, "CONSTRUTASK_LOGIN_MAX_ATTEMPTS", 5) or 5), 1),
+                "lockout_minutes": max(int(getattr(settings, "CONSTRUTASK_LOGIN_LOCKOUT_MINUTES", 15) or 15), 1),
+            },
+            self._ip_cache_key(): {
+                "max_tentativas": max(int(getattr(settings, "CONSTRUTASK_LOGIN_IP_MAX_ATTEMPTS", 10) or 10), 1),
+                "lockout_minutes": max(int(getattr(settings, "CONSTRUTASK_LOGIN_IP_LOCKOUT_MINUTES", 15) or 15), 1),
+            },
+        }
 
     def _lock_message(self, bloqueado_ate):
         if not bloqueado_ate:
             return "Muitas tentativas de login. Tente novamente em alguns minutos."
         return f"Muitas tentativas de login. Tente novamente apos {timezone.localtime(bloqueado_ate).strftime('%d/%m/%Y %H:%M')}."
 
+    def _active_lock(self):
+        agora = timezone.now()
+        bloqueios_ativos = []
+        for cache_key in self._lock_config():
+            estado = self._lock_state(cache_key)
+            bloqueado_ate = estado.get("bloqueado_ate")
+            if bloqueado_ate and bloqueado_ate > agora:
+                bloqueios_ativos.append(bloqueado_ate)
+            elif bloqueado_ate:
+                critical_cache_delete(cache_key)
+        if not bloqueios_ativos:
+            return None
+        return max(bloqueios_ativos)
+
     def dispatch(self, request, *args, **kwargs):
-        estado = self._lock_state()
-        bloqueado_ate = estado.get("bloqueado_ate")
-        if bloqueado_ate and bloqueado_ate > timezone.now():
+        bloqueado_ate = self._active_lock()
+        if bloqueado_ate:
             if request.method == "POST":
                 form = self.get_form()
                 form.add_error(None, self._lock_message(bloqueado_ate))
                 return self.render_to_response(self.get_context_data(form=form))
-        elif bloqueado_ate:
-            critical_cache_delete(self._cache_key())
         return super().dispatch(request, *args, **kwargs)
 
     def get_success_url(self):
         return self.request.GET.get("next", reverse_lazy("obra_list"))
 
     def form_valid(self, form):
-        critical_cache_delete(self._cache_key())
+        for cache_key in self._lock_config():
+            critical_cache_delete(cache_key)
         return super().form_valid(form)
 
     def form_invalid(self, form):
         if self.request.method == "POST":
-            estado = self._lock_state()
-            tentativas = int(estado.get("tentativas") or 0) + 1
-            max_tentativas = max(int(getattr(settings, "CONSTRUTASK_LOGIN_MAX_ATTEMPTS", 5) or 5), 1)
-            lockout_minutes = max(int(getattr(settings, "CONSTRUTASK_LOGIN_LOCKOUT_MINUTES", 15) or 15), 1)
-            bloqueado_ate = None
-            if tentativas >= max_tentativas:
-                bloqueado_ate = timezone.now() + timedelta(minutes=lockout_minutes)
-                form.add_error(None, self._lock_message(bloqueado_ate))
-            critical_cache_set(
-                self._cache_key(),
-                {"tentativas": tentativas, "bloqueado_ate": bloqueado_ate},
-                timeout=lockout_minutes * 60,
-            )
+            bloqueio_disparado = None
+            for cache_key, config in self._lock_config().items():
+                estado = self._lock_state(cache_key)
+                tentativas = int(estado.get("tentativas") or 0) + 1
+                bloqueado_ate = None
+                if tentativas >= config["max_tentativas"]:
+                    bloqueado_ate = timezone.now() + timedelta(minutes=config["lockout_minutes"])
+                    bloqueio_disparado = max(bloqueio_disparado, bloqueado_ate) if bloqueio_disparado else bloqueado_ate
+                critical_cache_set(
+                    cache_key,
+                    {"tentativas": tentativas, "bloqueado_ate": bloqueado_ate},
+                    timeout=config["lockout_minutes"] * 60,
+                )
+            if bloqueio_disparado:
+                form.add_error(None, self._lock_message(bloqueio_disparado))
         return super().form_invalid(form)
 
 

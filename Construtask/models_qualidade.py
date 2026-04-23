@@ -3,6 +3,7 @@ from django.db import models
 from django.utils import timezone
 
 from .domain import gerar_numero_documento
+from .tenant_querysets import TenantScopedManager
 
 
 class NaoConformidade(models.Model):
@@ -62,6 +63,7 @@ class NaoConformidade(models.Model):
     )
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)
+    objects = TenantScopedManager()
 
     def save(self, *args, **kwargs):
         if not self.numero:

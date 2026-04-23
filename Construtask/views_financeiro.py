@@ -6,8 +6,9 @@ from .application.financeiro import dados_fechamento_mensal_request, dados_proje
 from .permissions import get_empresa_operacional as _get_empresa_operacional, get_obra_do_contexto as _obter_obra_contexto
 from .services_jobs import listar_jobs_recentes
 from .services_lgpd import registrar_acesso_dado_pessoal
+from .approval_helpers import _registrar_historico
+from .export_helpers import _datahora_local, _exportar_excel_response, _pdf_relatorio_probatorio_response
 from .templatetags.formatters import money_br
-from .views import _datahora_local, _exportar_excel_response, _pdf_relatorio_probatorio_response, _registrar_historico
 from .models import Obra
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy

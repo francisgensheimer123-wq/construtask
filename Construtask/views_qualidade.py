@@ -8,23 +8,24 @@ from django.utils import timezone
 from .forms import NaoConformidadeForm
 from .models import Obra
 from .models_qualidade import NaoConformidade
+from .pagination import DefaultPaginationMixin
 from .permissions import get_empresa_operacional, get_obra_do_contexto
 from .services_qualidade import QualidadeWorkflowService
 from .services_aprovacao import can_manage_quality
-from .views import (
+from .export_helpers import (
     _datahora_local,
     _exportar_excel_response,
     _exportar_relatorio_probatorio_excel_response,
     _pdf_relatorio_probatorio_response,
-    money_br,
 )
+from .templatetags.formatters import money_br
 
 
 def _obra_contexto(request):
     return get_obra_do_contexto(request)
 
 
-class NaoConformidadeListView(LoginRequiredMixin, ListView):
+class NaoConformidadeListView(LoginRequiredMixin, DefaultPaginationMixin, ListView):
     model = NaoConformidade
     template_name = "app/nao_conformidade_list.html"
     context_object_name = "nao_conformidades"

@@ -3,6 +3,7 @@ from django.db import models
 from django.utils import timezone
 
 from .domain import gerar_numero_documento
+from .tenant_querysets import TenantScopedManager
 
 
 class ParametroComunicacaoEmpresa(models.Model):
@@ -102,6 +103,7 @@ class ReuniaoComunicacao(models.Model):
     )
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)
+    objects = TenantScopedManager()
 
     def __str__(self):
         return self.numero or self.titulo

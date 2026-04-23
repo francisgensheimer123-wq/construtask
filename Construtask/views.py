@@ -1,13 +1,10 @@
 ﻿from collections import defaultdict
 from datetime import date, timedelta
 from decimal import Decimal
-from io import BytesIO
 import os
 import struct
 import unicodedata
 import zlib
-
-import pandas as pd
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from django.conf import settings
@@ -76,24 +73,45 @@ from .services_alertas import (
 from .domain import arredondar_moeda
 from .templatetags.formatters import money_br
 from .audit import AuditService
+from .approval_helpers import (
+    _aprovar_documento as _approval_aprovar_documento,
+    _enviar_documento_para_aprovacao as _approval_enviar_documento_para_aprovacao,
+    _obter_alcada_contexto as _approval_obter_alcada_contexto,
+    _registrar_historico as _approval_registrar_historico,
+    _retornar_documento_para_ajuste as _approval_retornar_documento_para_ajuste,
+)
 from .application.alertas import (
     acoes_alerta_permitidas,
     obter_contexto_central_alertas,
     obter_dados_painel_executivo_alertas,
 )
 from .cache_utils import critical_cache_add, request_local_get_or_set, resilient_cache_get_or_set
+from .export_helpers import (
+    _datahora_local as _export_datahora_local,
+    _exportar_excel_response as _export_excel_response_helper,
+    _exportar_relatorio_probatorio_excel_response as _export_relatorio_probatorio_excel_helper,
+    _pdf_relatorio_probatorio_response as _pdf_relatorio_probatorio_helper,
+    _pdf_relatorio_tabelas_response as _pdf_relatorio_tabelas_helper,
+    _pdf_simples_response as _pdf_simples_helper,
+)
 from .application.financeiro import (
     dados_fechamento_mensal_request,
     dados_projecao_financeira_request,
     registrar_fechamento_mensal,
 )
+from .navigation_helpers import (
+    _calcular_percentual,
+    _grafico_score_operacional,
+    _nivel_resumo_alerta,
+    _obter_grupos_navegacao,
+)
+from .pagination import DefaultPaginationMixin
 from .services_jobs import listar_jobs_recentes
 from .text_normalization import corrigir_mojibake
 
-from .services_tenant import TenantService, LimitePlanoExcedido #inserido por mim
+from .services_tenant import LimitePlanoExcedido, TenantService  # inserido por mim
 
 _STATIC_APP_DIR = os.path.join(os.path.dirname(__file__), "static", "app")
-_PDF_LOGO_PATH = os.path.join(_STATIC_APP_DIR, "logo-construtask.png")
 _EXCEL_FILL_RED = PatternFill(fill_type="solid", fgColor="840B0B")
 _EXCEL_FONT_WHITE = Font(color="FFFFFF", bold=True)
 _EXCEL_FONT_BLACK_BOLD = Font(color="000000", bold=True)
@@ -103,12 +121,6 @@ _EXCEL_BORDER = Border(
     top=Side(style="thin", color="000000"),
     bottom=Side(style="thin", color="000000"),
 )
-
-
-def _calcular_percentual(valor, total):
-    if not total:
-        return 0
-    return round((float(valor) / float(total)) * 100, 1)
 
 
 def _home_cache_ttl():
@@ -139,218 +151,8 @@ def _coletar_post_int(request, campo):
     return int(valor_normalizado)
 
 
-def _nivel_resumo_alerta(total):
-    if total >= 8:
-        return "critico"
-    if total >= 4:
-        return "alto"
-    if total >= 1:
-        return "medio"
-    return "baixo"
-
-
-def _grafico_score_operacional(score_operacional):
-    componentes = list(score_operacional.get("componentes") or [])
-    cores = ["#a61e1e", "#d4a017", "#4f9a2f", "#3f6fd1"]
-    fatias = []
-    offset = Decimal("0.00")
-    for indice, componente in enumerate(componentes):
-        maximo = Decimal(str(componente.get("maximo") or 0))
-        pontuacao = Decimal(str(componente.get("pontuacao") or 0))
-        percentual = Decimal("0.00")
-        if maximo:
-            percentual = (pontuacao / maximo * Decimal("25.00")).quantize(Decimal("0.01"))
-        inicio = offset
-        fim = min(Decimal("100.00"), offset + Decimal("25.00"))
-        fatias.append({
-            "cor": cores[indice % len(cores)],
-            "inicio": inicio,
-            "fim": fim,
-            "percentual_componente": percentual,
-            "indice": indice + 1,
-            "nome": componente.get("nome"),
-            "pontuacao": pontuacao,
-            "nivel": componente.get("nivel"),
-            "detalhe": componente.get("detalhe"),
-        })
-        offset = fim
-    gradiente = ", ".join(
-        f"{item['cor']} {item['inicio']}% {item['fim']}%" for item in fatias
-    ) or "#d1d5db 0 100%"
-    return {
-        "gradiente": gradiente,
-        "fatias": fatias,
-    }
-
-
-def _obter_grupos_navegacao():
-    return {
-        "planejamento": {
-            "slug": "planejamento",
-            "titulo": "Planejamento",
-            "descricao": "Organize o orcamento, acompanhe o cronograma e monitore os riscos da obra em um unico fluxo.",
-            "itens": [
-                {
-                    "titulo": "Plano de Contas",
-                    "descricao": "Estruture a EAP, acompanhe o orcado e mantenha as baselines de referencia.",
-                    "url_name": "plano_contas_list",
-                },
-                {
-                    "titulo": "Cronograma",
-                    "descricao": "Importe, revise e acompanhe as atividades planejadas e realizadas da obra.",
-                    "url_name": "plano_fisico_list",
-                },
-                {
-                    "titulo": "Riscos",
-                    "descricao": "Registre, trate e acompanhe os riscos operacionais e gerenciais da obra.",
-                    "url_name": "risco_list",
-                },
-                {
-                    "titulo": "Alertas Operacionais",
-                    "descricao": "Centralize desvios, justificativas e encerramentos dos alertas automaticos da obra.",
-                    "url_name": "alerta_operacional_list",
-                },
-            ],
-        },
-        "qualidade": {
-            "slug": "qualidade",
-            "titulo": "Qualidade",
-            "descricao": "Concentre o controle documental, as nao conformidades e as evidencias formais da obra.",
-            "itens": [
-                {
-                    "titulo": "Documentos",
-                    "descricao": "Controle revisoes, aprovacoes e rastreabilidade dos documentos da obra.",
-                    "url_name": "documento_list",
-                },
-                {
-                    "titulo": "Nao Conformidades",
-                    "descricao": "Gerencie tratativas, evidencias e encerramentos das ocorrencias de qualidade.",
-                    "url_name": "nao_conformidade_list",
-                },
-                {
-                    "titulo": "Central de Evidencias",
-                    "descricao": "Acesse rapidamente os comprovantes formais e registros probatorios da operacao.",
-                    "url_name": "central_evidencias",
-                },
-            ],
-        },
-        "aquisicoes": {
-            "slug": "aquisicoes",
-            "titulo": "Aquisicoes",
-            "descricao": "Administre fornecedores, solicitacoes, cotacoes, ordens e compromissos em uma jornada unica.",
-            "itens": [
-                {
-                    "titulo": "Fornecedores",
-                    "descricao": "Cadastre e acompanhe os parceiros que participam da cadeia de suprimentos.",
-                    "url_name": "fornecedor_list",
-                },
-                {
-                    "titulo": "Solicitacoes",
-                    "descricao": "Abra e acompanhe as demandas de compra originadas pela obra.",
-                    "url_name": "solicitacao_compra_list",
-                },
-                {
-                    "titulo": "Cotacoes",
-                    "descricao": "Compare propostas e consolide o processo de aquisicao.",
-                    "url_name": "cotacao_list",
-                },
-                {
-                    "titulo": "Ordens de Compra",
-                    "descricao": "Visualize as ordens emitidas a partir das cotacoes aprovadas.",
-                    "url_name": "ordem_compra_list",
-                },
-                {
-                    "titulo": "Compras e Contratacoes",
-                    "descricao": "Gerencie pedidos, contratos, aditivos e compromissos financeiros da obra.",
-                    "url_name": "compromisso_list",
-                },
-            ],
-        },
-        "comunicacoes": {
-            "slug": "comunicacoes",
-            "titulo": "Comunicacoes",
-            "descricao": "Conduza reunioes de curto, medio e longo prazo com pauta semi automatica, definicoes e ata formal.",
-            "itens": [
-                {
-                    "titulo": "Reunioes e Atas",
-                    "descricao": "Monte pautas automaticamente a partir do contexto da obra, registre respostas e envie a ata para aprovacao.",
-                    "url_name": "reuniao_comunicacao_list",
-                },
-            ],
-        },
-        "relatorios": {
-            "slug": "relatorios",
-            "titulo": "Relatorios",
-            "descricao": "Reuna os principais documentos gerenciais e de acompanhamento da obra.",
-            "itens": [
-                {
-                    "titulo": "Dossie da Obra",
-                    "descricao": "Consulte o documento consolidado de acompanhamento tecnico e gerencial.",
-                    "url_name": "dossie_obra",
-                },
-                {
-                    "titulo": "Fechamento Mensal",
-                    "descricao": "Analise o fechamento periodico da obra com base em custo e execucao.",
-                    "url_name": "fechamento_mensal",
-                },
-                {
-                    "titulo": "Curva ABC",
-                    "descricao": "Veja a concentracao de relevancia financeira dos centros de custo da obra.",
-                    "url_name": "curva_abc",
-                },
-            ],
-        },
-        "juridico": {
-            "slug": "juridico",
-            "titulo": "Juridico",
-            "descricao": "Centralize governanca, transparência e documentos institucionais do sistema.",
-            "itens": [
-                {
-                    "titulo": "LGPD",
-                    "descricao": "Acompanhe a governanca de dados pessoais, trilhas e evidencias de conformidade.",
-                    "url_name": "lgpd_governanca",
-                },
-                {
-                    "titulo": "Termos de Uso",
-                    "descricao": "Consulte as regras de uso e responsabilidade do sistema.",
-                    "url_name": "termos_uso",
-                },
-                {
-                    "titulo": "Politica de Privacidade",
-                    "descricao": "Visualize os principios de tratamento e protecao de dados adotados.",
-                    "url_name": "politica_privacidade",
-                },
-            ],
-        },
-        "financeiro": {
-            "slug": "financeiro",
-            "titulo": "Financeiro",
-            "descricao": "Monitore a execucao financeira da obra com foco em notas, medicoes e projecoes.",
-            "itens": [
-                {
-                    "titulo": "Notas Fiscais",
-                    "descricao": "Controle emissao, rateio e situacao financeira das notas da obra.",
-                    "url_name": "nota_fiscal_list",
-                },
-                {
-                    "titulo": "Medicoes",
-                    "descricao": "Acompanhe lancamentos, aprovacoes e valores medidos.",
-                    "url_name": "medicao_list",
-                },
-                {
-                    "titulo": "Projecao Financeira",
-                    "descricao": "Projete entradas e saidas futuras com base no andamento da obra.",
-                    "url_name": "projecao_financeira",
-                },
-            ],
-        },
-    }
-
-
 def _datahora_local(datahora):
-    if not datahora:
-        return None
-    return timezone.localtime(datahora)
+    return _export_datahora_local(datahora)
 
 
 def _normalizar_texto_exportacao(valor):
@@ -568,19 +370,7 @@ def _construir_formset_nota(*, data=None, instance=None, prefix="rateio", pedido
 
 
 def _obter_alcada_contexto(user, valor):
-    papel = get_papel_aprovacao(user)
-    limite = get_limite_aprovacao(user)
-    if limite is None:
-        limite_label = "ilimitada"
-    else:
-        limite_label = money_br(limite)
-    return {
-        "papel_aprovacao": papel,
-        "limite_aprovacao": limite,
-        "limite_aprovacao_label": limite_label,
-        "pode_enviar_para_aprovacao": can_submit_for_approval(user),
-        "pode_aprovar": can_approve_value(user, valor),
-    }
+    return _approval_obter_alcada_contexto(user, valor)
 
 
 def _criar_baseline_orcamento(obra, *, descricao, usuario):
@@ -696,48 +486,22 @@ def _retornar_baseline_para_ajuste(request, baseline):
 
 
 def _enviar_documento_para_aprovacao(request, objeto, *, status_em_aprovacao, descricao):
-    if not can_submit_for_approval(request.user):
-        messages.error(request, "Seu usuario nao possui funcao operacional para enviar este registro para aprovacao.")
-        return False
-    if objeto.status == status_em_aprovacao:
-        messages.info(request, "Este registro ja esta em aprovacao.")
-        return False
-
-    parecer = (request.POST.get("parecer_aprovacao") or "").strip()
-    objeto.status = status_em_aprovacao
-    objeto.enviado_para_aprovacao_em = timezone.now()
-    objeto.enviado_para_aprovacao_por = request.user
-    objeto.parecer_aprovacao = parecer
-    objeto.aprovado_em = None
-    objeto.aprovado_por = None
-    objeto.save()
-    descricao_historico = descricao if not parecer else f"{descricao} Parecer: {parecer}"
-    _registrar_historico("APROVACAO", objeto, descricao_historico, request.user)
-    messages.success(request, "Registro enviado para aprovacao.")
-    return True
+    return _approval_enviar_documento_para_aprovacao(
+        request,
+        objeto,
+        status_em_aprovacao=status_em_aprovacao,
+        descricao=descricao,
+    )
 
 
 def _aprovar_documento(request, objeto, *, valor, status_aprovado, descricao):
-    if not can_approve_value(request.user, valor):
-        messages.error(request, "Sua funcao nao possui alcada suficiente para aprovar este valor.")
-        return False
-    parecer = (request.POST.get("parecer_aprovacao") or "").strip()
-    before = AuditService.instance_to_dict(objeto)
-    objeto.status = status_aprovado
-    objeto.parecer_aprovacao = parecer
-    objeto.aprovado_em = timezone.now()
-    objeto.aprovado_por = request.user
-    if not objeto.enviado_para_aprovacao_em:
-        objeto.enviado_para_aprovacao_em = timezone.now()
-    if not objeto.enviado_para_aprovacao_por:
-        objeto.enviado_para_aprovacao_por = request.user
-    objeto.save()
-    after = AuditService.instance_to_dict(objeto)
-    AuditService.log_event(request, "APPROVE", objeto, before, after)
-    descricao_historico = descricao if not parecer else f"{descricao} Parecer: {parecer}"
-    _registrar_historico("APROVACAO", objeto, descricao_historico, request.user)
-    messages.success(request, "Registro aprovado com sucesso.")
-    return True
+    return _approval_aprovar_documento(
+        request,
+        objeto,
+        valor=valor,
+        status_aprovado=status_aprovado,
+        descricao=descricao,
+    )
 
 
 def _retornar_documento_para_ajuste(
@@ -748,24 +512,13 @@ def _retornar_documento_para_ajuste(
     status_ajuste,
     descricao,
 ):
-    if not can_approve_value(request.user, valor):
-        messages.error(request, "Sua funcao nao possui alcada suficiente para devolver este valor para ajuste.")
-        return False
-    parecer = (request.POST.get("parecer_aprovacao") or "").strip()
-    if not parecer:
-        messages.error(request, "Informe um parecer para devolver o registro para ajuste.")
-        return False
-    before = AuditService.instance_to_dict(objeto)
-    objeto.status = status_ajuste
-    objeto.parecer_aprovacao = parecer
-    objeto.aprovado_em = None
-    objeto.aprovado_por = None
-    objeto.save()
-    after = AuditService.instance_to_dict(objeto)
-    AuditService.log_event(request, "REJECT", objeto, before, after)
-    _registrar_historico("APROVACAO", objeto, f"{descricao} Parecer: {parecer}", request.user)
-    messages.success(request, "Registro devolvido para ajuste.")
-    return True
+    return _approval_retornar_documento_para_ajuste(
+        request,
+        objeto,
+        valor=valor,
+        status_ajuste=status_ajuste,
+        descricao=descricao,
+    )
 
 
 def _valor_total_aditivo(aditivo):
@@ -1093,647 +846,11 @@ def _aplicar_layout_excel_relatorio(worksheet, titulo_relatorio, subtitulo=None)
 
 
 def _exportar_excel_response(nome_arquivo, sheet_name, linhas):
-    output = BytesIO()
-    linhas = _normalizar_linhas_exportacao(linhas)
-    dataframe = pd.DataFrame(linhas)
-    with pd.ExcelWriter(output, engine="openpyxl") as writer:
-        dataframe.to_excel(writer, index=False, sheet_name=sheet_name)
-        worksheet = writer.book[sheet_name]
-        _aplicar_layout_excel_relatorio(worksheet, sheet_name)
-    output.seek(0)
-    response = HttpResponse(
-        output.getvalue(),
-        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    )
-    response["Content-Disposition"] = f'attachment; filename="{nome_arquivo}"'
-    return response
-
-
-import re
-
-
-def _pdf_escape(texto):
-    """
-    Sanitiza texto antes de escrever conteudo bruto no PDF.
-    """
-    texto = "-" if texto is None else str(texto)
-    texto = _sanear_texto_exportacao_seguro(texto)
-    for termo_antigo, termo_novo in {
-        "HISTRICO": "HIST\u00d3RICO",
-        "APROVAO": "APROVA\u00c7\u00c3O",
-        "DESCRIO": "DESCRI\u00c7\u00c3O",
-        "CONTRATAES": "CONTRATA\u00c7\u00d5ES",
-        "MEDIO": "MEDI\u00c7\u00c3O",
-    }.items():
-        texto = texto.replace(termo_antigo, termo_novo)
-    return (
-        texto
-        .replace("\\", "\\\\")
-        .replace("(", "\\(")
-        .replace(")", "\\)")
-    )
-
-
-def _pdf_wrap_text(texto, largura_maxima, tamanho_fonte):
-    """
-    Quebra texto em multiplas linhas de forma mais conservadora para evitar
-    estouro horizontal dentro da celula do PDF.
-    """
-    texto = _sanear_texto_exportacao_seguro(texto or "-").strip()
-    if not texto:
-        return ["-"]
-
-    largura_maxima = max(float(largura_maxima or 0), 20.0)
-    tamanho_fonte = max(float(tamanho_fonte or 0), 6.0)
-
-    largura_util = max(largura_maxima - 6.0, 10.0)
-
-    paragrafos = texto.splitlines()
-    linhas_finais = []
-
-    for paragrafo in paragrafos:
-        paragrafo = re.sub(r"\s+", " ", paragrafo).strip()
-
-        if not paragrafo:
-            linhas_finais.append("")
-            continue
-
-        palavras = paragrafo.split(" ")
-        linha_atual = ""
-
-        for palavra in palavras:
-            while palavra and _pdf_estimar_largura_texto(palavra, tamanho_fonte) > largura_util:
-                if linha_atual:
-                    linhas_finais.append(linha_atual)
-                    linha_atual = ""
-                parte, resto = _pdf_quebrar_palavra_longa(palavra, largura_util, tamanho_fonte)
-                linhas_finais.append(parte)
-                palavra = resto
-
-            if not linha_atual:
-                linha_atual = palavra
-            else:
-                candidato = f"{linha_atual} {palavra}"
-                if _pdf_estimar_largura_texto(candidato, tamanho_fonte) <= largura_util:
-                    linha_atual = candidato
-                else:
-                    linhas_finais.append(linha_atual)
-                    linha_atual = palavra
-
-        if linha_atual:
-            linhas_finais.append(linha_atual)
-
-    return linhas_finais or ["-"]
-
-
-def _pdf_estimar_largura_texto(texto, tamanho_fonte):
-    texto = _sanear_texto_exportacao_seguro(texto or "")
-    largura = 0.0
-    for caractere in texto:
-        if caractere in "W@%MmQGOD":
-            fator = 0.92
-        elif caractere in "ABCDEFGHKNOPRSTUVXYZ":
-            fator = 0.78
-        elif caractere in "mw":
-            fator = 0.82
-        elif caractere in "ijlI1|.,:;!'` ":
-            fator = 0.30
-        elif caractere in "-_/\\()[]{}":
-            fator = 0.42
-        elif caractere.isdigit():
-            fator = 0.60
-        else:
-            fator = 0.56
-        largura += tamanho_fonte * fator
-    return largura
-
-
-def _pdf_ajustar_texto_para_largura(texto, largura_maxima, tamanho_fonte, sufixo="..."):
-    texto = _sanear_texto_exportacao_seguro(texto or "")
-    if _pdf_estimar_largura_texto(texto, tamanho_fonte) <= largura_maxima:
-        return texto
-    base = texto
-    while base:
-        candidato = f"{base}{sufixo}"
-        if _pdf_estimar_largura_texto(candidato, tamanho_fonte) <= largura_maxima:
-            return candidato
-        base = base[:-1].rstrip()
-    return sufixo
-
-
-def _pdf_quebrar_palavra_longa(palavra, largura_maxima, tamanho_fonte):
-    ponto_quebra = 1
-    for indice in range(1, len(palavra) + 1):
-        trecho = palavra[:indice]
-        if _pdf_estimar_largura_texto(trecho, tamanho_fonte) > largura_maxima:
-            break
-        ponto_quebra = indice
-    if ponto_quebra >= len(palavra):
-        return palavra, ""
-    if ponto_quebra > 3:
-        return f"{palavra[:ponto_quebra - 1]}-", palavra[ponto_quebra - 1:]
-    return palavra[:ponto_quebra], palavra[ponto_quebra:]
-
-
-def _pdf_text_commands(x, y, texto, *, fonte="F1", tamanho=10):
-    return [
-        "0 0 0 rg",
-        "BT",
-        f"/{fonte} {tamanho} Tf",
-        f"{x:.2f} {y:.2f} Td",
-        f"({_pdf_escape(texto)}) Tj",
-        "ET",
-    ]
-
-
-def _pdf_text_commands_color(x, y, texto, *, fonte="F1", tamanho=10, rgb=(0, 0, 0)):
-    r, g, b = rgb
-    return [
-        f"{r} {g} {b} rg",
-        "BT",
-        f"/{fonte} {tamanho} Tf",
-        f"{x:.2f} {y:.2f} Td",
-        f"({_pdf_escape(texto)}) Tj",
-        "ET",
-        "0 0 0 rg",
-    ]
-
-
-def _pdf_normalizar_colunas(colunas):
-    colunas_normalizadas = []
-    for coluna in colunas:
-        if isinstance(coluna, dict):
-            colunas_normalizadas.append(
-                {
-                    "chave": coluna.get("chave") or coluna.get("titulo") or "valor",
-                    "titulo": coluna.get("titulo") or coluna.get("chave") or "Valor",
-                    "largura": float(coluna.get("largura", 80)),
-                    "align": coluna.get("align") or _pdf_inferir_alinhamento_coluna(coluna.get("titulo") or coluna.get("chave") or ""),
-                }
-            )
-        else:
-            titulo, largura = coluna
-            colunas_normalizadas.append(
-                {
-                    "chave": titulo,
-                    "titulo": titulo,
-                    "largura": float(largura),
-                    "align": _pdf_inferir_alinhamento_coluna(titulo),
-                }
-            )
-    return colunas_normalizadas
-
-
-def _pdf_inferir_alinhamento_coluna(titulo):
-    titulo_normalizado = _sanear_texto_exportacao_seguro(titulo or "").lower()
-    if any(chave in titulo_normalizado for chave in ["valor", "saldo", "total", "quantidade", "%", "percent", "nivel"]):
-        return "right"
-    if any(chave in titulo_normalizado for chave in ["data", "emissao", "vencimento", "validade"]):
-        return "center"
-    return "left"
-
-
-def _pdf_x_texto_alinhado(x_cursor, largura, texto, tamanho_fonte, alinhamento, padding_x):
-    largura_texto = _pdf_estimar_largura_texto(texto, tamanho_fonte)
-    if alinhamento == "right":
-        return max(x_cursor + padding_x, x_cursor + largura - padding_x - largura_texto)
-    if alinhamento == "center":
-        return max(x_cursor + padding_x, x_cursor + ((largura - largura_texto) / 2))
-    return x_cursor + padding_x
-
-
-def _pdf_valor_documento(valor, *, vazio="N\u00e3o informado"):
-    if valor is None:
-        return vazio
-    if isinstance(valor, str):
-        texto = _sanear_texto_exportacao_seguro(valor).strip()
-        return texto if texto and texto not in {"-", "--", "- - - -"} else vazio
-    return str(valor)
-
-
-def _pdf_normalizar_linhas_documento(linhas, colunas):
-    colunas_normalizadas = _pdf_normalizar_colunas(colunas)
-    linhas_normalizadas = []
-    for linha in list(linhas or []):
-        linha_normalizada = {}
-        for coluna in colunas_normalizadas:
-            linha_normalizada[coluna["chave"]] = _pdf_valor_documento(linha.get(coluna["chave"]))
-        linhas_normalizadas.append(linha_normalizada)
-    if linhas_normalizadas:
-        return linhas_normalizadas
-    return [{colunas_normalizadas[0]["chave"]: "Nenhum registro encontrado"}]
-
-
-def _pdf_obter_metadados_relatorio(titulo, resumo):
-    resumo = resumo or {}
-    return {
-        "sistema": "CONSTRUTASK",
-        "relatorio": _pdf_valor_documento(titulo, vazio="Relat\u00f3rio"),
-        "codigo_documento": _pdf_valor_documento(
-            resumo.get("Numero")
-            or resumo.get("C\u00f3digo")
-            or resumo.get("C\u00f3digo Documento")
-            or resumo.get("Identificador")
-            or resumo.get("Identificador da Evid\u00eancia")
-        ),
-        "obra": _pdf_valor_documento(resumo.get("Obra")),
-        "data_emissao": _pdf_valor_documento(resumo.get("Emitido em") or _datahora_local(timezone.now()).strftime("%d/%m/%Y %H:%M")),
-        "id_interno": _pdf_valor_documento(
-            resumo.get("ID Interno") or resumo.get("Identificador da Evid\u00eancia"),
-            vazio="N\u00e3o informado",
-        ),
-    }
-
-
-def _pdf_titulo_limpo(titulo):
-    texto = _sanear_texto_exportacao_seguro(titulo or "").strip()
-    if " - EVD-" in texto:
-        return texto.split(" - EVD-", 1)[0].strip()
-    return texto
-
-
-def desenhar_cabecalho_pdf(y_topo, titulo, resumo, logo_pdf):
-    metadados = _pdf_obter_metadados_relatorio(_pdf_titulo_limpo(titulo), resumo)
-    x_caixa = 50
-    largura_caixa = 495
-    y_caixa = y_topo - 76
-    altura_caixa = 72
-    padding_x = 10
-    padding_y = 8
-    comandos = [
-        "0.96 0.96 0.96 rg",
-        "0 0 0 RG",
-        f"{x_caixa} {y_caixa:.2f} {largura_caixa} {altura_caixa} re",
-        "B",
-    ]
-    if logo_pdf:
-        largura_logo = 125
-        altura_logo = round((logo_pdf["height"] / logo_pdf["width"]) * largura_logo, 2)
-        x_logo = x_caixa + largura_caixa - padding_x - largura_logo
-        y_logo = y_caixa + altura_caixa - padding_y - altura_logo
-        comandos.extend(
-            [
-                "q",
-                f"{largura_logo} 0 0 {altura_logo} {x_logo:.2f} {y_logo:.2f} cm",
-                "/Im1 Do",
-                "Q",
-            ]
-        )
-        largura_titulo = max(140, x_logo - (x_caixa + padding_x) - 14)
-    else:
-        comandos.extend(
-            [
-                "0.85 0.85 0.85 rg",
-                "0 0 0 RG",
-                f"{x_caixa + largura_caixa - padding_x - 125:.2f} {y_caixa + altura_caixa - padding_y - 28:.2f} 125 28 re",
-                "B",
-                *_pdf_text_commands(x_caixa + largura_caixa - padding_x - 105, y_caixa + altura_caixa - padding_y - 18, "LOGO", fonte="F2", tamanho=12),
-            ]
-        )
-        largura_titulo = largura_caixa - (padding_x * 2) - 14
-    titulo_cabecalho = _pdf_ajustar_texto_para_largura(metadados["relatorio"], largura_titulo, 11)
-    comandos.extend(
-        [
-            *_pdf_text_commands(x_caixa + padding_x, y_caixa + altura_caixa - 18, titulo_cabecalho, fonte="F2", tamanho=11),
-            *_pdf_text_commands(x_caixa + padding_x, y_caixa + altura_caixa - 34, f"C\u00f3digo: {metadados['codigo_documento']}", tamanho=8),
-            *_pdf_text_commands(x_caixa + padding_x, y_caixa + altura_caixa - 50, f"Obra: {metadados['obra']}", tamanho=8),
-            "0.75 0.75 0.75 RG",
-            f"{x_caixa} {y_caixa - 4:.2f} m {x_caixa + largura_caixa} {y_caixa - 4:.2f} l S",
-        ]
-    )
-    return comandos
-
-
-def desenhar_rodape_pdf(numero_pagina, total_paginas, resumo, y_base=26):
-    metadados = _pdf_obter_metadados_relatorio("", resumo)
-    texto_geracao = f"Gerado por Construtask em {metadados['data_emissao']}"
-    x_geracao = _pdf_x_texto_alinhado(225, 320, texto_geracao, 8, "right", 0)
-    return [
-        "0.75 0.75 0.75 RG",
-        f"40 {y_base + 10:.2f} m 555 {y_base + 10:.2f} l S",
-        *_pdf_text_commands(42, y_base, f"P\u00e1gina {numero_pagina} de {total_paginas}", tamanho=8),
-        *_pdf_text_commands(x_geracao, y_base, texto_geracao, tamanho=8),
-    ]
-
-
-def desenhar_titulo_secao(y, titulo):
-    return _pdf_section_title_commands(y, titulo)
-
-
-def desenhar_bloco_informacoes(y_topo, titulo, resumo):
-    linhas = [{"Campo": campo, "Valor": _pdf_valor_documento(valor)} for campo, valor in (resumo or {}).items()]
-    return _pdf_table_commands(
-        y_topo,
-        [
-            {"chave": "Campo", "titulo": "Campo", "largura": 160, "align": "left"},
-            {"chave": "Valor", "titulo": "Valor", "largura": 335, "align": "left"},
-        ],
-        linhas,
-        titulo=titulo,
-    )
-
-
-def desenhar_tabela_padrao(y_topo, titulo, colunas, linhas, *, max_linhas=None):
-    linhas_normalizadas = _pdf_normalizar_linhas_documento(linhas, colunas)
-    return _pdf_table_commands(y_topo, colunas, linhas_normalizadas, titulo=titulo, max_linhas=max_linhas)
-
-
-def _pdf_section_title_commands(y, titulo):
-    titulo_bruto = _sanear_texto_exportacao_seguro(titulo or "")
-    titulo_base = titulo_bruto.lower()
-    if "histor" in titulo_base and "aprov" in titulo_base:
-        titulo_normalizado = "HIST\u00d3RICO DE APROVA\u00c7\u00c3O"
-    elif "histor" in titulo_base and "aditivo" in titulo_base:
-        titulo_normalizado = "HIST\u00d3RICO DOS ADITIVOS"
-    else:
-        titulo_normalizado = titulo_bruto.upper()
-    for termo_antigo, termo_novo in {
-        "HISTRICO": "HIST\u00d3RICO",
-        "APROVAO": "APROVA\u00c7\u00c3O",
-        "DESCRIO": "DESCRI\u00c7\u00c3O",
-        "MEDIO": "MEDI\u00c7\u00c3O",
-        "CONTRATAES": "CONTRATA\u00c7\u00d5ES",
-    }.items():
-        titulo_normalizado = titulo_normalizado.replace(termo_antigo, termo_novo)
-    return [
-        "0.87 0.87 0.87 rg",
-        "0 0 0 RG",
-        f"50 {y - 20:.2f} 495 20 re",
-        "B",
-        * _pdf_text_commands_color(56, y - 14, titulo_normalizado, fonte="F2", tamanho=10, rgb=(0, 0, 0)),
-        "0 0 0 rg",
-    ]
-
-
-def _pdf_table_commands(y_topo, colunas, linhas, *, titulo=None, max_linhas=None):
-    colunas = _pdf_normalizar_colunas(colunas)
-    # Controla a construÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o de cada tabela no PDF: larguras, altura de linha, cabeÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§alhos e conteÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âºdo.
-    comandos = []
-    y_atual = y_topo
-    if titulo:
-        comandos.extend(_pdf_section_title_commands(y_atual, titulo))
-        y_atual -= 30
-
-    if max_linhas is not None:
-        linhas = list(linhas)[:max_linhas]
-
-    altura_linha = 22
-    padding_x = 5
-    tamanho_fonte_cabecalho = 7
-    tamanho_fonte_corpo = 7
-    espacamento_linha = 9
-
-    if not linhas:
-        linhas = [{colunas[0]["chave"]: "-"}]
-
-    header_wraps = []
-    for coluna in colunas:
-        header_wraps.append(
-            _pdf_wrap_text(coluna["titulo"], coluna["largura"] - (padding_x * 2), tamanho_fonte_cabecalho)
-        )
-    header_height = max(20, 10 + (max(len(item) for item in header_wraps) * espacamento_linha))
-    comandos.extend(
-        [
-            "0.90 0.90 0.90 rg",
-            "0 0 0 RG",
-            f"50 {y_atual - header_height:.2f} 495 {header_height} re",
-            "B",
-        ]
-    )
-    x_cursor = 50
-    for indice_coluna, coluna in enumerate(colunas):
-        largura = coluna["largura"]
-        comandos.extend(
-            [
-                "0.90 0.90 0.90 rg",
-                "0 0 0 RG",
-                f"{x_cursor:.2f} {y_atual - header_height:.2f} {largura:.2f} {header_height} re",
-                "B",
-            ]
-        )
-        y_header = y_atual - 12
-        for sublinha in header_wraps[indice_coluna]:
-            comandos.extend(
-                _pdf_text_commands_color(
-                    _pdf_x_texto_alinhado(
-                        x_cursor,
-                        largura,
-                        sublinha,
-                        tamanho_fonte_cabecalho,
-                        coluna.get("align", "left"),
-                        padding_x,
-                    ),
-                    y_header,
-                    sublinha,
-                    fonte="F2",
-                    tamanho=tamanho_fonte_cabecalho,
-                    rgb=(0, 0, 0),
-                )
-            )
-            y_header -= espacamento_linha
-        x_cursor += largura
-    y_atual -= header_height
-
-    for linha in linhas:
-        alturas = []
-        conteudos = []
-        for coluna in colunas:
-            valor = _pdf_valor_documento(linha.get(coluna["chave"]))
-            quebrado = _pdf_wrap_text(valor, coluna["largura"] - (padding_x * 2), tamanho_fonte_corpo)
-            conteudos.append(quebrado)
-            alturas.append(max(altura_linha, 10 + (len(quebrado) * espacamento_linha)))
-        altura = max(alturas)
-        x_cursor = 50
-        for indice, coluna in enumerate(colunas):
-            largura = coluna["largura"]
-            comandos.append(f"{x_cursor:.2f} {y_atual - altura:.2f} {largura:.2f} {altura:.2f} re")
-            comandos.append("S")
-            y_texto = y_atual - 13
-            for sublinha in conteudos[indice]:
-                comandos.extend(
-                    _pdf_text_commands(
-                        _pdf_x_texto_alinhado(
-                            x_cursor,
-                            largura,
-                            sublinha,
-                            tamanho_fonte_corpo,
-                            coluna.get("align", "left"),
-                            padding_x,
-                        ),
-                        y_texto,
-                        sublinha,
-                        fonte="F1",
-                        tamanho=tamanho_fonte_corpo,
-                    )
-                )
-                y_texto -= espacamento_linha
-            x_cursor += largura
-        y_atual -= altura
-
-    return comandos, y_atual
-
-
-def _pdf_estimar_altura_tabela(colunas, linhas, *, titulo=None):
-    colunas = _pdf_normalizar_colunas(colunas)
-    padding_x = 5
-    tamanho_fonte_cabecalho = 7
-    tamanho_fonte_corpo = 7
-    espacamento_linha = 9
-    altura_total = 0
-    if titulo:
-        altura_total += 30
-    header_wraps = [
-        _pdf_wrap_text(coluna["titulo"], coluna["largura"] - (padding_x * 2), tamanho_fonte_cabecalho)
-        for coluna in colunas
-    ]
-    altura_total += max(20, 10 + (max(len(item) for item in header_wraps) * espacamento_linha))
-    for linha in linhas:
-        alturas = []
-        for coluna in colunas:
-            quebrado = _pdf_wrap_text(
-                _pdf_valor_documento(linha.get(coluna["chave"])),
-                coluna["largura"] - (padding_x * 2),
-                tamanho_fonte_corpo,
-            )
-            alturas.append(max(22, 10 + (len(quebrado) * espacamento_linha)))
-        altura_total += max(alturas)
-    return altura_total
+    return _export_excel_response_helper(nome_arquivo, sheet_name, linhas)
 
 
 def _pdf_relatorio_tabelas_response(nome_arquivo, titulo, resumo, secoes):
-    logo_pdf = _carregar_png_para_pdf(_PDF_LOGO_PATH)
-    altura_pagina = 842
-    margem_superior = 40
-    margem_inferior = 60
-    y_inicial_pagina = altura_pagina - margem_superior - 102
-    paginas = []
-
-    def _novo_conteudo_pagina():
-        comandos_pagina = desenhar_cabecalho_pdf(790, titulo, resumo, logo_pdf)
-        return comandos_pagina, y_inicial_pagina
-
-    def _fechar_pagina(comandos_pagina):
-        paginas.append(comandos_pagina)
-
-    conteudo, y_atual = _novo_conteudo_pagina()
-    comandos_resumo, y_atual = desenhar_bloco_informacoes(y_atual, "RESUMO", resumo)
-    conteudo.extend(comandos_resumo)
-
-    for secao in secoes:
-        colunas_secao = _pdf_normalizar_colunas(secao["colunas"])
-        linhas = list(secao["linhas"] or [{colunas_secao[0]["chave"]: "-"}])
-        max_linhas = secao.get("max_linhas")
-        if max_linhas is not None:
-            linhas = linhas[:max_linhas]
-        primeiro_bloco = True
-        while linhas:
-            y_bloco = y_atual - 18
-            titulo_secao = secao["titulo"] if primeiro_bloco else f'{secao["titulo"]} (continua)'
-            linhas_bloco = []
-            for linha in linhas:
-                candidato = linhas_bloco + [linha]
-                altura_prevista = _pdf_estimar_altura_tabela(colunas_secao, candidato, titulo=titulo_secao)
-                if y_bloco - altura_prevista < margem_inferior:
-                    break
-                linhas_bloco = candidato
-            if not linhas_bloco:
-                _fechar_pagina(conteudo)
-                conteudo, y_atual = _novo_conteudo_pagina()
-                continue
-            comandos_secao, y_atual = desenhar_tabela_padrao(y_bloco, titulo_secao, colunas_secao, linhas_bloco)
-            conteudo.extend(comandos_secao)
-            linhas = linhas[len(linhas_bloco):]
-            primeiro_bloco = False
-            if linhas:
-                _fechar_pagina(conteudo)
-                conteudo, y_atual = _novo_conteudo_pagina()
-
-    _fechar_pagina(conteudo)
-
-    page_count = len(paginas)
-    paginas_stream = []
-    for indice_pagina, comandos_pagina in enumerate(paginas, start=1):
-        comandos_pagina.extend(desenhar_rodape_pdf(indice_pagina, page_count, resumo))
-        paginas_stream.append("\n".join(comandos_pagina).encode("cp1252", "replace"))
-    font1_id = 3 + (page_count * 2)
-    font2_id = font1_id + 1
-    image_id = font2_id + 1 if logo_pdf else None
-    alpha_image_id = image_id + 1 if logo_pdf and logo_pdf.get("alpha_stream") else None
-
-    recursos_pagina = f"/Font << /F1 {font1_id} 0 R /F2 {font2_id} 0 R >>".encode("ascii")
-    if image_id:
-        recursos_pagina += f" /XObject << /Im1 {image_id} 0 R >>".encode("ascii")
-
-    objetos = [
-        b"1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj\n",
-        (
-            b"2 0 obj << /Type /Pages /Kids ["
-            + b" ".join(f"{3 + (indice * 2)} 0 R".encode("ascii") for indice in range(page_count))
-            + b"] /Count "
-            + str(page_count).encode("ascii")
-            + b" >> endobj\n"
-        ),
-    ]
-    for indice_pagina, stream in enumerate(paginas_stream):
-        page_obj_id = 3 + (indice_pagina * 2)
-        content_obj_id = page_obj_id + 1
-        objetos.append(
-            f"{page_obj_id} 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << ".encode("ascii")
-            + recursos_pagina
-            + f" >> /Contents {content_obj_id} 0 R >> endobj\n".encode("ascii")
-        )
-        objetos.append(
-            f"{content_obj_id} 0 obj << /Length {len(stream)} >> stream\n".encode("ascii")
-            + stream
-            + b"\nendstream endobj\n"
-        )
-    objetos.extend(
-        [
-            f"{font1_id} 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >> endobj\n".encode("ascii"),
-            f"{font2_id} 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >> endobj\n".encode("ascii"),
-        ]
-    )
-    if logo_pdf and image_id:
-        objetos.append(
-            f"{image_id} 0 obj << /Type /XObject /Subtype /Image /Width ".encode("ascii")
-            + str(logo_pdf["width"]).encode("ascii")
-            + b" /Height "
-            + str(logo_pdf["height"]).encode("ascii")
-            + b" /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /FlateDecode /Length "
-            + str(len(logo_pdf["stream"])).encode("ascii")
-            + (f" /SMask {alpha_image_id} 0 R".encode("ascii") if alpha_image_id else b"")
-            + b" >> stream\n"
-            + logo_pdf["stream"]
-            + b"\nendstream endobj\n"
-        )
-    if logo_pdf and alpha_image_id:
-        objetos.append(
-            f"{alpha_image_id} 0 obj << /Type /XObject /Subtype /Image /Width ".encode("ascii")
-            + str(logo_pdf["width"]).encode("ascii")
-            + b" /Height "
-            + str(logo_pdf["height"]).encode("ascii")
-            + b" /ColorSpace /DeviceGray /BitsPerComponent 8 /Filter /FlateDecode /Length "
-            + str(len(logo_pdf["alpha_stream"])).encode("ascii")
-            + b" >> stream\n"
-            + logo_pdf["alpha_stream"]
-            + b"\nendstream endobj\n"
-        )
-
-    pdf = b"%PDF-1.4\n"
-    offsets = [0]
-    for obj in objetos:
-        offsets.append(len(pdf))
-        pdf += obj
-    xref = len(pdf)
-    pdf += f"xref\n0 {len(offsets)}\n".encode("ascii")
-    pdf += b"0000000000 65535 f \n"
-    for offset in offsets[1:]:
-        pdf += f"{offset:010d} 00000 n \n".encode("ascii")
-    pdf += f"trailer << /Size {len(offsets)} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF".encode("ascii")
-
-    response = HttpResponse(pdf, content_type="application/pdf")
-    response["Content-Disposition"] = f'attachment; filename="{nome_arquivo}"'
-    return response
+    return _pdf_relatorio_tabelas_helper(nome_arquivo, titulo, resumo, secoes)
 
 
 def _pdf_relatorio_probatorio_response(
@@ -1749,55 +866,22 @@ def _pdf_relatorio_probatorio_response(
     extras_max_linhas=None,
     secoes_extras=None,
 ):
-    secoes = []
-    if incluir_historico:
-        secoes.append(
-            {
-                "titulo": "Hist\u00f3rico de Aprova\u00e7\u00e3o",
-                "colunas": [("Data", 75), ("A\u00e7\u00e3o", 75), ("Usu\u00e1rio", 105), ("Descri\u00e7\u00e3o", 240)],
-                "linhas": [
-                    {
-                        "Data": linha.get("Data", "-"),
-                        "A\u00e7\u00e3o": linha.get("Acao", linha.get("A\u00e7\u00e3o", "-")),
-                        "Usu\u00e1rio": linha.get("Usuario", linha.get("Usu\u00e1rio", "-")),
-                        "Descri\u00e7\u00e3o": linha.get("Descricao", linha.get("Descri\u00e7\u00e3o", "-")),
-                    }
-                    for linha in (historico or [{"Data": "-", "Acao": "-", "Usuario": "-", "Descricao": "-"}])
-                ],
-            }
-        )
-    secoes.append(
-        {
-            "titulo": extras_titulo,
-            "colunas": extras_colunas,
-            "linhas": extras or [{extras_colunas[0][0]: "-"}],
-            **({"max_linhas": extras_max_linhas} if extras_max_linhas is not None else {}),
-        }
+    return _pdf_relatorio_probatorio_helper(
+        nome_arquivo,
+        titulo,
+        resumo,
+        historico,
+        extras,
+        extras_titulo=extras_titulo,
+        extras_colunas=extras_colunas,
+        incluir_historico=incluir_historico,
+        extras_max_linhas=extras_max_linhas,
+        secoes_extras=secoes_extras,
     )
-    for secao_extra in secoes_extras or []:
-        secoes.append(secao_extra)
-    return _pdf_relatorio_tabelas_response(nome_arquivo, titulo, resumo, secoes)
 
 
 def _pdf_simples_response(nome_arquivo, titulo, linhas):
-    resumo = []
-    for linha in list(linhas):
-        texto = str(linha)
-        if ":" in texto:
-            campo, valor = texto.split(":", 1)
-            resumo.append({"Campo": campo.strip(), "Valor": valor.strip() or "-"})
-        else:
-            resumo.append({"Campo": "Informação", "Valor": texto})
-
-    return _pdf_relatorio_probatorio_response(
-        nome_arquivo,
-        titulo,
-        {"Documento": titulo, "Emitido em": _datahora_local(timezone.now()).strftime("%d/%m/%Y %H:%M")},
-        [],
-        resumo,
-        extras_titulo="Dados Exportados",
-        extras_colunas=[("Campo", 165), ("Valor", 330)],
-    )
+    return _pdf_simples_helper(nome_arquivo, titulo, linhas)
 
 
 def _exportar_relatorio_probatorio_excel_response(
@@ -1809,39 +893,14 @@ def _exportar_relatorio_probatorio_excel_response(
     extras_sheet_name=None,
     extras_linhas=None,
 ):
-    output = BytesIO()
-    resumo_linhas = _normalizar_linhas_exportacao([{"Campo": chave, "Valor": valor} for chave, valor in resumo.items()])
-    historico_normalizado = _normalizar_linhas_exportacao(
-        historico_linhas or [{"Data": "-", "Acao": "-", "Usuario": "-", "Descricao": "-"}]
+    return _export_relatorio_probatorio_excel_helper(
+        nome_arquivo,
+        sheet_resumo,
+        resumo,
+        historico_linhas,
+        extras_sheet_name=extras_sheet_name,
+        extras_linhas=extras_linhas,
     )
-    extras_normalizados = _normalizar_linhas_exportacao(extras_linhas or [{"Informação": "-"}])
-    with pd.ExcelWriter(output, engine="openpyxl") as writer:
-        pd.DataFrame(resumo_linhas).to_excel(writer, index=False, sheet_name=sheet_resumo)
-        _aplicar_layout_excel_relatorio(writer.book[sheet_resumo], "RELATÓRIO PROBATÓRIO DE APROVAÇÃO", sheet_resumo)
-        pd.DataFrame(historico_normalizado).to_excel(
-            writer,
-            index=False,
-            sheet_name="Histórico",
-        )
-        _aplicar_layout_excel_relatorio(writer.book["Histórico"], "RELATÓRIO PROBATÓRIO DE APROVAÇÃO", "Histórico")
-        if extras_sheet_name:
-            pd.DataFrame(extras_normalizados).to_excel(
-                writer,
-                index=False,
-                sheet_name=extras_sheet_name,
-            )
-            _aplicar_layout_excel_relatorio(
-                writer.book[extras_sheet_name],
-                "RELATÓRIO PROBATÓRIO DE APROVAÇÃO",
-                extras_sheet_name,
-            )
-    output.seek(0)
-    response = HttpResponse(
-        output.getvalue(),
-        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    )
-    response["Content-Disposition"] = f'attachment; filename="{nome_arquivo}"'
-    return response
 
 
 def _formatar_usuario_data(usuario, datahora):
@@ -2374,34 +1433,7 @@ def _apagar_objeto(request, queryset, success_url):
 
 
 def _registrar_historico(acao, objeto, descricao, usuario=None):
-    payload = {"acao": acao, "descricao": descricao, "usuario": usuario}
-    if isinstance(objeto, Obra):
-        if getattr(objeto, "pk", None):
-            payload["obra_id"] = objeto.pk
-        else:
-            payload["obra"] = objeto
-    elif isinstance(objeto, Compromisso):
-        if getattr(objeto, "obra_id", None):
-            payload["obra_id"] = objeto.obra_id
-        if getattr(objeto, "pk", None):
-            payload["compromisso_id"] = objeto.pk
-        else:
-            payload["compromisso"] = objeto
-    elif isinstance(objeto, Medicao):
-        if getattr(objeto, "obra_id", None):
-            payload["obra_id"] = objeto.obra_id
-        if getattr(objeto, "pk", None):
-            payload["medicao_id"] = objeto.pk
-        else:
-            payload["medicao"] = objeto
-    elif isinstance(objeto, NotaFiscal):
-        if getattr(objeto, "obra_id", None):
-            payload["obra_id"] = objeto.obra_id
-        if getattr(objeto, "pk", None):
-            payload["nota_fiscal_id"] = objeto.pk
-        else:
-            payload["nota_fiscal"] = objeto
-    return HistoricoOperacional.objects.create(**payload)
+    return _approval_registrar_historico(acao, objeto, descricao, usuario)
 
 
 @login_required
@@ -3334,7 +2366,7 @@ def curva_abc_pdf_view(request):
     )
 
 
-class ObraListView(ListView):
+class ObraListView(DefaultPaginationMixin, ListView):
     model = Obra
     template_name = "app/obra_list.html"
     context_object_name = "obras"
@@ -3402,7 +2434,7 @@ class ObraUpdateView(UpdateView):
         return response
 
 
-class PlanoContasConsultaView(ListView):
+class PlanoContasConsultaView(DefaultPaginationMixin, ListView):
     model = PlanoContas
     template_name = "app/plano_contas_list.html"
     context_object_name = "planos_contas"
@@ -3638,11 +2670,10 @@ def plano_contas_notas_view(request, pk):
     )
 
 
-class CompromissoListView(ListView):
+class CompromissoListView(DefaultPaginationMixin, ListView):
     model = Compromisso
     template_name = "app/compromisso_list.html"
     context_object_name = "compromissos"
-    paginate_by = 20
 
     def get_queryset(self):
         queryset = (
@@ -4149,11 +3180,10 @@ def compromisso_aprovacao_excel_view(request, pk):
     )
 
 
-class MedicaoListView(ListView):
+class MedicaoListView(DefaultPaginationMixin, ListView):
     model = Medicao
     template_name = "app/medicao_list.html"
     context_object_name = "medicoes"
-    paginate_by = 20
 
     def get_queryset(self):
         queryset = (
@@ -4451,11 +3481,10 @@ def medicao_lista_pdf_view(request):
     )
 
 
-class NotaFiscalListView(ListView):
+class NotaFiscalListView(DefaultPaginationMixin, ListView):
     model = NotaFiscal
     template_name = "app/nota_fiscal_list.html"
     context_object_name = "notas_fiscais"
-    paginate_by = 20
 
     def get_queryset(self):
         queryset = (

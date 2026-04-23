@@ -9,7 +9,7 @@ urlpatterns = [
     path("health/", health_check_view, name="health_check"),
     path("ready/", readiness_check_view, name="readiness_check"),
     path("", include("Construtask.urls")),
-    path("admin/", admin.site.urls),
+    path(settings.CONSTRUTASK_ADMIN_URL, admin.site.urls),
 ]
 
 if settings.DEBUG:

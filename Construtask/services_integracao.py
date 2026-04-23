@@ -1,7 +1,7 @@
 from datetime import date
 from decimal import Decimal
 
-from django.db.models import Count, F, Sum
+from django.db.models import Count, F, Q, Sum
 
 from .importacao_cronograma import MapeamentoService
 from .models import Compromisso, Medicao, NotaFiscalCentroCusto, PlanoContas
@@ -37,12 +37,16 @@ class IntegracaoService:
         )
 
     @classmethod
+    def _itens_folha_plano(cls, plano):
+        return plano.itens.filter(filhos__isnull=True)
+
+    @classmethod
     def calcular_valor_planejado_total(cls, obra):
         plano = cls.obter_plano_referencia(obra)
         if not plano:
             return Decimal("0.00")
         total = (
-            plano.itens.filter(filhos__isnull=True).aggregate(total=Sum("valor_planejado"))["total"]
+            cls._itens_folha_plano(plano).aggregate(total=Sum("valor_planejado"))["total"]
             or Decimal("0.00")
         )
         return total.quantize(Decimal("0.01"))
@@ -54,8 +58,24 @@ class IntegracaoService:
         if not plano:
             return Decimal("0.00")
 
-        total = Decimal("0.00")
-        for item in plano.itens.filter(filhos__isnull=True):
+        itens_folha = cls._itens_folha_plano(plano)
+        total = (
+            itens_folha.filter(data_fim_prevista__lte=data_referencia).aggregate(total=Sum("valor_planejado"))["total"]
+            or Decimal("0.00")
+        )
+        total += (
+            itens_folha.filter(
+                data_inicio_prevista__lte=data_referencia,
+                data_fim_prevista__isnull=True,
+            ).aggregate(total=Sum("valor_planejado"))["total"]
+            or Decimal("0.00")
+        )
+
+        itens_em_andamento = itens_folha.filter(
+            data_inicio_prevista__lt=data_referencia,
+            data_fim_prevista__gt=data_referencia,
+        ).only("data_inicio_prevista", "data_fim_prevista", "duracao", "valor_planejado")
+        for item in itens_em_andamento:
             total += cls._valor_planejado_item_ate_data(item, data_referencia)
         return total.quantize(Decimal("0.01"))
 
@@ -66,21 +86,11 @@ class IntegracaoService:
         if not plano:
             return Decimal("0.00")
 
-        total = Decimal("0.00")
-        for item in plano.itens.filter(filhos__isnull=True):
-            total += cls._valor_agregado_item(item, data_referencia)
+        total = (
+            cls._itens_folha_plano(plano).aggregate(total=Sum("valor_realizado"))["total"]
+            or Decimal("0.00")
+        )
         return total.quantize(Decimal("0.01"))
-
-    @staticmethod
-    def _valor_agregado_item(item, data_referencia):
-        valor = item.valor_planejado or Decimal("0.00")
-        if not valor:
-            return Decimal("0.00")
-
-        percentual_realizado = Decimal(str(item.percentual_realizado_calculado or 0))
-        percentual_realizado = max(Decimal("0.00"), min(percentual_realizado, Decimal("100.00")))
-        proporcao = percentual_realizado / Decimal("100.00")
-        return (valor * proporcao).quantize(Decimal("0.01"))
 
     @staticmethod
     def calcular_custo_real_operacional(obra, data_referencia=None):
@@ -106,7 +116,7 @@ class IntegracaoService:
         if data_referencia >= item.data_fim_prevista:
             return valor
 
-        total_dias = max((item.data_fim_prevista - item.data_inicio_prevista).days, 1)
+        total_dias = max(item.duracao or (item.data_fim_prevista - item.data_inicio_prevista).days, 1)
         dias_decorridos = max((data_referencia - item.data_inicio_prevista).days, 0)
         percentual = Decimal(dias_decorridos) / Decimal(total_dias)
         return (valor * percentual).quantize(Decimal("0.01"))
