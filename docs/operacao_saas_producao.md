@@ -9,6 +9,8 @@ Este runbook consolida os controles minimos exigidos para operar o Construtask c
 - O processo `web` sobe apenas a aplicacao HTTP via Gunicorn.
 - O processo `worker` executa Celery worker.
 - O processo `worker2` executa Celery beat.
+- No Railway, o `Build Command` deve permanecer apenas com `collectstatic`; migracoes dependem da rede interna do runtime e nao devem rodar no build.
+- O bootstrap de runtime do `web` executa `check --deploy` e `migrate --noinput` quando o ambiente produtivo estiver ativo.
 
 ## Variaveis obrigatorias em producao
 

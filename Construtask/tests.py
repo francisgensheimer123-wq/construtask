@@ -789,6 +789,19 @@ class AppViewsTests(BaseFinanceTestCase):
         self.assertContains(response, reverse("modulo_grupo", args=["juridico"]))
         self.assertContains(response, reverse("modulo_grupo", args=["financeiro"]))
 
+    def test_grupos_agrupados_adicionais_respondem_com_sucesso(self):
+        cenarios = (
+            ("comunicacoes", "Comunicacoes"),
+            ("relatorios", "Relatorios"),
+            ("juridico", "Juridico"),
+        )
+
+        for slug, titulo in cenarios:
+            with self.subTest(slug=slug):
+                response = self.client.get(reverse("modulo_grupo", args=[slug]))
+                self.assertEqual(response.status_code, 200)
+                self.assertContains(response, titulo)
+
     def test_edicao_de_item_do_cronograma_salva_datas_percentual_e_calcula_valor_realizado(self):
         plano = PlanoFisico.objects.create(
             obra=self.obra,

@@ -131,6 +131,23 @@ def _obter_grupos_navegacao():
                 },
             ],
         },
+        "comunicacoes": {
+            "slug": "comunicacoes",
+            "titulo": "Comunicacoes",
+            "descricao": "Conduza pautas, atas e acompanhamentos formais da obra em um fluxo unico e rastreavel.",
+            "itens": [
+                {
+                    "titulo": "Reunioes da Obra",
+                    "descricao": "Monte pautas, valide atas e acompanhe respostas pendentes do time.",
+                    "url_name": "reuniao_comunicacao_list",
+                },
+                {
+                    "titulo": "Alertas Operacionais",
+                    "descricao": "Use os alertas como insumo prioritario para as reunioes de acompanhamento.",
+                    "url_name": "alerta_operacional_list",
+                },
+            ],
+        },
         "financeiro": {
             "slug": "financeiro",
             "titulo": "Financeiro",
@@ -155,6 +172,50 @@ def _obter_grupos_navegacao():
                     "titulo": "Projecao Financeira",
                     "descricao": "Projete entradas e saidas futuras com base no andamento da obra.",
                     "url_name": "projecao_financeira",
+                },
+            ],
+        },
+        "relatorios": {
+            "slug": "relatorios",
+            "titulo": "Relatorios",
+            "descricao": "Acesse os consolidadores e visoes executivas mais usados para acompanhamento da obra.",
+            "itens": [
+                {
+                    "titulo": "Dossie da Obra",
+                    "descricao": "Reuna documentos, evidencias e registros formais em uma visao consolidada.",
+                    "url_name": "dossie_obra",
+                },
+                {
+                    "titulo": "Curva ABC",
+                    "descricao": "Analise concentracao de custos e prioridades do orcamento em uma leitura gerencial.",
+                    "url_name": "curva_abc",
+                },
+                {
+                    "titulo": "Dashboard de Alertas",
+                    "descricao": "Visualize desvios operacionais e criticidades da obra em painel executivo.",
+                    "url_name": "alerta_operacional_dashboard",
+                },
+            ],
+        },
+        "juridico": {
+            "slug": "juridico",
+            "titulo": "Juridico",
+            "descricao": "Centralize governanca legal, politicas publicas e orientacoes formais do ambiente SaaS.",
+            "itens": [
+                {
+                    "titulo": "Governanca LGPD",
+                    "descricao": "Consulte os controles e evidencias de governanca de dados do sistema.",
+                    "url_name": "lgpd_governanca",
+                },
+                {
+                    "titulo": "Politica de Privacidade",
+                    "descricao": "Acesse o documento institucional de privacidade disponibilizado aos usuarios.",
+                    "url_name": "politica_privacidade",
+                },
+                {
+                    "titulo": "Termos de Uso",
+                    "descricao": "Consulte os termos de uso vigentes aplicaveis ao ambiente e aos usuarios.",
+                    "url_name": "termos_uso",
                 },
             ],
         },
