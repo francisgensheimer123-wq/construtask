@@ -144,6 +144,7 @@ def _check_backup():
     provedor = getattr(settings, "CONSTRUTASK_BACKUP_PROVIDER", "")
     retencao = int(getattr(settings, "CONSTRUTASK_BACKUP_RETENTION_DAYS", 0) or 0)
     janela_horas = int(getattr(settings, "CONSTRUTASK_BACKUP_INTERVAL_HOURS", 24) or 24)
+    janela_teste_recuperacao_dias = int(getattr(settings, "CONSTRUTASK_RECOVERY_TEST_INTERVAL_DAYS", 30) or 30)
     ultima_execucao = _parse_datetime(getattr(settings, "CONSTRUTASK_BACKUP_LAST_SUCCESS_AT", ""))
     ambiente_produtivo = not settings.DEBUG
     ultimo_backup = _obter_ultima_operacao("BACKUP")
@@ -153,6 +154,12 @@ def _check_backup():
     if ultimo_backup and ultimo_backup.status == "SUCESSO":
         ultima_execucao = ultimo_backup.executado_em
     teste_recuperacao_ok = bool(ultimo_teste_recuperacao and ultimo_teste_recuperacao.status == "SUCESSO")
+    teste_recuperacao_recente = bool(
+        teste_recuperacao_ok
+        and ultimo_teste_recuperacao.executado_em
+        and ultimo_teste_recuperacao.executado_em
+        >= timezone.now() - timedelta(days=janela_teste_recuperacao_dias)
+    )
 
     if not habilitado:
         return {
@@ -162,6 +169,7 @@ def _check_backup():
             "provedor": provedor_efetivo,
             "retencao_dias": retencao,
             "teste_recuperacao_ok": teste_recuperacao_ok,
+            "teste_recuperacao_recente": teste_recuperacao_recente,
         }
 
     if not provedor or retencao <= 0:
@@ -172,6 +180,7 @@ def _check_backup():
             "provedor": provedor_efetivo,
             "retencao_dias": retencao,
             "teste_recuperacao_ok": teste_recuperacao_ok,
+            "teste_recuperacao_recente": teste_recuperacao_recente,
         }
 
     status = "ok"
@@ -187,9 +196,12 @@ def _check_backup():
         status = "warning"
         detalhe = "Politica configurada, mas ainda sem ultima execucao registrada."
 
-    if ambiente_produtivo and not teste_recuperacao_ok:
+    if ambiente_produtivo and not teste_recuperacao_recente:
         status = "error" if status == "ok" else status
-        detalhe = f"{detalhe} Nenhum teste de recuperacao com sucesso foi registrado."
+        detalhe = (
+            f"{detalhe} Nenhum teste de recuperacao com sucesso foi registrado "
+            f"dentro da janela de {janela_teste_recuperacao_dias} dias."
+        )
 
     return {
         "status": status,
@@ -197,10 +209,12 @@ def _check_backup():
         "detalhe": detalhe,
         "provedor": provedor_efetivo,
         "retencao_dias": retencao,
+        "janela_teste_recuperacao_dias": janela_teste_recuperacao_dias,
         "ultima_execucao": ultima_execucao,
         "ultimo_backup": ultimo_backup,
         "ultimo_teste_recuperacao": ultimo_teste_recuperacao,
         "teste_recuperacao_ok": teste_recuperacao_ok,
+        "teste_recuperacao_recente": teste_recuperacao_recente,
     }
 
 
@@ -246,15 +260,21 @@ def _check_security():
 def _check_cache_infra():
     ambiente_produtivo = not settings.DEBUG
     backend = settings.CACHES["default"]["BACKEND"]
+    backend_critico = settings.CACHES["critical"]["BACKEND"]
     redis_url = os.environ.get("REDIS_URL", "").strip()
 
     if not ambiente_produtivo:
-        detalhe = "Cache local pronto para desenvolvimento." if backend != "django_redis.cache.RedisCache" else "Cache Redis configurado para desenvolvimento."
+        detalhe = (
+            "Cache local pronto para desenvolvimento."
+            if backend != "django_redis.cache.RedisCache"
+            else "Cache Redis configurado para desenvolvimento."
+        )
         return {
             "status": "ok",
             "titulo": "Cache e fila",
             "detalhe": detalhe,
             "backend": backend,
+            "backend_critico": backend_critico,
             "redis_url_configurada": bool(redis_url),
         }
 
@@ -264,6 +284,17 @@ def _check_cache_infra():
             "titulo": "Cache e fila",
             "detalhe": "Em producao, a aplicacao exige cache compartilhado em Redis.",
             "backend": backend,
+            "backend_critico": backend_critico,
+            "redis_url_configurada": bool(redis_url),
+        }
+
+    if backend_critico != "django_redis.cache.RedisCache":
+        return {
+            "status": "error",
+            "titulo": "Cache e fila",
+            "detalhe": "Em producao, o cache critico de seguranca deve usar Redis compartilhado.",
+            "backend": backend,
+            "backend_critico": backend_critico,
             "redis_url_configurada": bool(redis_url),
         }
 
@@ -273,6 +304,7 @@ def _check_cache_infra():
             "titulo": "Cache e fila",
             "detalhe": "Defina REDIS_URL para cache compartilhado e execucao de jobs.",
             "backend": backend,
+            "backend_critico": backend_critico,
             "redis_url_configurada": False,
         }
 
@@ -286,6 +318,7 @@ def _check_cache_infra():
             "titulo": "Cache e fila",
             "detalhe": f"Nao foi possivel validar o Redis operacional: {exc}",
             "backend": backend,
+            "backend_critico": backend_critico,
             "redis_url_configurada": True,
         }
 
@@ -294,6 +327,7 @@ def _check_cache_infra():
         "titulo": "Cache e fila",
         "detalhe": "Redis operacional validado para cache compartilhado e jobs.",
         "backend": backend,
+        "backend_critico": backend_critico,
         "redis_url_configurada": True,
     }
 

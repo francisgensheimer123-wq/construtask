@@ -31,8 +31,19 @@ def _safe_delete(cache_alias: str, key: str) -> None:
         return
 
 
+def _safe_add(cache_alias: str, key: str, value: Any, timeout: int | None = None) -> bool:
+    try:
+        return bool(caches[cache_alias].add(key, value, timeout=timeout))
+    except Exception:
+        return False
+
+
+def _backend(cache_alias: str) -> str:
+    return settings.CACHES.get(cache_alias, {}).get("BACKEND", "")
+
+
 def _use_fallback_cache() -> bool:
-    return settings.CACHES["default"]["BACKEND"] == "django_redis.cache.RedisCache"
+    return _backend("default") == "django_redis.cache.RedisCache" and "critical" in settings.CACHES
 
 
 def resilient_cache_get(key: str, default: Any = None) -> Any:
@@ -69,22 +80,20 @@ def resilient_cache_get_or_set(key: str, builder: Callable[[], Any], timeout: in
 
 
 def critical_cache_get(key: str, default: Any = None) -> Any:
-    return resilient_cache_get(key, default)
+    return _safe_get("critical", key, default)
 
 
 def critical_cache_set(key: str, value: Any, timeout: int | None = None) -> Any:
-    return resilient_cache_set(key, value, timeout=timeout)
+    _safe_set("critical", key, value, timeout=timeout)
+    return value
 
 
 def critical_cache_delete(key: str) -> None:
-    resilient_cache_delete(key)
+    _safe_delete("critical", key)
 
 
 def critical_cache_add(key: str, value: Any, timeout: int | None = None) -> bool:
-    if critical_cache_get(key, _MISSING) is not _MISSING:
-        return False
-    critical_cache_set(key, value, timeout=timeout)
-    return True
+    return _safe_add("critical", key, value, timeout=timeout)
 
 
 def request_local_get_or_set(request: Any, key: str, builder: Callable[[], Any]) -> Any:

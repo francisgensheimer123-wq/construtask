@@ -8,6 +8,7 @@ import os
 from unittest.mock import patch
 
 import pandas as pd
+from celery.exceptions import SoftTimeLimitExceeded
 from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
@@ -6584,9 +6585,15 @@ class HardeningProducaoTests(BaseFinanceTestCase):
                 "KEY_PREFIX": "construtask",
             },
             "critical": {
-                "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-                "LOCATION": "construtask-critical",
+                "BACKEND": "django_redis.cache.RedisCache",
+                "LOCATION": "redis://cache.example.com:6379/2",
                 "TIMEOUT": 300,
+                "OPTIONS": {
+                    "CLIENT_CLASS": "django_redis.client.DefaultClient",
+                    "IGNORE_EXCEPTIONS": False,
+                    "LOG_IGNORED_EXCEPTIONS": False,
+                },
+                "KEY_PREFIX": "construtask-critical",
             },
         },
     )
@@ -6635,6 +6642,7 @@ class HardeningProducaoTests(BaseFinanceTestCase):
         self.assertIn('construtask.E007', payload)
         self.assertIn('construtask.E008', payload)
         self.assertIn('construtask.E009', payload)
+        self.assertIn('construtask.E012', payload)
         self.assertIn('"readiness"', payload)
 
     @override_settings(
@@ -6652,6 +6660,30 @@ class HardeningProducaoTests(BaseFinanceTestCase):
         CSRF_TRUSTED_ORIGINS=["https://construtask.example.com"],
         SECURE_PROXY_SSL_HEADER=("HTTP_X_FORWARDED_PROTO", "https"),
         SECURE_SSL_REDIRECT=True,
+        CACHES={
+            "default": {
+                "BACKEND": "django_redis.cache.RedisCache",
+                "LOCATION": "redis://cache.example.com:6379/1",
+                "TIMEOUT": 300,
+                "OPTIONS": {
+                    "CLIENT_CLASS": "django_redis.client.DefaultClient",
+                    "IGNORE_EXCEPTIONS": False,
+                    "LOG_IGNORED_EXCEPTIONS": False,
+                },
+                "KEY_PREFIX": "construtask",
+            },
+            "critical": {
+                "BACKEND": "django_redis.cache.RedisCache",
+                "LOCATION": "redis://cache.example.com:6379/2",
+                "TIMEOUT": 300,
+                "OPTIONS": {
+                    "CLIENT_CLASS": "django_redis.client.DefaultClient",
+                    "IGNORE_EXCEPTIONS": False,
+                    "LOG_IGNORED_EXCEPTIONS": False,
+                },
+                "KEY_PREFIX": "construtask-critical",
+            },
+        },
         CELERY_BEAT_SCHEDULE={
             "construtask-backup-postgres-r2": {
                 "task": "Construtask.tasks.task_executar_backup_postgres",
@@ -6660,9 +6692,93 @@ class HardeningProducaoTests(BaseFinanceTestCase):
         },
     )
     def test_validar_prontidao_producao_aceita_admin_customizado_e_agendamento_backup(self):
+        backup = OperacaoBackupSaaS.objects.create(
+            tipo="BACKUP",
+            status="SUCESSO",
+            ambiente="production",
+            provedor="s3",
+            identificador_artefato="backup-prod.dump",
+        )
+        OperacaoBackupSaaS.objects.create(
+            tipo="TESTE_RESTAURACAO",
+            status="SUCESSO",
+            ambiente="production",
+            provedor="s3",
+            backup_referencia=backup,
+        )
         stdout = StringIO()
-        call_command("validar_prontidao_producao", "--json", stdout=stdout)
-        payload = stdout.getvalue()
+        with patch.dict(os.environ, {"REDIS_URL": "redis://cache.example.com:6379/0"}):
+            with patch("django_redis.get_redis_connection") as get_redis_connection:
+                get_redis_connection.return_value.ping.return_value = True
+                call_command("validar_prontidao_producao", "--json", stdout=stdout)
+            payload = stdout.getvalue()
 
         self.assertNotIn("construtask.E010", payload)
         self.assertNotIn("construtask.E011", payload)
+        self.assertNotIn("construtask.E012", payload)
+
+    @override_settings(
+        DEBUG=False,
+        CONSTRUTASK_ENVIRONMENT="production",
+        CONSTRUTASK_BACKUP_ENABLED=True,
+        CONSTRUTASK_BACKUP_PROVIDER="s3",
+        CONSTRUTASK_BACKUP_RETENTION_DAYS=30,
+        CONSTRUTASK_BACKUP_INTERVAL_HOURS=24,
+        CONSTRUTASK_RECOVERY_TEST_INTERVAL_DAYS=30,
+    )
+    def test_diagnostico_saas_sinaliza_teste_de_recuperacao_antigo(self):
+        from .application.saas import diagnostico_base_saas
+
+        backup = OperacaoBackupSaaS.objects.create(
+            tipo="BACKUP",
+            status="SUCESSO",
+            ambiente="production",
+            provedor="s3",
+            executado_em=timezone.now(),
+        )
+        OperacaoBackupSaaS.objects.create(
+            tipo="TESTE_RESTAURACAO",
+            status="SUCESSO",
+            ambiente="production",
+            provedor="s3",
+            backup_referencia=backup,
+            executado_em=timezone.now() - timedelta(days=45),
+        )
+
+        diagnostico = diagnostico_base_saas()
+        backup_check = diagnostico["checks"]["backup"]
+
+        self.assertEqual(backup_check["status"], "error")
+        self.assertFalse(backup_check["teste_recuperacao_recente"])
+        self.assertIn("30 dias", backup_check["detalhe"])
+
+    def test_task_sincronizar_alertas_registra_falha_quando_soft_time_limit_explode(self):
+        from .tasks import task_sincronizar_alertas_obra
+
+        with patch(
+            "Construtask.services_alertas.sincronizar_alertas_operacionais_obra",
+            side_effect=SoftTimeLimitExceeded("tempo excedido"),
+        ):
+            with self.assertRaises(SoftTimeLimitExceeded):
+                task_sincronizar_alertas_obra.run(self.obra.pk)
+
+        job = JobAssincrono.objects.filter(tipo="SINCRONIZAR_ALERTAS_OBRA", status="FALHOU").latest("criado_em")
+        self.assertEqual(job.empresa, self.empresa)
+        self.assertEqual(job.obra, self.obra)
+        self.assertEqual(job.parametros["motivo"], "soft_time_limit_exceeded")
+
+    @override_settings(
+        CONSTRUTASK_BACKUP_ENABLED=True,
+        CONSTRUTASK_BACKUP_PROVIDER="s3",
+        CONSTRUTASK_ENVIRONMENT="production",
+    )
+    def test_task_backup_registra_falha_quando_soft_time_limit_explode(self):
+        from .tasks import task_executar_backup_postgres
+
+        with patch("django.core.management.call_command", side_effect=SoftTimeLimitExceeded("tempo excedido")):
+            with self.assertRaises(SoftTimeLimitExceeded):
+                task_executar_backup_postgres.run()
+
+        operacao = OperacaoBackupSaaS.objects.filter(tipo="BACKUP", status="FALHOU").latest("executado_em")
+        self.assertEqual(operacao.ambiente, "production")
+        self.assertEqual(operacao.detalhes["motivo"], "soft_time_limit_exceeded")

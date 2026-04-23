@@ -70,6 +70,13 @@ def construtask_saas_checks(app_configs, **kwargs):
                 id="construtask.E008",
             )
         )
+    if settings.CACHES["critical"]["BACKEND"] != "django_redis.cache.RedisCache":
+        errors.append(
+            Error(
+                "O cache critico de seguranca deve usar Redis compartilhado para lockout e coordenacao entre workers.",
+                id="construtask.E012",
+            )
+        )
     if not os.environ.get("REDIS_URL"):
         errors.append(
             Error(

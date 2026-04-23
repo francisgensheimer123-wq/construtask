@@ -134,7 +134,7 @@ if os.environ.get("DATABASE_URL"):
         "default": dj_database_url.parse(
             os.environ.get("DATABASE_URL"),
             conn_max_age=600,
-            conn_health_checks=False,
+            conn_health_checks=True,
         )
     }
 else:
@@ -201,6 +201,9 @@ CONSTRUTASK_BACKUP_PROVIDER = os.environ.get("CONSTRUTASK_BACKUP_PROVIDER", "fil
 CONSTRUTASK_BACKUP_RETENTION_DAYS = int(os.environ.get("CONSTRUTASK_BACKUP_RETENTION_DAYS", "7" if DEBUG else "30"))
 CONSTRUTASK_BACKUP_INTERVAL_HOURS = int(os.environ.get("CONSTRUTASK_BACKUP_INTERVAL_HOURS", "24"))
 CONSTRUTASK_BACKUP_LAST_SUCCESS_AT = os.environ.get("CONSTRUTASK_BACKUP_LAST_SUCCESS_AT", "")
+CONSTRUTASK_RECOVERY_TEST_INTERVAL_DAYS = int(
+    os.environ.get("CONSTRUTASK_RECOVERY_TEST_INTERVAL_DAYS", "7" if DEBUG else "30")
+)
 CONSTRUTASK_LOGIN_MAX_ATTEMPTS = int(os.environ.get("CONSTRUTASK_LOGIN_MAX_ATTEMPTS", "5"))
 CONSTRUTASK_LOGIN_LOCKOUT_MINUTES = int(os.environ.get("CONSTRUTASK_LOGIN_LOCKOUT_MINUTES", "15"))
 CONSTRUTASK_LOGIN_IP_MAX_ATTEMPTS = int(os.environ.get("CONSTRUTASK_LOGIN_IP_MAX_ATTEMPTS", "10"))
@@ -220,16 +223,13 @@ _REDIS_BASE = os.environ.get("REDIS_URL", "redis://localhost:6379")
 _cache_backend = os.environ.get("CONSTRUTASK_CACHE_BACKEND", "").strip()
 if not _cache_backend:
     _cache_backend = "django_redis.cache.RedisCache" if os.environ.get("REDIS_URL") else "django.core.cache.backends.locmem.LocMemCache"
+_critical_cache_backend = os.environ.get("CONSTRUTASK_CRITICAL_CACHE_BACKEND", "").strip()
+if not _critical_cache_backend:
+    _critical_cache_backend = "django_redis.cache.RedisCache" if os.environ.get("REDIS_URL") else "django.core.cache.backends.locmem.LocMemCache"
 _cache_timeout = int(os.environ.get("CONSTRUTASK_CACHE_TIMEOUT", "300"))
 _cache_ignore_exceptions = _env_bool("CONSTRUTASK_CACHE_IGNORE_EXCEPTIONS", DEBUG)
 
-CACHES = {
-    "critical": {
-        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-        "LOCATION": "construtask-critical",
-        "TIMEOUT": _cache_timeout,
-    }
-}
+CACHES = {}
 
 if _cache_backend == "django_redis.cache.RedisCache":
     CACHES["default"] = {
@@ -249,6 +249,26 @@ else:
         "LOCATION": os.environ.get("CONSTRUTASK_CACHE_LOCATION", "construtask-default"),
         "TIMEOUT": _cache_timeout,
         "KEY_PREFIX": "construtask",
+    }
+
+if _critical_cache_backend == "django_redis.cache.RedisCache":
+    CACHES["critical"] = {
+        "BACKEND": _critical_cache_backend,
+        "LOCATION": _redis_db_url(_REDIS_BASE, 2),  # DB 2 para lockout e coordenacao critica
+        "TIMEOUT": _cache_timeout,
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            "IGNORE_EXCEPTIONS": False,
+            "LOG_IGNORED_EXCEPTIONS": False,
+        },
+        "KEY_PREFIX": "construtask-critical",
+    }
+else:
+    CACHES["critical"] = {
+        "BACKEND": _critical_cache_backend,
+        "LOCATION": os.environ.get("CONSTRUTASK_CRITICAL_CACHE_LOCATION", "construtask-critical"),
+        "TIMEOUT": _cache_timeout,
+        "KEY_PREFIX": "construtask-critical",
     }
 
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 5000
@@ -284,8 +304,8 @@ LOGOUT_REDIRECT_URL = 'login'
 SESSION_COOKIE_AGE = 60 * 60 * 24 * 7  # 7 dias
 SESSION_SAVE_EVERY_REQUEST = True
 SESSION_COOKIE_HTTPONLY = True
-SESSION_COOKIE_SAMESITE = "Lax"
-CSRF_COOKIE_SAMESITE = "Lax"
+SESSION_COOKIE_SAMESITE = os.environ.get("SESSION_COOKIE_SAMESITE", "Lax" if DEBUG else "Strict")
+CSRF_COOKIE_SAMESITE = os.environ.get("CSRF_COOKIE_SAMESITE", "Lax")
 SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG
 SECURE_CONTENT_TYPE_NOSNIFF = True
@@ -296,7 +316,7 @@ if not DEBUG:
     if _env_bool("SECURE_PROXY_SSL_HEADER_ENABLED", True):
         SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
         USE_X_FORWARDED_HOST = True
-    SECURE_HSTS_SECONDS = int(os.environ.get("SECURE_HSTS_SECONDS", "3600"))
+    SECURE_HSTS_SECONDS = int(os.environ.get("SECURE_HSTS_SECONDS", "31536000"))
     SECURE_HSTS_INCLUDE_SUBDOMAINS = os.environ.get("SECURE_HSTS_INCLUDE_SUBDOMAINS", "True").lower() in {"1", "true", "yes", "on"}
     SECURE_HSTS_PRELOAD = os.environ.get("SECURE_HSTS_PRELOAD", "True").lower() in {"1", "true", "yes", "on"}
     SECURE_SSL_REDIRECT = os.environ.get("SECURE_SSL_REDIRECT", "True").lower() in {"1", "true", "yes", "on"}
