@@ -12,7 +12,9 @@ class QualidadeWorkflowService:
             "causa": nc.causa,
             "acao_corretiva": nc.acao_corretiva,
             "evidencia_tratamento": nc.evidencia_tratamento,
+            "evidencia_tratamento_anexo": getattr(nc.evidencia_tratamento_anexo, "name", ""),
             "evidencia_encerramento": nc.evidencia_encerramento,
+            "evidencia_encerramento_anexo": getattr(nc.evidencia_encerramento_anexo, "name", ""),
             "eficacia_observacao": nc.eficacia_observacao,
         }
 

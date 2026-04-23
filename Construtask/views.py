@@ -40,10 +40,12 @@ from .models_aquisicoes import Cotacao, OrdemCompra, SolicitacaoCompra
 from .models_qualidade import NaoConformidade
 from .models_risco import Risco
 from .permissions import (
+    descricao_restricao_obra as _descricao_restricao_obra,
     filtrar_por_obra_contexto as _filtrar_por_obra_contexto,
     get_empresa_operacional as _get_empresa_operacional,
     get_obra_do_contexto as _obter_obra_contexto,
     get_obras_permitidas as _get_obras_permitidas,
+    obra_em_somente_leitura as _obra_em_somente_leitura,
 )
 from .services import importar_plano_contas_excel, obter_dados_contrato, obter_dados_medicao
 from .services_aprovacao import (
@@ -149,6 +151,18 @@ def _coletar_post_int(request, campo):
     if not valor_normalizado.isdigit():
         return None
     return int(valor_normalizado)
+
+
+def _exigir_obra_contexto_view(request, *, mensagem=None):
+    obra = _obter_obra_contexto(request)
+    if not obra:
+        messages.error(request, mensagem or "Selecione uma obra no menu antes de continuar.")
+        return None
+    return obra
+
+
+def _bloqueio_lancamento_obra(obra):
+    return _descricao_restricao_obra(obra) if _obra_em_somente_leitura(obra) else None
 
 
 def _datahora_local(datahora):
@@ -1661,7 +1675,9 @@ class HomeView(TemplateView):
             .prefetch_related(Prefetch("itens", queryset=CompromissoItem.objects.select_related("centro_custo")))
             .order_by("-id")[:5]
         )
-        context["obras_ativas"] = Obra.objects.exclude(status="CONCLUIDA").count() if not obra_contexto else 1
+        context["obras_ativas"] = (
+            Obra.objects.exclude(status__in=["CONCLUIDA", "PARALISADA"]).count() if not obra_contexto else 1
+        )
         
         # EstatÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­sticas de Riscos ISO 6.1
         riscos_qs = _filtrar_por_obra_contexto(self.request, Risco.objects.all())
@@ -2439,6 +2455,14 @@ class PlanoContasConsultaView(DefaultPaginationMixin, ListView):
     template_name = "app/plano_contas_list.html"
     context_object_name = "planos_contas"
 
+    def get_paginate_by(self, queryset):
+        return None
+
+    def dispatch(self, request, *args, **kwargs):
+        if not _exigir_obra_contexto_view(request, mensagem="Selecione uma obra no menu antes de acessar o plano de contas."):
+            return redirect("obra_list")
+        return super().dispatch(request, *args, **kwargs)
+
     def get_queryset(self):
         queryset = PlanoContas.objects.annotate(filhos_count=Count("filhos")).order_by("tree_id", "lft")
         queryset = _filtrar_por_obra_contexto(self.request, queryset)
@@ -2675,6 +2699,11 @@ class CompromissoListView(DefaultPaginationMixin, ListView):
     template_name = "app/compromisso_list.html"
     context_object_name = "compromissos"
 
+    def dispatch(self, request, *args, **kwargs):
+        if not _exigir_obra_contexto_view(request, mensagem="Selecione uma obra no menu antes de acessar compras e contratacoes."):
+            return redirect("obra_list")
+        return super().dispatch(request, *args, **kwargs)
+
     def get_queryset(self):
         queryset = (
             _anotar_execucao_compromissos(Compromisso.objects.select_related("centro_custo", "obra"))
@@ -2709,6 +2738,16 @@ class CompromissoCreateView(CreateView):
     template_name = "app/compromisso_form.html"
     success_url = reverse_lazy("compromisso_list")
 
+    def dispatch(self, request, *args, **kwargs):
+        obra = _exigir_obra_contexto_view(request, mensagem="Selecione uma obra no menu antes de criar compras ou contratacoes.")
+        if not obra:
+            return redirect("obra_list")
+        motivo = _bloqueio_lancamento_obra(obra)
+        if motivo:
+            messages.error(request, motivo)
+            return redirect("compromisso_list")
+        return super().dispatch(request, *args, **kwargs)
+
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs["obra_contexto"] = _obter_obra_contexto(self.request)
@@ -2724,11 +2763,15 @@ class CompromissoCreateView(CreateView):
 
     def form_valid(self, form):
         obra_contexto = _obter_obra_contexto(self.request)
+        if not obra_contexto:
+            form.add_error("obra", "Selecione uma obra no menu antes de criar compras ou contratacoes.")
+            return self.form_invalid(form)
         item_formset = CompromissoItemFormSet(self.request.POST, prefix="itens", form_kwargs={"obra_contexto": obra_contexto})
         if not item_formset.is_valid():
             return self.render_to_response(self.get_context_data(form=form, item_formset=item_formset))
 
         self.object = form.save(commit=False)
+        self.object.obra = obra_contexto
         self.object.status = "RASCUNHO"
         self.object.save()
         item_formset.instance = self.object
@@ -2759,6 +2802,10 @@ class CompromissoUpdateView(UpdateView):
 
     def dispatch(self, request, *args, **kwargs):
         self.object = self.get_object()
+        motivo = _bloqueio_lancamento_obra(self.object.obra)
+        if motivo:
+            messages.error(request, motivo)
+            return redirect("contrato_detail", pk=self.object.pk)
         if self.object.status != "RASCUNHO":
             messages.error(request, "Somente contratos ou pedidos em rascunho podem ser editados.")
             return redirect("contrato_detail", pk=self.object.pk)
@@ -2851,6 +2898,10 @@ class ContratoDetailView(DetailView):
 
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
+        motivo = _bloqueio_lancamento_obra(self.object.obra)
+        if motivo:
+            messages.error(request, motivo)
+            return redirect("contrato_detail", pk=self.object.pk)
         acao = request.POST.get("acao")
         if acao == "enviar_para_aprovacao":
             _enviar_documento_para_aprovacao(
@@ -2903,6 +2954,10 @@ class AditivoContratoCreateView(CreateView):
             ),
             pk=kwargs.get("pk"),
         )
+        motivo = _bloqueio_lancamento_obra(contrato.obra)
+        if motivo:
+            messages.error(request, motivo)
+            return redirect("contrato_detail", pk=contrato.pk)
 
         aditivo_form = self.form_class(request.POST)
 
@@ -2967,6 +3022,10 @@ def aditivo_contrato_workflow_view(request, pk):
         ),
         pk=pk,
     )
+    motivo = _bloqueio_lancamento_obra(aditivo.contrato.obra)
+    if motivo:
+        messages.error(request, motivo)
+        return redirect("contrato_detail", pk=aditivo.contrato_id)
     acao = request.POST.get("acao")
     if acao == "enviar_para_aprovacao":
         _enviar_aditivo_contrato_para_aprovacao(request, aditivo)
@@ -3185,6 +3244,11 @@ class MedicaoListView(DefaultPaginationMixin, ListView):
     template_name = "app/medicao_list.html"
     context_object_name = "medicoes"
 
+    def dispatch(self, request, *args, **kwargs):
+        if not _exigir_obra_contexto_view(request, mensagem="Selecione uma obra no menu antes de acessar medicoes."):
+            return redirect("obra_list")
+        return super().dispatch(request, *args, **kwargs)
+
     def get_queryset(self):
         queryset = (
             Medicao.objects.select_related("contrato", "centro_custo", "obra")
@@ -3215,6 +3279,16 @@ class MedicaoListView(DefaultPaginationMixin, ListView):
 
 
 class MedicaoCreateView(CreateView):
+    def dispatch(self, request, *args, **kwargs):
+        obra = _exigir_obra_contexto_view(request, mensagem="Selecione uma obra no menu antes de criar medicoes.")
+        if not obra:
+            return redirect("obra_list")
+        motivo = _bloqueio_lancamento_obra(obra)
+        if motivo:
+            messages.error(request, motivo)
+            return redirect("medicao_list")
+        return super().dispatch(request, *args, **kwargs)
+
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs["obra_contexto"] = _obter_obra_contexto(self.request)
@@ -3235,6 +3309,10 @@ class MedicaoCreateView(CreateView):
 
     def form_valid(self, form):
         contrato = form.cleaned_data.get("contrato")
+        obra_contexto = _obter_obra_contexto(self.request)
+        if not obra_contexto:
+            form.add_error("contrato", "Selecione uma obra no menu antes de criar medicoes.")
+            return self.form_invalid(form)
         if contrato and contrato.status != "APROVADO":
             form.add_error("contrato", "Só é possível emitir medição para contratos aprovados.")
             return self.render_to_response(self.get_context_data(form=form, item_formset=_construir_formset_medicao(data=self.request.POST, prefix="itens", contrato=contrato)))
@@ -3242,7 +3320,6 @@ class MedicaoCreateView(CreateView):
         if not item_formset.is_valid():
             return self.render_to_response(self.get_context_data(form=form, item_formset=item_formset))
 
-        obra_contexto = _obter_obra_contexto(self.request)
         self.object = form.save(commit=False)
         self.object.obra = obra_contexto or getattr(contrato, "obra", None)
         self.object.status = "EM_ELABORACAO"
@@ -3275,6 +3352,10 @@ class MedicaoUpdateView(UpdateView):
 
     def dispatch(self, request, *args, **kwargs):
         self.object = self.get_object()
+        motivo = _bloqueio_lancamento_obra(self.object.obra)
+        if motivo:
+            messages.error(request, motivo)
+            return redirect("medicao_detail", pk=self.object.pk)
         if self.object.status != "EM_ELABORACAO":
             messages.error(request, "Somente medicoes em elaboracao podem ser editadas.")
             return redirect("medicao_detail", pk=self.object.pk)
@@ -3326,6 +3407,10 @@ class MedicaoDetailView(DetailView):
 
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
+        motivo = _bloqueio_lancamento_obra(self.object.obra)
+        if motivo:
+            messages.error(request, motivo)
+            return redirect("medicao_detail", pk=self.object.pk)
         acao = request.POST.get("acao")
         if acao == "enviar_para_aprovacao":
             _enviar_documento_para_aprovacao(
@@ -3486,6 +3571,11 @@ class NotaFiscalListView(DefaultPaginationMixin, ListView):
     template_name = "app/nota_fiscal_list.html"
     context_object_name = "notas_fiscais"
 
+    def dispatch(self, request, *args, **kwargs):
+        if not _exigir_obra_contexto_view(request, mensagem="Selecione uma obra no menu antes de acessar notas fiscais."):
+            return redirect("obra_list")
+        return super().dispatch(request, *args, **kwargs)
+
     def get_queryset(self):
         queryset = (
             NotaFiscal.objects.select_related("medicao", "pedido_compra", "obra")
@@ -3515,6 +3605,16 @@ class NotaFiscalListView(DefaultPaginationMixin, ListView):
 
 
 class NotaFiscalCreateView(CreateView):
+    def dispatch(self, request, *args, **kwargs):
+        obra = _exigir_obra_contexto_view(request, mensagem="Selecione uma obra no menu antes de criar notas fiscais.")
+        if not obra:
+            return redirect("obra_list")
+        motivo = _bloqueio_lancamento_obra(obra)
+        if motivo:
+            messages.error(request, motivo)
+            return redirect("nota_fiscal_list")
+        return super().dispatch(request, *args, **kwargs)
+
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs["obra_contexto"] = _obter_obra_contexto(self.request)
@@ -3537,6 +3637,10 @@ class NotaFiscalCreateView(CreateView):
     def form_valid(self, form):
         pedido = form.cleaned_data.get("pedido_compra")
         medicao = form.cleaned_data.get("medicao")
+        obra_contexto = _obter_obra_contexto(self.request)
+        if not obra_contexto:
+            form.add_error("pedido_compra", "Selecione uma obra no menu antes de criar notas fiscais.")
+            return self.form_invalid(form)
         if medicao and medicao.status != "APROVADA":
             form.add_error("medicao", "Só é possível emitir nota fiscal para medições aprovadas.")
         if pedido and pedido.status != "APROVADO":
@@ -3551,7 +3655,6 @@ class NotaFiscalCreateView(CreateView):
                 obra=_obter_obra_contexto(self.request),
             )
             return self.render_to_response(self.get_context_data(form=form, rateio_formset=rateio_formset))
-        obra_contexto = _obter_obra_contexto(self.request)
         self.object = form.save(commit=False)
         self.object.obra = obra_contexto or getattr(medicao, "obra", None) or getattr(pedido, "obra", None)
         rateio_formset = _construir_formset_nota(
@@ -3583,6 +3686,14 @@ class NotaFiscalUpdateView(UpdateView):
     template_name = "app/nota_fiscal_form.html"
     success_url = reverse_lazy("nota_fiscal_list")
 
+    def dispatch(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        motivo = _bloqueio_lancamento_obra(self.object.obra)
+        if motivo:
+            messages.error(request, motivo)
+            return redirect("nota_fiscal_list")
+        return super().dispatch(request, *args, **kwargs)
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         pedido, medicao = _obter_origem_nota(self.request, self.object)
@@ -3601,6 +3712,10 @@ class NotaFiscalUpdateView(UpdateView):
     def form_valid(self, form):
         pedido = form.cleaned_data.get("pedido_compra")
         medicao = form.cleaned_data.get("medicao")
+        obra_contexto = _obter_obra_contexto(self.request)
+        if not obra_contexto:
+            form.add_error("pedido_compra", "Selecione uma obra no menu antes de editar notas fiscais.")
+            return self.form_invalid(form)
         if medicao and medicao.status != "APROVADA":
             form.add_error("medicao", "Só é possível emitir nota fiscal para medições aprovadas.")
         if pedido and pedido.status != "APROVADO":
@@ -3615,7 +3730,6 @@ class NotaFiscalUpdateView(UpdateView):
                 obra=_obter_obra_contexto(self.request),
             )
             return self.render_to_response(self.get_context_data(form=form, rateio_formset=rateio_formset))
-        obra_contexto = _obter_obra_contexto(self.request)
         self.object = form.save(commit=False)
         self.object.obra = obra_contexto or getattr(medicao, "obra", None) or getattr(pedido, "obra", None)
         rateio_formset = _construir_formset_nota(

@@ -6,6 +6,8 @@ from django.core.exceptions import PermissionDenied
 
 from .models import Obra, PermissaoModuloAcao, UsuarioEmpresa
 
+OBRA_STATUS_SOMENTE_LEITURA = {"PARALISADA", "CONCLUIDA"}
+
 
 PERMISSOES_MODULO_ACAO = {
     "planejamento": ("view", "create", "update", "approve", "export"),
@@ -209,6 +211,27 @@ def get_obra_do_contexto(request):
         request.session.pop("obra_selecionada_id", None)
         return None
     return obra
+
+
+def obra_em_somente_leitura(obra):
+    return bool(obra and getattr(obra, "status", None) in OBRA_STATUS_SOMENTE_LEITURA)
+
+
+def obra_permite_lancamentos(obra):
+    return not obra_em_somente_leitura(obra)
+
+
+def descricao_restricao_obra(obra):
+    if not obra:
+        return "Selecione uma obra no menu antes de continuar."
+    return (
+        f"A obra {obra.codigo} - {obra.nome} esta com status "
+        f"{obra.get_status_display().lower()} e permite apenas visualizacao."
+    )
+
+
+def filtrar_obras_liberadas_para_lancamento(queryset):
+    return queryset.exclude(status__in=sorted(OBRA_STATUS_SOMENTE_LEITURA))
 
 
 def get_empresa_operacional(request, obra=None):

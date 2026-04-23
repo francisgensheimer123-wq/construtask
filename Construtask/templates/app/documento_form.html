@@ -20,7 +20,7 @@
 
     <div class="card">
         <div class="card-body">
-            <form method="POST">
+            <form method="POST" enctype="multipart/form-data">
                 {% csrf_token %}
                 
                 <div class="row">
@@ -73,6 +73,15 @@
                         <div class="text-danger">{{ form.processo.errors }}</div>
                     {% endif %}
                     <small class="text-muted">Ex: ISO 7.5, ISO 9.1, ISO 8.5</small>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Anexo do Documento *</label>
+                    {{ form.arquivo_inicial }}
+                    {% if form.arquivo_inicial.errors %}
+                        <div class="text-danger">{{ form.arquivo_inicial.errors }}</div>
+                    {% endif %}
+                    <small class="text-muted">{{ form.arquivo_inicial.help_text }}</small>
                 </div>
 
                 {{ form.empresa.as_hidden }}

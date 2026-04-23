@@ -30,7 +30,9 @@
                 <tr><th>Causa</th><td class="wrap-text">{{ nc.causa|default:"-" }}</td></tr>
                 <tr><th>Acao corretiva</th><td class="wrap-text">{{ nc.acao_corretiva|default:"-" }}</td></tr>
                 <tr><th>Evidencia de tratamento</th><td class="wrap-text">{{ nc.evidencia_tratamento|default:"-" }}</td></tr>
+                <tr><th>Anexo do tratamento</th><td>{% if nc.evidencia_tratamento_anexo %}<a href="{{ nc.evidencia_tratamento_anexo.url }}" target="_blank" rel="noopener">Abrir anexo</a>{% else %}-{% endif %}</td></tr>
                 <tr><th>Evidencia de encerramento</th><td class="wrap-text">{{ nc.evidencia_encerramento|default:"-" }}</td></tr>
+                <tr><th>Anexo do encerramento</th><td>{% if nc.evidencia_encerramento_anexo %}<a href="{{ nc.evidencia_encerramento_anexo.url }}" target="_blank" rel="noopener">Abrir anexo</a>{% else %}-{% endif %}</td></tr>
                 <tr><th>Eficacia</th><td class="wrap-text">{{ nc.eficacia_observacao|default:"-" }}</td></tr>
                 <tr><th>Verificada por</th><td>{{ nc.eficacia_verificada_por|default:"-" }}</td></tr>
             </tbody>
@@ -39,7 +41,7 @@
 
     <div class="panel">
         <h3>Workflow</h3>
-        <form method="post">
+        <form method="post" enctype="multipart/form-data">
             {% csrf_token %}
             <div class="field">
                 <label for="id_acao">Acao</label>
@@ -53,6 +55,22 @@
             <div class="field">
                 <label for="id_observacao">Observacao</label>
                 <textarea id="id_observacao" name="observacao" rows="4"></textarea>
+            </div>
+            <div class="field">
+                <label for="id_evidencia_tratamento">Evidencia de tratamento</label>
+                <textarea id="id_evidencia_tratamento" name="evidencia_tratamento" rows="3">{{ nc.evidencia_tratamento|default:"" }}</textarea>
+            </div>
+            <div class="field">
+                <label for="id_evidencia_tratamento_anexo">Anexo da evidencia de tratamento</label>
+                <input id="id_evidencia_tratamento_anexo" type="file" name="evidencia_tratamento_anexo">
+            </div>
+            <div class="field">
+                <label for="id_evidencia_encerramento">Evidencia de encerramento</label>
+                <textarea id="id_evidencia_encerramento" name="evidencia_encerramento" rows="3">{{ nc.evidencia_encerramento|default:"" }}</textarea>
+            </div>
+            <div class="field">
+                <label for="id_evidencia_encerramento_anexo">Anexo da evidencia de encerramento</label>
+                <input id="id_evidencia_encerramento_anexo" type="file" name="evidencia_encerramento_anexo">
             </div>
             <div class="actions">
                 <button class="btn" type="submit">Atualizar workflow</button>

@@ -14,9 +14,11 @@ from django.views.generic import CreateView, DetailView, ListView, UpdateView
 from .models_risco import Risco, RiscoHistorico
 from .pagination import DefaultPaginationMixin
 from .permissions import (
+    descricao_restricao_obra,
     filtrar_por_empresa as _filtrar_por_empresa,
     get_empresa_operacional as _get_empresa_do_request,
     get_obra_do_contexto as _get_obra_contexto,
+    obra_em_somente_leitura,
 )
 
 
@@ -37,6 +39,12 @@ class RiscoListView(DefaultPaginationMixin, ListView):
     model = Risco
     template_name = "app/risco_list.html"
     context_object_name = "riscos"
+
+    def dispatch(self, request, *args, **kwargs):
+        if not _get_obra_contexto(request):
+            messages.error(request, "Selecione uma obra no menu antes de acessar riscos.")
+            return redirect("obra_list")
+        return super().dispatch(request, *args, **kwargs)
 
     def get_queryset(self):
         empresa = _get_empresa_do_request(self.request)
@@ -121,6 +129,16 @@ class RiscoCreateView(CreateView):
         "observacoes"
     ]
 
+    def dispatch(self, request, *args, **kwargs):
+        obra = _get_obra_contexto(request)
+        if not obra:
+            messages.error(request, "Selecione uma obra no menu antes de criar riscos.")
+            return redirect("obra_list")
+        if obra_em_somente_leitura(obra):
+            messages.error(request, descricao_restricao_obra(obra))
+            return redirect("risco_list")
+        return super().dispatch(request, *args, **kwargs)
+
     def get_form(self, *args, **kwargs):
         form = super().get_form(*args, **kwargs)
         empresa = _get_empresa_do_request(self.request)
@@ -166,6 +184,9 @@ class RiscoCreateView(CreateView):
             return redirect("risco_list")
         
         risco = form.save(commit=False)
+        if obra_em_somente_leitura(risco.obra):
+            messages.error(self.request, descricao_restricao_obra(risco.obra))
+            return self.form_invalid(form)
         risco.empresa = empresa
         risco.criado_por = self.request.user
         risco.save()
@@ -196,6 +217,12 @@ class RiscoDetailView(DetailView):
     model = Risco
     template_name = "app/risco_detail.html"
     context_object_name = "risco"
+
+    def dispatch(self, request, *args, **kwargs):
+        if not _get_obra_contexto(request):
+            messages.error(request, "Selecione uma obra no menu antes de acessar riscos.")
+            return redirect("obra_list")
+        return super().dispatch(request, *args, **kwargs)
 
     def get_queryset(self):
         empresa = _get_empresa_do_request(self.request)
@@ -261,6 +288,9 @@ class RiscoDetailView(DetailView):
 
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
+        if obra_em_somente_leitura(self.object.obra):
+            messages.error(request, descricao_restricao_obra(self.object.obra))
+            return redirect("risco_detail", pk=self.object.pk)
         
         acao = request.POST.get("acao")
         
@@ -405,6 +435,13 @@ class RiscoUpdateView(UpdateView):
         "plano_resposta", "responsavel", "data_meta_tratamento",
         "observacoes"
     ]
+
+    def dispatch(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        if obra_em_somente_leitura(self.object.obra):
+            messages.error(request, descricao_restricao_obra(self.object.obra))
+            return redirect("risco_detail", pk=self.object.pk)
+        return super().dispatch(request, *args, **kwargs)
 
     def get_queryset(self):
         empresa = _get_empresa_do_request(self.request)

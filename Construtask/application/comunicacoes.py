@@ -21,6 +21,14 @@ SECOES_PAUTA = (
 )
 
 
+def _rotulo_penultimo_ultimo(item):
+    parent = getattr(item, "parent", None)
+    titulo = getattr(item, "atividade", None) or getattr(item, "titulo", None) or str(item)
+    if parent and getattr(parent, "atividade", None):
+        return f"{parent.atividade} / {titulo}"
+    return titulo
+
+
 def periodicidade_reuniao_empresa(empresa, tipo_reuniao):
     parametros = ParametroComunicacaoEmpresa.obter_ou_criar(empresa)
     if tipo_reuniao == "CURTO_PRAZO":
@@ -52,12 +60,21 @@ def construir_itens_automaticos_pauta(obra, *, data_reuniao=None, janela_dias=No
         .order_by("data_referencia", "-criado_em")[:10]
     )
     for alerta in alertas:
+        titulo_alerta = alerta.titulo
+        if alerta.entidade_tipo == "PlanoFisicoItem" and alerta.entidade_id:
+            atividade = (
+                PlanoFisicoItem.objects.select_related("parent")
+                .filter(pk=alerta.entidade_id)
+                .first()
+            )
+            if atividade:
+                titulo_alerta = _rotulo_penultimo_ultimo(atividade)
         itens.append(
             {
                 "categoria": "ALERTA",
                 "referencia_modelo": "AlertaOperacional",
                 "referencia_id": alerta.pk,
-                "titulo": f"[{alerta.severidade}] {alerta.titulo}",
+                "titulo": f"[{alerta.severidade}] {titulo_alerta}",
                 "descricao": alerta.descricao,
                 "contexto": {
                     "codigo_regra": alerta.codigo_regra,
@@ -134,7 +151,7 @@ def construir_itens_automaticos_pauta(obra, *, data_reuniao=None, janela_dias=No
                     "categoria": "CRONOGRAMA",
                     "referencia_modelo": "PlanoFisicoItem",
                     "referencia_id": atividade.pk,
-                    "titulo": f"{atividade.codigo_atividade} - {atividade.atividade}",
+                    "titulo": f"{atividade.codigo_atividade} - {_rotulo_penultimo_ultimo(atividade)}",
                     "descricao": f"Previsto para {atividade.data_fim_prevista.strftime('%d/%m/%Y') if atividade.data_fim_prevista else '-'} | Concluido: {atividade.percentual_concluido}%",
                     "contexto": {
                         "dias_desvio": atividade.dias_desvio,

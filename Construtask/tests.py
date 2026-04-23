@@ -11,11 +11,11 @@ import pandas as pd
 from celery.exceptions import SoftTimeLimitExceeded
 from django.contrib import admin
 from django.contrib.auth import get_user_model
-from django.core.cache import cache
+from django.core.cache import cache, caches
 from django.core.management import call_command
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import RequestFactory, TestCase, override_settings
+from django.test import Client, RequestFactory, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -74,7 +74,7 @@ from .models import (
 )
 from .models_planejamento import MapaCorrespondencia, PlanoFisico, PlanoFisicoItem
 from .models_risco import Risco
-from .forms import AditivoContratoItemFormSet, MedicaoForm, NotaFiscalForm
+from .forms import AditivoContratoItemFormSet, MedicaoForm, NotaFiscalForm, ObraForm
 from .importacao_cronograma import CronogramaService, MapeamentoService
 from .queries.financeiro import construir_fluxo_financeiro_contratual
 from .views import ContratoDetailView, HomeView
@@ -106,6 +106,7 @@ from .services_alertas import (
     sincronizar_alertas_planejamento_suprimentos,
     sincronizar_alertas_risco_vencido,
 )
+from .cache_utils import critical_cache_set
 from .templatetags.formatters import money_br, trunc2
 from .text_normalization import corrigir_mojibake, normalizar_texto_cadastral
 
@@ -1166,6 +1167,169 @@ class AppViewsTests(BaseFinanceTestCase):
         response = self.client.get(reverse("documento_update", args=[documento.pk]))
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(response, reverse("documento_detail", args=[documento.pk]))
+
+    def test_documento_create_exige_anexo(self):
+        response = self.client.post(
+            reverse("documento_create"),
+            {
+                "empresa": self.empresa.pk,
+                "obra": self.obra.pk,
+                "processo": "ISO 7.5",
+                "plano_contas": self.analitico.pk,
+                "tipo_documento": "PROCEDIMENTO",
+                "codigo_documento": "",
+                "titulo": "Procedimento sem anexo",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("arquivo_inicial", response.context["form"].errors)
+        self.assertFalse(Documento.objects.filter(titulo="Procedimento sem anexo").exists())
+
+    def test_documento_create_com_anexo_cria_revisao_inicial(self):
+        response = self.client.post(
+            reverse("documento_create"),
+            {
+                "empresa": self.empresa.pk,
+                "obra": self.obra.pk,
+                "processo": "ISO 7.5",
+                "plano_contas": self.analitico.pk,
+                "tipo_documento": "PROCEDIMENTO",
+                "codigo_documento": "",
+                "titulo": "Procedimento com anexo",
+                "arquivo_inicial": SimpleUploadedFile(
+                    "procedimento-inicial.pdf",
+                    b"%PDF-1.4 procedimento inicial",
+                    content_type="application/pdf",
+                ),
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        documento = Documento.objects.get(titulo="Procedimento com anexo")
+        revisao = documento.revisoes.get()
+        self.assertEqual(documento.obra, self.obra)
+        self.assertEqual(documento.versao_atual, 1)
+        self.assertEqual(revisao.versao, 1)
+        self.assertEqual(revisao.status, "ELABORACAO")
+        self.assertTrue(revisao.checksum)
+
+    def test_nao_conformidade_verificacao_exige_anexo_de_tratamento(self):
+        nc = QualidadeWorkflowService.abrir(
+            empresa=self.empresa,
+            obra=self.obra,
+            plano_contas=self.analitico,
+            descricao="Falha sem evidencia anexada",
+            responsavel=self.user,
+            criado_por=self.user,
+        )
+
+        response = self.client.post(
+            reverse("nao_conformidade_detail", args=[nc.pk]),
+            {
+                "acao": "VERIFICACAO",
+                "observacao": "Tratamento executado em campo.",
+                "evidencia_tratamento": "Tratamento executado em campo.",
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        nc.refresh_from_db()
+        self.assertEqual(nc.status, "ABERTA")
+        self.assertContains(response, "A comprovacao de tratamento exige descricao e anexo.")
+
+    def test_nao_conformidade_encerramento_exige_anexo_de_encerramento(self):
+        nc = QualidadeWorkflowService.abrir(
+            empresa=self.empresa,
+            obra=self.obra,
+            plano_contas=self.analitico,
+            descricao="Falha aguardando encerramento",
+            responsavel=self.user,
+            criado_por=self.user,
+        )
+        nc.status = "EM_VERIFICACAO"
+        nc.save(update_fields=["status"])
+
+        response = self.client.post(
+            reverse("nao_conformidade_detail", args=[nc.pk]),
+            {
+                "acao": "ENCERRAMENTO",
+                "observacao": "Encerramento sem anexo final.",
+                "evidencia_tratamento": "Tratamento executado com registro.",
+                "evidencia_tratamento_anexo": SimpleUploadedFile(
+                    "tratamento.pdf",
+                    b"%PDF-1.4 tratamento",
+                    content_type="application/pdf",
+                ),
+                "evidencia_encerramento": "Resultado validado em campo.",
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        nc.refresh_from_db()
+        self.assertEqual(nc.status, "EM_VERIFICACAO")
+        self.assertContains(response, "A comprovacao de encerramento exige descricao e anexo.")
+
+    def test_obra_concluida_bloqueia_telas_de_lancamento(self):
+        self.obra.status = "CONCLUIDA"
+        self.obra.save(update_fields=["status"])
+
+        for rota in (
+            "documento_create",
+            "nao_conformidade_create",
+            "risco_create",
+            "compromisso_create",
+            "medicao_create",
+            "nota_fiscal_create",
+        ):
+            response = self.client.get(reverse(rota), follow=True)
+            self.assertEqual(response.status_code, 200)
+            self.assertContains(response, "apenas visualizacao")
+
+    def test_plano_contas_e_cronograma_nao_sao_paginados(self):
+        response_plano = self.client.get(reverse("plano_contas_list"))
+        response_cronograma = self.client.get(reverse("plano_fisico_list"))
+
+        self.assertEqual(response_plano.status_code, 200)
+        self.assertEqual(response_cronograma.status_code, 200)
+        self.assertFalse(response_plano.context["is_paginated"])
+        self.assertFalse(response_cronograma.context["is_paginated"])
+
+    def test_plano_empresa_ignora_obras_concluidas_e_paralisadas_na_contagem(self):
+        obra_concluida = Obra.objects.create(
+            empresa=self.empresa,
+            codigo="OBR-END",
+            nome="Obra Encerrada",
+            status="CONCLUIDA",
+        )
+        obra_paralisada = Obra.objects.create(
+            empresa=self.empresa,
+            codigo="OBR-STOP",
+            nome="Obra Paralisada",
+            status="PARALISADA",
+        )
+
+        plano_empresa, _ = PlanoEmpresa.objects.get_or_create(empresa=self.empresa)
+        self.assertEqual(plano_empresa.obras_ativas(), 1)
+
+    def test_obra_form_aceita_status_concluida(self):
+        form = ObraForm(
+            data={
+                "codigo": self.obra.codigo,
+                "nome": self.obra.nome,
+                "cliente": self.obra.cliente,
+                "responsavel": self.obra.responsavel,
+                "status": "CONCLUIDA",
+                "data_inicio": self.obra.data_inicio or "",
+                "data_fim": self.obra.data_fim or "",
+                "descricao": self.obra.descricao,
+            },
+            instance=self.obra,
+        )
+
+        self.assertTrue(form.is_valid(), form.errors.as_json())
 
     def test_tecnico_nao_pode_encerrar_nao_conformidade(self):
         tecnico = self._criar_usuario_operacional("tecnico_qualidade", "TECNICO_OBRAS")
@@ -4164,6 +4328,13 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
         self.assertEqual(eva["EV"], Decimal("20.00"))
         self.assertEqual(eva["AC"], Decimal("30.00"))
 
+    def test_eva_mantem_spi_e_cpi_em_um_quando_previsto_da_obra_e_zero(self):
+        eva = EVAService.calcular(self.obra, date(2026, 3, 21))
+
+        self.assertEqual(eva["PV"], Decimal("0.00"))
+        self.assertEqual(eva["SPI"], Decimal("1.0000"))
+        self.assertEqual(eva["CPI"], Decimal("1.0000"))
+
     def test_score_operacional_reduz_com_alertas_e_riscos(self):
         risco = Risco.objects.create(
             empresa=self.empresa,
@@ -6495,6 +6666,10 @@ class HardeningProducaoTests(BaseFinanceTestCase):
     def setUp(self):
         super().setUp()
         cache.clear()
+        try:
+            caches["critical"].clear()
+        except Exception:
+            pass
         self.admin_empresa = get_user_model().objects.create_user(
             username="gestor_hardening",
             password="senha12345",
@@ -6591,6 +6766,49 @@ class HardeningProducaoTests(BaseFinanceTestCase):
         self.assertEqual(segunda.status_code, 200)
         self.assertEqual(terceira.status_code, 200)
         self.assertContains(terceira, "Muitas tentativas de login")
+
+    def test_login_redireciona_para_home_quando_nao_ha_next(self):
+        self.client.logout()
+        usuario = get_user_model().objects.create_user(username="redirecionado_home", password="senha12345")
+        UsuarioEmpresa.objects.create(
+            usuario=usuario,
+            empresa=self.empresa,
+            is_admin_empresa=True,
+            papel_aprovacao="GERENTE_OBRAS",
+        )
+
+        response = self.client.post(
+            reverse("login"),
+            {"username": usuario.username, "password": "senha12345"},
+            REMOTE_ADDR="177.10.10.10",
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, reverse("home"), fetch_redirect_response=False)
+
+    def test_login_bloqueia_mesmo_usuario_em_ips_distintos(self):
+        self.client.logout()
+        usuario = get_user_model().objects.create_user(username="sessao_ip_unica", password="senha12345")
+        UsuarioEmpresa.objects.create(
+            usuario=usuario,
+            empresa=self.empresa,
+            is_admin_empresa=True,
+            papel_aprovacao="GERENTE_OBRAS",
+        )
+
+        critical_cache_set(
+            f"construtask:user-active-ip:{usuario.pk}",
+            {"ip": "189.1.1.1", "session_key": "sessao-remota"},
+            timeout=3600,
+        )
+        segunda = self.client.post(
+            reverse("login"),
+            {"username": usuario.username, "password": "senha12345"},
+            REMOTE_ADDR="189.1.1.2",
+        )
+
+        self.assertEqual(segunda.status_code, 200)
+        self.assertContains(segunda, "sessao ativa em outro endereco IP")
 
     @override_settings(
         DEBUG=False,

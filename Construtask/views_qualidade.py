@@ -9,7 +9,12 @@ from .forms import NaoConformidadeForm
 from .models import Obra
 from .models_qualidade import NaoConformidade
 from .pagination import DefaultPaginationMixin
-from .permissions import get_empresa_operacional, get_obra_do_contexto
+from .permissions import (
+    descricao_restricao_obra,
+    get_empresa_operacional,
+    get_obra_do_contexto,
+    obra_em_somente_leitura,
+)
 from .services_qualidade import QualidadeWorkflowService
 from .services_aprovacao import can_manage_quality
 from .export_helpers import (
@@ -29,6 +34,12 @@ class NaoConformidadeListView(LoginRequiredMixin, DefaultPaginationMixin, ListVi
     model = NaoConformidade
     template_name = "app/nao_conformidade_list.html"
     context_object_name = "nao_conformidades"
+
+    def dispatch(self, request, *args, **kwargs):
+        if not _obra_contexto(request):
+            messages.error(request, "Selecione uma obra no menu antes de acessar nao conformidades.")
+            return redirect("obra_list")
+        return super().dispatch(request, *args, **kwargs)
 
     def get_queryset(self):
         empresa = get_empresa_operacional(self.request)
@@ -53,6 +64,16 @@ class NaoConformidadeCreateView(LoginRequiredMixin, CreateView):
     template_name = "app/nao_conformidade_form.html"
     success_url = reverse_lazy("nao_conformidade_list")
 
+    def dispatch(self, request, *args, **kwargs):
+        obra = _obra_contexto(request)
+        if not obra:
+            messages.error(request, "Selecione uma obra no menu antes de registrar nao conformidades.")
+            return redirect("obra_list")
+        if obra_em_somente_leitura(obra):
+            messages.error(request, descricao_restricao_obra(obra))
+            return redirect("nao_conformidade_list")
+        return super().dispatch(request, *args, **kwargs)
+
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs["empresa"] = get_empresa_operacional(self.request)
@@ -61,6 +82,9 @@ class NaoConformidadeCreateView(LoginRequiredMixin, CreateView):
 
     def form_valid(self, form):
         obra = form.cleaned_data["obra"]
+        if obra_em_somente_leitura(obra):
+            form.add_error("obra", descricao_restricao_obra(obra))
+            return self.form_invalid(form)
         empresa = get_empresa_operacional(self.request, obra=obra)
         nc = QualidadeWorkflowService.abrir(
             empresa=empresa,
@@ -72,6 +96,15 @@ class NaoConformidadeCreateView(LoginRequiredMixin, CreateView):
             responsavel=form.cleaned_data["responsavel"],
             criado_por=self.request.user,
         )
+        for campo in (
+            "evidencia_tratamento",
+            "evidencia_tratamento_anexo",
+            "evidencia_encerramento",
+            "evidencia_encerramento_anexo",
+            "eficacia_observacao",
+        ):
+            setattr(nc, campo, form.cleaned_data.get(campo))
+        nc.save()
         self.object = nc
         status = form.cleaned_data.get("status")
         if status == "EM_TRATAMENTO":
@@ -92,20 +125,51 @@ class NaoConformidadeDetailView(LoginRequiredMixin, DetailView):
     template_name = "app/nao_conformidade_detail.html"
     context_object_name = "nc"
 
+    def dispatch(self, request, *args, **kwargs):
+        if not _obra_contexto(request):
+            messages.error(request, "Selecione uma obra no menu antes de acessar nao conformidades.")
+            return redirect("obra_list")
+        return super().dispatch(request, *args, **kwargs)
+
     def get_queryset(self):
         empresa = get_empresa_operacional(self.request)
         queryset = NaoConformidade.objects.select_related("obra", "plano_contas", "responsavel", "criado_por")
         if empresa:
             queryset = queryset.filter(empresa=empresa)
+        obra = _obra_contexto(self.request)
+        if obra:
+            queryset = queryset.filter(obra=obra)
         return queryset.prefetch_related("historico__usuario")
 
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
+        if obra_em_somente_leitura(self.object.obra):
+            messages.error(request, descricao_restricao_obra(self.object.obra))
+            return redirect("nao_conformidade_detail", pk=self.object.pk)
+
         acao = request.POST.get("acao")
         observacao = request.POST.get("observacao", "")
         if acao in {"VERIFICACAO", "ENCERRAMENTO", "CANCELAMENTO"} and not can_manage_quality(request.user):
-            messages.error(request, "Seu perfil não possui permissão para executar esta etapa da qualidade.")
+            messages.error(request, "Seu perfil nao possui permissao para executar esta etapa da qualidade.")
             return redirect("nao_conformidade_detail", pk=self.object.pk)
+
+        if acao in {"VERIFICACAO", "ENCERRAMENTO"}:
+            self.object.evidencia_tratamento = (request.POST.get("evidencia_tratamento") or self.object.evidencia_tratamento or "").strip()
+            if request.FILES.get("evidencia_tratamento_anexo"):
+                self.object.evidencia_tratamento_anexo = request.FILES["evidencia_tratamento_anexo"]
+            if not self.object.evidencia_tratamento or not self.object.evidencia_tratamento_anexo:
+                messages.error(request, "A comprovacao de tratamento exige descricao e anexo.")
+                return redirect("nao_conformidade_detail", pk=self.object.pk)
+
+        if acao == "ENCERRAMENTO":
+            self.object.evidencia_encerramento = (request.POST.get("evidencia_encerramento") or self.object.evidencia_encerramento or "").strip()
+            if request.FILES.get("evidencia_encerramento_anexo"):
+                self.object.evidencia_encerramento_anexo = request.FILES["evidencia_encerramento_anexo"]
+            if not self.object.evidencia_encerramento or not self.object.evidencia_encerramento_anexo:
+                messages.error(request, "A comprovacao de encerramento exige descricao e anexo.")
+                return redirect("nao_conformidade_detail", pk=self.object.pk)
+
+        self.object.save()
         if acao == "TRATAMENTO":
             QualidadeWorkflowService.iniciar_tratamento(self.object, request.user, observacao)
         elif acao == "VERIFICACAO":
@@ -128,6 +192,13 @@ class NaoConformidadeUpdateView(LoginRequiredMixin, UpdateView):
         kwargs["empresa"] = get_empresa_operacional(self.request, obra=self.object.obra)
         kwargs["obra_contexto"] = self.object.obra
         return kwargs
+
+    def dispatch(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        if obra_em_somente_leitura(self.object.obra):
+            messages.error(request, descricao_restricao_obra(self.object.obra))
+            return redirect("nao_conformidade_detail", pk=self.object.pk)
+        return super().dispatch(request, *args, **kwargs)
 
     def get_success_url(self):
         messages.success(self.request, "Nao conformidade atualizada com sucesso.")
@@ -206,7 +277,9 @@ def _dados_probatorio_nc(nc):
         "Causa": nc.causa or "-",
         "Acao Corretiva": nc.acao_corretiva or "-",
         "Evidencia de Tratamento": nc.evidencia_tratamento or "-",
+        "Anexo de Tratamento": getattr(nc.evidencia_tratamento_anexo, "name", "-") or "-",
         "Evidencia de Encerramento": nc.evidencia_encerramento or "-",
+        "Anexo de Encerramento": getattr(nc.evidencia_encerramento_anexo, "name", "-") or "-",
         "Eficacia": nc.eficacia_observacao or "-",
     }
     historico = [

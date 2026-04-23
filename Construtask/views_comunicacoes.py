@@ -105,6 +105,21 @@ def _linhas_exportacao_pauta(reuniao):
                     "Origem": item.get_origem_tipo_display(),
                     "Item": item.titulo,
                     "Contexto": item.descricao or "-",
+                }
+            )
+    return linhas
+
+
+def _linhas_exportacao_ata(reuniao):
+    linhas = []
+    for _, rotulo, itens_secao in _iterar_itens_ativos_por_secao(reuniao):
+        for item in itens_secao:
+            linhas.append(
+                {
+                    "Secao": rotulo,
+                    "Origem": item.get_origem_tipo_display(),
+                    "Item": item.titulo,
+                    "Contexto": item.descricao or "-",
                     "O que sera feito": item.resposta_o_que or "-",
                     "Quem fara": item.resposta_quem or "-",
                     "Quando": item.resposta_quando.strftime("%d/%m/%Y") if item.resposta_quando else "-",
@@ -422,7 +437,7 @@ def reuniao_comunicacao_pauta_excel_view(request, pk):
     return _exportar_excel_response(
         f"pauta_{reuniao.numero}.xlsx".replace("/", "-"),
         "Pauta de Reuniao",
-        linhas or [{"Secao": "-", "Origem": "-", "Item": "-", "Contexto": "-", "O que sera feito": "-", "Quem fara": "-", "Quando": "-"}],
+        linhas or [{"Secao": "-", "Origem": "-", "Item": "-", "Contexto": "-"}],
     )
 
 
@@ -430,7 +445,7 @@ def reuniao_comunicacao_pauta_excel_view(request, pk):
 def reuniao_comunicacao_ata_excel_view(request, pk):
     reuniao = get_object_or_404(_queryset_reunioes(request), pk=pk)
     _exigir_permissao_comunicacoes(request, "view")
-    linhas = _linhas_exportacao_pauta(reuniao)
+    linhas = _linhas_exportacao_ata(reuniao)
     return _exportar_excel_response(
         f"ata_{reuniao.numero}.xlsx".replace("/", "-"),
         "Ata de Reuniao",
@@ -446,24 +461,18 @@ def reuniao_comunicacao_pauta_pdf_view(request, pk):
     for _, rotulo, itens_secao in _iterar_itens_ativos_por_secao(reuniao):
         extras.append(
             {
-                "titulo": rotulo,
-                "colunas": [
-                    ("Item", 160),
-                    ("Contexto", 165),
-                    ("O que sera feito", 135),
-                    ("Quem fara", 80),
-                    ("Quando", 55),
-                ],
-                "linhas": [
-                    {
-                        "Item": item.titulo,
-                        "Contexto": item.descricao or "-",
-                        "O que sera feito": item.resposta_o_que or "-",
-                        "Quem fara": item.resposta_quem or "-",
-                        "Quando": item.resposta_quando.strftime("%d/%m/%Y") if item.resposta_quando else "-",
-                    }
-                    for item in itens_secao
-                ],
+                    "titulo": rotulo,
+                    "colunas": [
+                        ("Item", 160),
+                        ("Contexto", 435),
+                    ],
+                    "linhas": [
+                        {
+                            "Item": item.titulo,
+                            "Contexto": item.descricao or "-",
+                        }
+                        for item in itens_secao
+                    ],
             }
         )
     return _pdf_relatorio_probatorio_response(
@@ -473,7 +482,7 @@ def reuniao_comunicacao_pauta_pdf_view(request, pk):
         _linhas_exportacao_historico(reuniao),
         [],
         extras_titulo="Itens da Pauta",
-        extras_colunas=[("Item", 160), ("Contexto", 165), ("O que sera feito", 135), ("Quem fara", 80), ("Quando", 55)],
+        extras_colunas=[("Item", 160), ("Contexto", 435)],
         secoes_extras=extras,
     )
 

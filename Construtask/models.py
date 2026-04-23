@@ -101,8 +101,8 @@ class PlanoEmpresa(models.Model):
         ).count()
 
     def obras_ativas(self):
-        """Conta obras com status diferente de encerrado/cancelado."""
-        return self.empresa.obras.exclude(status__in=["ENCERRADA", "CANCELADA"]).count()
+        """Conta apenas obras aptas para operacao ativa do plano."""
+        return self.empresa.obras.exclude(status__in=["PARALISADA", "CONCLUIDA"]).count()
 
     def pode_criar_usuario(self):
         """Retorna True se ainda há vaga no plano."""
@@ -1852,4 +1852,3 @@ from .models_comunicacoes import (  # noqa: E402,F401
     ParametroComunicacaoEmpresa,
     ReuniaoComunicacao,
 )
-

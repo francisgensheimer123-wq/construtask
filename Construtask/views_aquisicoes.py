@@ -22,9 +22,11 @@ from .forms import (
 from .models import AuditEvent, Obra
 from .models_aquisicoes import Cotacao, CotacaoItem, Fornecedor, OrdemCompra, SolicitacaoCompra
 from .permissions import (
+    descricao_restricao_obra,
     get_empresa_do_usuario,
     get_empresa_operacional,
     get_obra_do_contexto,
+    obra_em_somente_leitura,
     usuario_tem_permissao_modulo,
 )
 from .services_aquisicoes import AquisicoesService
@@ -240,6 +242,16 @@ class SolicitacaoCompraCreateView(LoginRequiredMixin, CreateView):
     template_name = "app/solicitacao_compra_form.html"
     success_url = reverse_lazy("solicitacao_compra_list")
 
+    def dispatch(self, request, *args, **kwargs):
+        obra = _obra_contexto(request)
+        if not obra:
+            messages.error(request, "Selecione uma obra no menu antes de criar solicitacoes de compra.")
+            return redirect("obra_list")
+        if obra_em_somente_leitura(obra):
+            messages.error(request, descricao_restricao_obra(obra))
+            return redirect("solicitacao_compra_list")
+        return super().dispatch(request, *args, **kwargs)
+
     def get_form_kwargs(self):
         _exigir_permissao_aquisicoes(self.request, "create")
         kwargs = super().get_form_kwargs()
@@ -309,6 +321,9 @@ class SolicitacaoCompraDetailView(LoginRequiredMixin, DetailView):
 
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
+        if obra_em_somente_leitura(self.object.obra):
+            messages.error(request, descricao_restricao_obra(self.object.obra))
+            return redirect("solicitacao_compra_detail", pk=self.object.pk)
         acao = request.POST.get("acao")
         if acao == "enviar_para_aprovacao":
             _exigir_permissao_aquisicoes(request, "create")
@@ -354,6 +369,16 @@ class CotacaoCreateView(LoginRequiredMixin, CreateView):
     form_class = CotacaoComparativaForm
     template_name = "app/cotacao_form.html"
     success_url = reverse_lazy("cotacao_list")
+
+    def dispatch(self, request, *args, **kwargs):
+        obra = _obra_contexto(request)
+        if not obra:
+            messages.error(request, "Selecione uma obra no menu antes de criar cotacoes.")
+            return redirect("obra_list")
+        if obra_em_somente_leitura(obra):
+            messages.error(request, descricao_restricao_obra(obra))
+            return redirect("cotacao_list")
+        return super().dispatch(request, *args, **kwargs)
 
     def get_form_kwargs(self):
         _exigir_permissao_aquisicoes(self.request, "create")
@@ -494,6 +519,9 @@ class CotacaoDetailView(LoginRequiredMixin, DetailView):
 
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
+        if obra_em_somente_leitura(self.object.obra):
+            messages.error(request, descricao_restricao_obra(self.object.obra))
+            return redirect("cotacao_detail", pk=self.object.pk)
         acao = request.POST.get("acao")
         if acao == "enviar_para_aprovacao":
             _exigir_permissao_aquisicoes(request, "create")
@@ -570,6 +598,9 @@ class OrdemCompraDetailView(LoginRequiredMixin, DetailView):
 
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
+        if obra_em_somente_leitura(self.object.obra):
+            messages.error(request, descricao_restricao_obra(self.object.obra))
+            return redirect("ordem_compra_detail", pk=self.object.pk)
         acao = request.POST.get("acao")
         if acao == "enviar_para_aprovacao":
             _exigir_permissao_aquisicoes(request, "create")

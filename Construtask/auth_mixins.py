@@ -1,6 +1,6 @@
 """
-Módulo de autenticação e permissões.
-Mantém compatibilidade com imports legados, usando a trilha oficial de tenant.
+Modulo de autenticacao e permissoes.
+Mantem compatibilidade com imports legados, usando a trilha oficial de tenant.
 """
 
 from datetime import timedelta
@@ -23,7 +23,7 @@ class LoginRequiredMixin(DjangoLoginRequiredMixin):
 
     def dispatch(self, request, *args, **kwargs):
         if not request.user.is_authenticated:
-            messages.error(request, "Você precisa fazer login para acessar esta página.")
+            messages.error(request, "Voce precisa fazer login para acessar esta pagina.")
             return HttpResponseRedirect(f"{reverse_lazy('login')}?next={request.path}")
         return super().dispatch(request, *args, **kwargs)
 
@@ -48,6 +48,14 @@ class ConstrutaskLoginView(LoginView):
     def _ip_cache_key(self):
         return f"construtask:login-lock-ip:{self._client_ip()}"
 
+    def _user_ip_cache_key(self, user):
+        return f"construtask:user-active-ip:{user.pk}"
+
+    def _session_key(self):
+        if not self.request.session.session_key:
+            self.request.session.create()
+        return self.request.session.session_key
+
     def _lock_state(self, cache_key):
         return critical_cache_get(cache_key) or {"tentativas": 0, "bloqueado_ate": None}
 
@@ -66,7 +74,10 @@ class ConstrutaskLoginView(LoginView):
     def _lock_message(self, bloqueado_ate):
         if not bloqueado_ate:
             return "Muitas tentativas de login. Tente novamente em alguns minutos."
-        return f"Muitas tentativas de login. Tente novamente apos {timezone.localtime(bloqueado_ate).strftime('%d/%m/%Y %H:%M')}."
+        return (
+            "Muitas tentativas de login. Tente novamente apos "
+            f"{timezone.localtime(bloqueado_ate).strftime('%d/%m/%Y %H:%M')}."
+        )
 
     def _active_lock(self):
         agora = timezone.now()
@@ -84,20 +95,34 @@ class ConstrutaskLoginView(LoginView):
 
     def dispatch(self, request, *args, **kwargs):
         bloqueado_ate = self._active_lock()
-        if bloqueado_ate:
-            if request.method == "POST":
-                form = self.get_form()
-                form.add_error(None, self._lock_message(bloqueado_ate))
-                return self.render_to_response(self.get_context_data(form=form))
+        if bloqueado_ate and request.method == "POST":
+            form = self.get_form()
+            form.add_error(None, self._lock_message(bloqueado_ate))
+            return self.render_to_response(self.get_context_data(form=form))
         return super().dispatch(request, *args, **kwargs)
 
     def get_success_url(self):
-        return self.request.GET.get("next", reverse_lazy("obra_list"))
+        return self.request.GET.get("next", reverse_lazy("home"))
 
     def form_valid(self, form):
+        user = form.get_user()
+        estado = critical_cache_get(self._user_ip_cache_key(user)) or {}
+        ip_atual = self._client_ip()
+        sessao_atual = self._session_key()
+        if estado.get("ip") and estado.get("ip") != ip_atual and estado.get("session_key") != sessao_atual:
+            form.add_error(None, "Este usuario ja possui uma sessao ativa em outro endereco IP.")
+            return self.form_invalid(form)
+
         for cache_key in self._lock_config():
             critical_cache_delete(cache_key)
-        return super().form_valid(form)
+
+        response = super().form_valid(form)
+        critical_cache_set(
+            self._user_ip_cache_key(user),
+            {"ip": ip_atual, "session_key": self.request.session.session_key},
+            timeout=max(int(getattr(settings, "SESSION_COOKIE_AGE", 1209600) or 1209600), 300),
+        )
+        return response
 
     def form_invalid(self, form):
         if self.request.method == "POST":
@@ -123,7 +148,12 @@ class ConstrutaskLogoutView(LogoutView):
     next_page = reverse_lazy("login")
 
     def dispatch(self, request, *args, **kwargs):
-        messages.info(request, "Você foi desconectado com sucesso.")
+        if request.user.is_authenticated:
+            cache_key = f"construtask:user-active-ip:{request.user.pk}"
+            estado = critical_cache_get(cache_key) or {}
+            if estado.get("session_key") == request.session.session_key:
+                critical_cache_delete(cache_key)
+        messages.info(request, "Voce foi desconectado com sucesso.")
         return super().dispatch(request, *args, **kwargs)
 
 

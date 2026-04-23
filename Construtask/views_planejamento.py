@@ -31,6 +31,8 @@ from .pagination import DefaultPaginationMixin
 from .permissions import (
     filtrar_por_obra_contexto as _filtrar_por_obra_contexto,
     get_obra_do_contexto as _obter_obra_contexto,
+    obra_em_somente_leitura,
+    descricao_restricao_obra,
 )
 
 
@@ -177,6 +179,15 @@ class PlanoFisicoListView(DefaultPaginationMixin, ListView):
     template_name = "app/plano_fisico_list.html"
     context_object_name = "planos"
 
+    def get_paginate_by(self, queryset):
+        return None
+
+    def dispatch(self, request, *args, **kwargs):
+        if not _obter_obra_contexto(request):
+            messages.error(request, "Selecione uma obra no menu antes de acessar o cronograma.")
+            return redirect("obra_list")
+        return super().dispatch(request, *args, **kwargs)
+
     def get_queryset(self):
         itens_qs = PlanoFisicoItem.objects.select_related("parent").only(
             "id",
@@ -243,6 +254,16 @@ class PlanoFisicoCreateView(CreateView):
     template_name = "app/plano_fisico_importar.html"
     fields = ["titulo", "descricao"]
 
+    def dispatch(self, request, *args, **kwargs):
+        obra = _obter_obra_contexto(request)
+        if not obra:
+            messages.error(request, "Selecione uma obra no menu antes de importar o cronograma.")
+            return redirect("obra_list")
+        if obra_em_somente_leitura(obra):
+            messages.error(request, descricao_restricao_obra(obra))
+            return redirect("plano_fisico_list")
+        return super().dispatch(request, *args, **kwargs)
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["obra"] = _obter_obra_contexto(self.request)
@@ -306,6 +327,12 @@ class PlanoFisicoDetailView(DetailView):
     template_name = "app/plano_fisico_detail.html"
     context_object_name = "plano"
 
+    def dispatch(self, request, *args, **kwargs):
+        if not _obter_obra_contexto(request):
+            messages.error(request, "Selecione uma obra no menu antes de acessar o cronograma.")
+            return redirect("obra_list")
+        return super().dispatch(request, *args, **kwargs)
+
     def get_queryset(self):
         itens_qs = PlanoFisicoItem.objects.select_related("plano_contas", "parent").order_by("sort_order", "pk")
         return _filtrar_por_obra_contexto(
@@ -368,6 +395,9 @@ class PlanoFisicoDetailView(DetailView):
 
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
+        if obra_em_somente_leitura(self.object.obra):
+            messages.error(request, descricao_restricao_obra(self.object.obra))
+            return redirect("plano_fisico_detail", pk=self.object.pk)
         acao = request.POST.get("acao")
         if acao != "atualizar_cronograma":
             return redirect("plano_fisico_detail", pk=self.object.pk)
@@ -426,6 +456,13 @@ class PlanoFisicoUpdateView(UpdateView):
     template_name = "app/plano_fisico_form.html"
     fields = ["titulo", "descricao", "data_base", "status"]
 
+    def dispatch(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        if obra_em_somente_leitura(self.object.obra):
+            messages.error(request, descricao_restricao_obra(self.object.obra))
+            return redirect("plano_fisico_detail", pk=self.object.pk)
+        return super().dispatch(request, *args, **kwargs)
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["titulo"] = f"Editar Cronograma: {self.object.titulo}"
@@ -442,6 +479,13 @@ class PlanoFisicoItemUpdateView(UpdateView):
     template_name = "app/plano_fisico_item_form.html"
     form_class = PlanoFisicoItemForm
     pk_url_kwarg = "item_pk"
+
+    def dispatch(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        if obra_em_somente_leitura(self.object.plano.obra):
+            messages.error(request, descricao_restricao_obra(self.object.plano.obra))
+            return redirect("plano_fisico_detail", pk=self.object.plano.pk)
+        return super().dispatch(request, *args, **kwargs)
 
     def get_queryset(self):
         return PlanoFisicoItem.objects.select_related("plano", "plano__obra", "plano_contas").filter(

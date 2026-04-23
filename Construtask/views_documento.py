@@ -6,6 +6,7 @@ import hashlib
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
@@ -15,7 +16,13 @@ from django.views.generic import CreateView, DetailView, ListView, UpdateView
 from .forms import DocumentoForm, DocumentoRevisaoForm, DocumentoWorkflowForm
 from .models import AuditEvent, Documento, DocumentoRevisao, Obra
 from .pagination import DefaultPaginationMixin
-from .permissions import filtrar_por_empresa as _filtrar_por_empresa, get_empresa_operacional as _get_empresa_do_request
+from .permissions import (
+    descricao_restricao_obra,
+    filtrar_por_empresa as _filtrar_por_empresa,
+    get_empresa_operacional as _get_empresa_do_request,
+    get_obra_do_contexto as _get_obra_contexto,
+    obra_em_somente_leitura,
+)
 from .services_aprovacao import can_approve_document, can_submit_for_approval
 
 
@@ -54,20 +61,27 @@ def _snapshot_revisao(revisao):
     }
 
 
-class DocumentoListView(DefaultPaginationMixin, ListView):
+class DocumentoListView(LoginRequiredMixin, DefaultPaginationMixin, ListView):
     model = Documento
     template_name = "app/documento_list.html"
     context_object_name = "documentos"
 
+    def dispatch(self, request, *args, **kwargs):
+        if not _get_obra_contexto(request):
+            messages.error(request, "Selecione uma obra no menu antes de acessar documentos.")
+            return redirect("obra_list")
+        return super().dispatch(request, *args, **kwargs)
+
     def get_queryset(self):
         empresa = _get_empresa_do_request(self.request)
+        obra_contexto = _get_obra_contexto(self.request)
         queryset = Documento.objects.select_related("empresa", "obra", "plano_contas", "criado_por")
         queryset = _filtrar_por_empresa(queryset, empresa)
+        queryset = queryset.filter(obra=obra_contexto)
 
         termo = self.request.GET.get("q", "").strip()
         status = self.request.GET.get("status", "").strip()
         tipo = self.request.GET.get("tipo", "").strip()
-        obra_id = self.request.GET.get("obra", "").strip()
 
         if termo:
             queryset = queryset.filter(codigo_documento__icontains=termo) | queryset.filter(titulo__icontains=termo)
@@ -75,25 +89,24 @@ class DocumentoListView(DefaultPaginationMixin, ListView):
             queryset = queryset.filter(status=status)
         if tipo:
             queryset = queryset.filter(tipo_documento=tipo)
-        if obra_id:
-            queryset = queryset.filter(obra_id=obra_id)
 
         return queryset.order_by("-criado_em")
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         empresa = _get_empresa_do_request(self.request)
+        obra_contexto = _get_obra_contexto(self.request)
         context["busca"] = self.request.GET.get("q", "")
         context["status_filtro"] = self.request.GET.get("status", "")
         context["tipo_filtro"] = self.request.GET.get("tipo", "")
-        context["obra_filtro"] = self.request.GET.get("obra", "")
+        context["obra_filtro"] = str(obra_contexto.pk) if obra_contexto else ""
         context["status_choices"] = Documento.STATUS_CHOICES
         context["tipo_choices"] = Documento.TIPO_CHOICES
-        context["obras"] = Obra.objects.filter(empresa=empresa).order_by("codigo") if empresa else Obra.objects.none()
+        context["obras"] = Obra.objects.filter(empresa=empresa, pk=getattr(obra_contexto, "pk", None)).order_by("codigo") if empresa and obra_contexto else Obra.objects.none()
         return context
 
 
-class DocumentoCreateView(CreateView):
+class DocumentoCreateView(LoginRequiredMixin, CreateView):
     model = Documento
     form_class = DocumentoForm
     template_name = "app/documento_form.html"
@@ -101,7 +114,18 @@ class DocumentoCreateView(CreateView):
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs["empresa"] = _get_empresa_do_request(self.request)
+        kwargs["obra_contexto"] = _get_obra_contexto(self.request)
         return kwargs
+
+    def dispatch(self, request, *args, **kwargs):
+        obra = _get_obra_contexto(request)
+        if not obra:
+            messages.error(request, "Selecione uma obra no menu antes de criar documentos.")
+            return redirect("obra_list")
+        if obra_em_somente_leitura(obra):
+            messages.error(request, descricao_restricao_obra(obra))
+            return redirect("documento_list")
+        return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -111,14 +135,38 @@ class DocumentoCreateView(CreateView):
 
     def form_valid(self, form):
         empresa = _get_empresa_do_request(self.request)
+        obra_contexto = _get_obra_contexto(self.request)
         if not empresa:
-            messages.error(self.request, "Usuário não possui empresa vinculada.")
+            messages.error(self.request, "Usuario nao possui empresa vinculada.")
             return redirect("documento_list")
+        if not obra_contexto:
+            form.add_error("obra", "Selecione uma obra no menu antes de criar documentos.")
+            return self.form_invalid(form)
+        if obra_em_somente_leitura(obra_contexto):
+            form.add_error("obra", descricao_restricao_obra(obra_contexto))
+            return self.form_invalid(form)
 
         documento = form.save(commit=False)
         documento.criado_por = self.request.user
         documento.empresa = empresa
+        documento.obra = obra_contexto
         documento.save()
+
+        arquivo = form.cleaned_data["arquivo_inicial"]
+        sha256 = hashlib.sha256()
+        for chunk in arquivo.chunks():
+            sha256.update(chunk)
+        revisao = DocumentoRevisao.objects.create(
+            documento=documento,
+            versao=1,
+            arquivo=arquivo,
+            checksum=sha256.hexdigest(),
+            status="ELABORACAO",
+            criado_por=self.request.user,
+        )
+        documento.versao_atual = revisao.versao
+        documento.save(update_fields=["versao_atual", "atualizado_em"])
+
         _registrar_evento_documento(self.request, documento, "CREATE", depois=_snapshot_documento(documento))
         messages.success(self.request, f"Documento '{documento.codigo_documento}' criado com sucesso.")
         return redirect("documento_detail", pk=documento.pk)
@@ -127,17 +175,25 @@ class DocumentoCreateView(CreateView):
         return reverse_lazy("documento_list")
 
 
-class DocumentoDetailView(DetailView):
+class DocumentoDetailView(LoginRequiredMixin, DetailView):
     model = Documento
     template_name = "app/documento_detail.html"
     context_object_name = "documento"
 
+    def dispatch(self, request, *args, **kwargs):
+        if not _get_obra_contexto(request):
+            messages.error(request, "Selecione uma obra no menu antes de acessar documentos.")
+            return redirect("obra_list")
+        return super().dispatch(request, *args, **kwargs)
+
     def get_queryset(self):
         empresa = _get_empresa_do_request(self.request)
+        obra_contexto = _get_obra_contexto(self.request)
         queryset = Documento.objects.select_related(
             "empresa", "obra", "plano_contas", "criado_por"
         ).prefetch_related("revisoes", "revisoes__criado_por", "revisoes__revisor", "revisoes__aprobador")
-        return _filtrar_por_empresa(queryset, empresa)
+        queryset = _filtrar_por_empresa(queryset, empresa)
+        return queryset.filter(obra=obra_contexto)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -147,12 +203,13 @@ class DocumentoDetailView(DetailView):
         context["revisoes"] = documento.revisoes.all().order_by("-versao")
         context["ultima_revisao"] = ultima_revisao
         context["versao_aprovada"] = documento.get_versao_aprovada()
-        context["pode_revisar"] = documento.pode_revisar()
+        context["pode_revisar"] = documento.pode_revisar() and not obra_em_somente_leitura(documento.obra)
         context["pode_enviar_revisao"] = (
             documento.status == "RASCUNHO"
             and ultima_revisao is not None
             and ultima_revisao.status == "ELABORACAO"
             and can_submit_for_approval(self.request.user)
+            and not obra_em_somente_leitura(documento.obra)
         )
         context["pode_aprovar"] = (
             documento.status == "EM_REVISAO"
@@ -180,8 +237,11 @@ class DocumentoDetailView(DetailView):
 
     def _upload_revisao(self, request):
         documento = self.object
+        if obra_em_somente_leitura(documento.obra):
+            messages.error(request, descricao_restricao_obra(documento.obra))
+            return redirect("documento_detail", pk=documento.pk)
         if not documento.pode_revisar():
-            messages.error(request, "Este documento não pode receber novas revisões neste estágio.")
+            messages.error(request, "Este documento nao pode receber novas revisoes neste estagio.")
             return redirect("documento_detail", pk=documento.pk)
 
         form = DocumentoRevisaoForm(request.POST, request.FILES)
@@ -212,17 +272,21 @@ class DocumentoDetailView(DetailView):
             "UPLOAD",
             depois={"revisao": _snapshot_revisao(revisao), **_snapshot_documento(documento)},
         )
-        messages.success(request, f"Revisão {revisao.versao} enviada com sucesso.")
+        messages.success(request, f"Revisao {revisao.versao} enviada com sucesso.")
         return redirect("documento_detail", pk=documento.pk)
 
     def _workflow_action(self, request):
         documento = self.object
+        if obra_em_somente_leitura(documento.obra):
+            messages.error(request, descricao_restricao_obra(documento.obra))
+            return redirect("documento_detail", pk=documento.pk)
+
         revisao = documento.ultima_revisao
         acao = request.POST.get("acao")
         parecer = (request.POST.get("parecer") or "").strip()
 
         if not revisao:
-            messages.error(request, "Crie uma revisão antes de executar o workflow do documento.")
+            messages.error(request, "Crie uma revisao antes de executar o workflow do documento.")
             return redirect("documento_detail", pk=documento.pk)
 
         antes_documento = _snapshot_documento(documento)
@@ -230,10 +294,10 @@ class DocumentoDetailView(DetailView):
 
         if acao == "ENVIAR_REVISAO":
             if not can_submit_for_approval(request.user):
-                messages.error(request, "Seu perfil não pode submeter documentos para validação.")
+                messages.error(request, "Seu perfil nao pode submeter documentos para validacao.")
                 return redirect("documento_detail", pk=documento.pk)
             if documento.status != "RASCUNHO" or revisao.status != "ELABORACAO":
-                messages.error(request, "A revisão precisa estar em elaboração para ser enviada.")
+                messages.error(request, "A revisao precisa estar em elaboracao para ser enviada.")
                 return redirect("documento_detail", pk=documento.pk)
 
             revisao.status = "REVISAO"
@@ -251,15 +315,15 @@ class DocumentoDetailView(DetailView):
                 antes={"documento": antes_documento, "revisao": antes_revisao},
                 depois={"documento": _snapshot_documento(documento), "revisao": _snapshot_revisao(revisao)},
             )
-            messages.success(request, "Documento enviado para validação.")
+            messages.success(request, "Documento enviado para validacao.")
             return redirect("documento_detail", pk=documento.pk)
 
         if acao == "APROVAR":
             if not can_approve_document(request.user):
-                messages.error(request, "Seu perfil não pode aprovar documentos.")
+                messages.error(request, "Seu perfil nao pode aprovar documentos.")
                 return redirect("documento_detail", pk=documento.pk)
             if documento.status != "EM_REVISAO" or revisao.status != "REVISAO":
-                messages.error(request, "A revisão precisa estar em validação para ser aprovada.")
+                messages.error(request, "A revisao precisa estar em validacao para ser aprovada.")
                 return redirect("documento_detail", pk=documento.pk)
 
             revisao.status = "APROVADO"
@@ -283,10 +347,10 @@ class DocumentoDetailView(DetailView):
 
         if acao in {"REJEITAR", "DEVOLVER_AJUSTE"}:
             if not can_approve_document(request.user):
-                messages.error(request, "Seu perfil não pode devolver documentos para ajuste.")
+                messages.error(request, "Seu perfil nao pode devolver documentos para ajuste.")
                 return redirect("documento_detail", pk=documento.pk)
             if documento.status != "EM_REVISAO" or revisao.status != "REVISAO":
-                messages.error(request, "Somente revisões em validação podem voltar para ajuste.")
+                messages.error(request, "Somente revisoes em validacao podem voltar para ajuste.")
                 return redirect("documento_detail", pk=documento.pk)
             if not parecer:
                 messages.error(request, "Informe um parecer para devolver o documento para ajuste.")
@@ -311,10 +375,10 @@ class DocumentoDetailView(DetailView):
 
         if acao == "TORNAR_OBSOLETO":
             if not can_approve_document(request.user):
-                messages.error(request, "Seu perfil não pode tornar documentos obsoletos.")
+                messages.error(request, "Seu perfil nao pode tornar documentos obsoletos.")
                 return redirect("documento_detail", pk=documento.pk)
             if not documento.pode_tornar_obsoleto():
-                messages.error(request, "Este documento não pode ser tornado obsoleto neste estágio.")
+                messages.error(request, "Este documento nao pode ser tornado obsoleto neste estagio.")
                 return redirect("documento_detail", pk=documento.pk)
 
             documento.status = "OBSOLETO"
@@ -329,22 +393,27 @@ class DocumentoDetailView(DetailView):
             messages.warning(request, "Documento marcado como obsoleto.")
             return redirect("documento_detail", pk=documento.pk)
 
-        messages.error(request, "Ação de workflow inválida.")
+        messages.error(request, "Acao de workflow invalida.")
         return redirect("documento_detail", pk=documento.pk)
 
 
-class DocumentoUpdateView(UpdateView):
+class DocumentoUpdateView(LoginRequiredMixin, UpdateView):
     model = Documento
     form_class = DocumentoForm
     template_name = "app/documento_form.html"
 
     def get_queryset(self):
         empresa = _get_empresa_do_request(self.request)
+        obra_contexto = _get_obra_contexto(self.request)
         queryset = Documento.objects.select_related("empresa", "obra", "plano_contas", "criado_por")
-        return _filtrar_por_empresa(queryset, empresa)
+        queryset = _filtrar_por_empresa(queryset, empresa)
+        return queryset.filter(obra=obra_contexto)
 
     def dispatch(self, request, *args, **kwargs):
         self.object = self.get_object()
+        if obra_em_somente_leitura(self.object.obra):
+            messages.error(request, descricao_restricao_obra(self.object.obra))
+            return redirect("documento_detail", pk=self.object.pk)
         if self.object.status != "RASCUNHO":
             messages.error(request, "Somente documentos em rascunho podem ser editados.")
             return redirect("documento_detail", pk=self.object.pk)
@@ -353,6 +422,7 @@ class DocumentoUpdateView(UpdateView):
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs["empresa"] = _get_empresa_do_request(self.request)
+        kwargs["obra_contexto"] = _get_obra_contexto(self.request)
         return kwargs
 
     def get_context_data(self, **kwargs):
@@ -363,10 +433,12 @@ class DocumentoUpdateView(UpdateView):
 
     def form_valid(self, form):
         antes = _snapshot_documento(self.object)
-        response = super().form_valid(form)
+        self.object = form.save(commit=False)
+        self.object.obra = _get_obra_contexto(self.request)
+        self.object.save()
         _registrar_evento_documento(self.request, self.object, "UPDATE", antes=antes, depois=_snapshot_documento(self.object))
         messages.success(self.request, "Documento atualizado com sucesso.")
-        return response
+        return redirect("documento_detail", pk=self.object.pk)
 
     def get_success_url(self):
         return reverse_lazy("documento_detail", kwargs={"pk": self.object.pk})
@@ -375,15 +447,21 @@ class DocumentoUpdateView(UpdateView):
 @login_required
 def documento_delete_view(request, pk):
     empresa = _get_empresa_do_request(request)
+    obra_contexto = _get_obra_contexto(request)
     documento = get_object_or_404(Documento, pk=pk)
 
     if empresa and documento.empresa_id != empresa.id:
-        raise Http404("Documento não encontrado.")
+        raise Http404("Documento nao encontrado.")
+    if obra_contexto and documento.obra_id != obra_contexto.id:
+        raise Http404("Documento nao encontrado.")
+    if obra_em_somente_leitura(documento.obra):
+        messages.error(request, descricao_restricao_obra(documento.obra))
+        return redirect("documento_detail", pk=documento.pk)
 
     if request.method == "POST":
         codigo = documento.codigo_documento
         documento.delete()
-        messages.success(request, f"Documento '{codigo}' excluído com sucesso.")
+        messages.success(request, f"Documento '{codigo}' excluido com sucesso.")
         return redirect("documento_list")
 
     return redirect("documento_list")
@@ -392,10 +470,13 @@ def documento_delete_view(request, pk):
 @login_required
 def documento_download_view(request, pk, revisao_pk=None):
     empresa = _get_empresa_do_request(request)
+    obra_contexto = _get_obra_contexto(request)
     documento = get_object_or_404(Documento, pk=pk)
 
     if empresa and documento.empresa_id != empresa.id:
-        raise Http404("Documento não encontrado.")
+        raise Http404("Documento nao encontrado.")
+    if obra_contexto and documento.obra_id != obra_contexto.id:
+        raise Http404("Documento nao encontrado.")
 
     if revisao_pk:
         revisao = get_object_or_404(DocumentoRevisao, pk=revisao_pk, documento=documento)
@@ -405,7 +486,7 @@ def documento_download_view(request, pk, revisao_pk=None):
         if revisao_aprovada:
             arquivo = revisao_aprovada.arquivo_aprovado or revisao_aprovada.arquivo
         else:
-            raise Http404("Nenhum arquivo disponível para download.")
+            raise Http404("Nenhum arquivo disponivel para download.")
 
     response = FileResponse(arquivo)
     response["Content-Disposition"] = f'attachment; filename="{arquivo.name}"'

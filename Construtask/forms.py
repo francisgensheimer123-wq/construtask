@@ -33,6 +33,7 @@ from .models_aquisicoes import (
     SolicitacaoCompraItem,
 )
 from .models_qualidade import NaoConformidade
+from .permissions import filtrar_obras_liberadas_para_lancamento, obra_em_somente_leitura
 from .services import validar_rateio_nota
 from .text_normalization import normalizar_texto_cadastral
 
@@ -186,7 +187,7 @@ class PlanoContasForm(NormalizeTextFieldsMixin, forms.ModelForm):
 
 
 class ObraForm(NormalizeTextFieldsMixin, forms.ModelForm):
-    text_fields_to_normalize = ("codigo", "nome", "cliente", "responsavel", "status", "descricao")
+    text_fields_to_normalize = ("codigo", "nome", "cliente", "responsavel", "descricao")
 
     class Meta:
         model = Obra
@@ -848,6 +849,12 @@ from .models import Documento, DocumentoRevisao
 
 class DocumentoForm(NormalizeTextFieldsMixin, forms.ModelForm):
     text_fields_to_normalize = ("processo", "codigo_documento", "titulo")
+    arquivo_inicial = forms.FileField(
+        required=True,
+        widget=forms.FileInput(attrs={"accept": ".pdf,.doc,.docx"}),
+        help_text="Anexe a versão inicial do documento.",
+        label="Anexo do Documento",
+    )
 
     """Formulário para criação/edição de Documentos Controlados ISO 7.5."""
 
@@ -868,13 +875,29 @@ class DocumentoForm(NormalizeTextFieldsMixin, forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         empresa = kwargs.pop('empresa', None)
+        obra_contexto = kwargs.pop("obra_contexto", None)
         super().__init__(*args, **kwargs)
         if empresa:
-            self.fields['obra'].queryset = empresa.obras.all()
-            self.fields['plano_contas'].queryset = PlanoContas.objects.filter(obra__empresa=empresa)
+            self.fields['obra'].queryset = filtrar_obras_liberadas_para_lancamento(empresa.obras.all()).order_by("codigo")
+            if obra_contexto and obra_contexto.empresa_id == empresa.id:
+                self.fields["obra"].initial = obra_contexto
+                self.fields["plano_contas"].queryset = PlanoContas.objects.filter(obra=obra_contexto).order_by("tree_id", "lft")
+            else:
+                self.fields['plano_contas'].queryset = PlanoContas.objects.filter(obra__empresa=empresa).order_by("tree_id", "lft")
         else:
             self.fields['obra'].queryset = Obra.objects.none()
             self.fields['plano_contas'].queryset = PlanoContas.objects.none()
+        self.fields["obra"].required = True
+        self.fields["codigo_documento"].required = False
+        if self.instance and self.instance.pk:
+            self.fields["arquivo_inicial"].required = False
+
+    def clean(self):
+        cleaned_data = super().clean()
+        obra = cleaned_data.get("obra")
+        if obra_em_somente_leitura(obra):
+            self.add_error("obra", "Obras concluidas ou paralisadas permitem apenas visualizacao.")
+        return cleaned_data
 
 
 class DocumentoRevisaoForm(NormalizeTextFieldsMixin, forms.ModelForm):
@@ -934,14 +957,22 @@ class NaoConformidadeForm(NormalizeTextFieldsMixin, forms.ModelForm):
             "eficacia_observacao",
             "responsavel",
             "status",
+            "evidencia_tratamento_anexo",
+            "evidencia_encerramento_anexo",
         ]
+        widgets = {
+            "evidencia_tratamento_anexo": forms.FileInput(),
+            "evidencia_encerramento_anexo": forms.FileInput(),
+        }
 
     def __init__(self, *args, **kwargs):
         empresa = kwargs.pop("empresa", None)
         obra_contexto = kwargs.pop("obra_contexto", None)
         super().__init__(*args, **kwargs)
         if empresa:
-            self.fields["obra"].queryset = Obra.objects.filter(empresa=empresa).order_by("codigo")
+            self.fields["obra"].queryset = filtrar_obras_liberadas_para_lancamento(
+                Obra.objects.filter(empresa=empresa)
+            ).order_by("codigo")
         else:
             self.fields["obra"].queryset = Obra.objects.none()
         if obra_contexto:
@@ -949,6 +980,24 @@ class NaoConformidadeForm(NormalizeTextFieldsMixin, forms.ModelForm):
             self.fields["plano_contas"].queryset = PlanoContas.objects.filter(obra=obra_contexto).order_by("tree_id", "lft")
         else:
             self.fields["plano_contas"].queryset = PlanoContas.objects.none()
+
+    def clean(self):
+        cleaned_data = super().clean()
+        obra = cleaned_data.get("obra")
+        status = cleaned_data.get("status")
+        if obra_em_somente_leitura(obra):
+            self.add_error("obra", "Obras concluidas ou paralisadas permitem apenas visualizacao.")
+        if status in {"EM_VERIFICACAO", "ENCERRADA"}:
+            if not (cleaned_data.get("evidencia_tratamento") or "").strip():
+                self.add_error("evidencia_tratamento", "Informe a evidencia de tratamento antes de enviar para verificacao.")
+            if not cleaned_data.get("evidencia_tratamento_anexo"):
+                self.add_error("evidencia_tratamento_anexo", "Anexe a comprovacao da evidencia de tratamento.")
+        if status == "ENCERRADA":
+            if not (cleaned_data.get("evidencia_encerramento") or "").strip():
+                self.add_error("evidencia_encerramento", "Informe a evidencia de encerramento antes de encerrar a NC.")
+            if not cleaned_data.get("evidencia_encerramento_anexo"):
+                self.add_error("evidencia_encerramento_anexo", "Anexe a comprovacao da evidencia de encerramento.")
+        return cleaned_data
 
 
 class FornecedorForm(NormalizeTextFieldsMixin, forms.ModelForm):
