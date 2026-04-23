@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 import json
 import os
+from datetime import timedelta
 from pathlib import Path
 
 import dj_database_url
@@ -314,6 +315,13 @@ CELERY_TASK_TIME_LIMIT = 360        # 6 min: mata o worker se travar
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 CELERY_TASK_ACKS_LATE = True
 CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+CELERY_BEAT_SCHEDULE = {}
+
+if CONSTRUTASK_BACKUP_ENABLED and CONSTRUTASK_BACKUP_PROVIDER:
+    CELERY_BEAT_SCHEDULE["construtask-backup-postgres-r2"] = {
+        "task": "Construtask.tasks.task_executar_backup_postgres",
+        "schedule": timedelta(hours=max(CONSTRUTASK_BACKUP_INTERVAL_HOURS, 1)),
+    }
 
 
 LOGGING = {

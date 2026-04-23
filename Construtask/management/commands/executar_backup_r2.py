@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """
 Backup do PostgreSQL para Cloudflare R2.
-Executar via: railway run python scripts/backup_postgres_r2.py
+Executar via: python manage.py executar_backup_r2
 """
 import hashlib
 import json

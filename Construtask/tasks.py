@@ -2,6 +2,7 @@
 import logging
 
 from celery import shared_task
+from django.conf import settings
 
 logger = logging.getLogger("construtask.request")
 
@@ -31,6 +32,15 @@ def task_sincronizar_alertas_obra(self, obra_id):
 def task_executar_backup_postgres(self):
     from django.core.management import call_command
     from io import StringIO
+
+    if not getattr(settings, "CONSTRUTASK_BACKUP_ENABLED", False):
+        logger.info("Rotina de backup ignorada: backup SaaS desabilitado.")
+        return "backup disabled"
+
+    if not getattr(settings, "CONSTRUTASK_BACKUP_PROVIDER", ""):
+        logger.warning("Rotina de backup ignorada: provedor de backup nao configurado.")
+        return "backup provider not configured"
+
     out = StringIO()
     try:
         call_command("executar_backup_r2", stdout=out)
