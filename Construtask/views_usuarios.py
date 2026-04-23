@@ -181,6 +181,44 @@ class EmpresaAdminForm(forms.Form):
     descricao = forms.CharField(widget=forms.Textarea(attrs={"rows": 3}), required=False)
 
 
+class SistemaEmpresaCreateForm(forms.ModelForm):
+    """Formulario de cadastro de empresa no painel tecnico do sistema."""
+
+    class Meta:
+        model = Empresa
+        fields = ["nome", "nome_fantasia", "cnpj", "telefone", "email", "endereco", "ativo"]
+        widgets = {
+            "endereco": forms.Textarea(attrs={"rows": 3}),
+        }
+        labels = {
+            "nome": "Razao social",
+            "nome_fantasia": "Nome fantasia",
+            "cnpj": "CNPJ",
+            "telefone": "Telefone",
+            "email": "Email principal",
+            "endereco": "Endereco",
+            "ativo": "Empresa ativa",
+        }
+
+    def clean_nome(self):
+        return (self.cleaned_data.get("nome") or "").strip()
+
+    def clean_nome_fantasia(self):
+        return (self.cleaned_data.get("nome_fantasia") or "").strip()
+
+    def clean_cnpj(self):
+        return (self.cleaned_data.get("cnpj") or "").strip()
+
+    def clean_telefone(self):
+        return (self.cleaned_data.get("telefone") or "").strip()
+
+    def clean_email(self):
+        return (self.cleaned_data.get("email") or "").strip()
+
+    def clean_endereco(self):
+        return (self.cleaned_data.get("endereco") or "").strip()
+
+
 class ParametroAlertaEmpresaForm(forms.ModelForm):
     class Meta:
         model = ParametroAlertaEmpresa
@@ -628,30 +666,21 @@ class SistemaAdminView(View):
             return redirect("home")
 
         empresa = self._resolver_empresa(request)
-
-        plano_empresa = getattr(empresa, "plano", None) if empresa else None
-        status_plano = TenantService.status_plano(empresa) if empresa else None
-
-        contexto = {
-            "empresa": empresa,
-            "plano_empresa": plano_empresa,
-            "status_plano": status_plano,            
-            "empresas": Empresa.objects.filter(ativo=True).order_by("nome"),
-            "admins_empresa": self._admins_empresa_queryset(empresa),
-        }
-        contexto.update(contexto_base_saas())
-        return render(request, self.template_name, contexto)
+        return render(request, self.template_name, self._build_context(empresa=empresa))
 
     def post(self, request):
         if not _exigir_admin_sistema(request):
             return redirect("home")
+
+        acao = request.POST.get("acao")
+        if acao == "criar_empresa":
+            return self._criar_empresa(request)
 
         empresa = self._resolver_empresa(request, source="post")
         if not empresa:
             messages.error(request, "Selecione uma empresa valida para gerenciar o sistema.")
             return redirect("sistema_admin")
 
-        acao = request.POST.get("acao")
         if acao == "criar_admin_empresa":
             return self._criar_admin_empresa(request, empresa)
         
@@ -672,6 +701,21 @@ class SistemaAdminView(View):
         messages.error(request, "Acao de sistema nao reconhecida.")
         return redirect(f"{reverse_lazy('sistema_admin')}?empresa={empresa.pk}")
 
+    def _build_context(self, *, empresa=None, empresa_create_form=None):
+        plano_empresa = getattr(empresa, "plano", None) if empresa else None
+        status_plano = TenantService.status_plano(empresa) if empresa else None
+
+        contexto = {
+            "empresa": empresa,
+            "plano_empresa": plano_empresa,
+            "status_plano": status_plano,
+            "empresas": Empresa.objects.filter(ativo=True).order_by("nome"),
+            "admins_empresa": self._admins_empresa_queryset(empresa),
+            "empresa_create_form": empresa_create_form or SistemaEmpresaCreateForm(initial={"ativo": True}),
+        }
+        contexto.update(contexto_base_saas())
+        return contexto
+
     def _resolver_empresa(self, request, source="get"):
         empresa_id = request.GET.get("empresa") if source == "get" else request.POST.get("empresa_id")
         if empresa_id:
@@ -688,6 +732,17 @@ class SistemaAdminView(View):
             .select_related("usuario")
             .order_by("usuario__username")
         )
+
+    def _criar_empresa(self, request):
+        form = SistemaEmpresaCreateForm(request.POST)
+        if not form.is_valid():
+            messages.error(request, "Revise os dados da empresa e tente novamente.")
+            return render(request, self.template_name, self._build_context(empresa_create_form=form))
+
+        empresa = form.save()
+        PlanoEmpresa.objects.get_or_create(empresa=empresa)
+        messages.success(request, f"Empresa {empresa.nome} criada com sucesso.")
+        return redirect(f"{reverse_lazy('sistema_admin')}?empresa={empresa.pk}")
 
     def _criar_admin_empresa(self, request, empresa):
         username = (request.POST.get("username") or "").strip()

@@ -55,6 +55,7 @@ from .models import (
     ParametroAlertaEmpresa,
     ParametroComunicacaoEmpresa,
     PermissaoModuloAcao,
+    PlanoEmpresa,
     RegistroAcessoDadoPessoal,
     RegistroTratamentoDadoPessoal,
     ReuniaoComunicacao,
@@ -1247,6 +1248,7 @@ class AppViewsTests(BaseFinanceTestCase):
         self.assertContains(response, "Base Operacional SaaS")
         self.assertContains(response, "Backup e recuperacao")
         self.assertContains(response, "Storage de arquivos")
+        self.assertContains(response, "Cadastrar Nova Empresa")
 
     def test_admin_empresa_nao_acessa_sistema_admin(self):
         response = self.client.get(reverse("sistema_admin"), follow=True)
@@ -1295,9 +1297,41 @@ class AppViewsTests(BaseFinanceTestCase):
                 empresa=self.empresa,
                 usuario__username="admin_empresa_novo",
                 is_admin_empresa=True,
-            ).exists()
+                ).exists()
         )
-        self.assertContains(response, "Admin da empresa")
+
+    def test_sistema_admin_cria_empresa_e_inicializa_plano(self):
+        user_model = get_user_model()
+        admin_sistema = user_model.objects.create_superuser(
+            username="Construtask",
+            email="sistema@construtask.com",
+            password="senhaforte123",
+        )
+        self.client.force_login(admin_sistema)
+
+        response = self.client.post(
+            reverse("sistema_admin"),
+            {
+                "acao": "criar_empresa",
+                "nome": "Construtora Horizonte Ltda",
+                "nome_fantasia": "Horizonte Obras",
+                "cnpj": "12.345.678/0001-95",
+                "telefone": "(11) 4000-9000",
+                "email": "contato@horizonte.com",
+                "endereco": "Av. Central, 1000",
+                "ativo": "on",
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        empresa = Empresa.objects.get(cnpj="12.345.678/0001-95")
+        self.assertEqual(empresa.nome, "Construtora Horizonte Ltda")
+        self.assertTrue(empresa.ativo)
+        self.assertTrue(PlanoEmpresa.objects.filter(empresa=empresa).exists())
+        self.assertContains(response, "Empresa Construtora Horizonte Ltda criada com sucesso.")
+        self.assertContains(response, "Horizonte Obras")
+        self.assertContains(response, "Admin da Empresa")
 
     def test_fornecedor_list_registra_acesso_lgpd(self):
         Fornecedor.objects.create(

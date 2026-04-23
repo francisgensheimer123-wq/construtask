@@ -26,6 +26,66 @@
     <section class="panel" style="margin-bottom: 24px;">
         <div class="toolbar">
             <div>
+                <h3>Cadastrar Nova Empresa</h3>
+                <p class="muted">Crie aqui o tenant da empresa antes de definir plano, diagnostico SaaS e admin principal.</p>
+            </div>
+        </div>
+        <form method="post" class="panel admin-subpanel">
+            {% csrf_token %}
+            <input type="hidden" name="acao" value="criar_empresa">
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:16px;">
+                <div class="field">
+                    <label for="{{ empresa_create_form.nome.id_for_label }}">Razao social *</label>
+                    {{ empresa_create_form.nome }}
+                    {% for error in empresa_create_form.nome.errors %}<small class="text-danger">{{ error }}</small>{% endfor %}
+                </div>
+                <div class="field">
+                    <label for="{{ empresa_create_form.nome_fantasia.id_for_label }}">Nome fantasia</label>
+                    {{ empresa_create_form.nome_fantasia }}
+                    {% for error in empresa_create_form.nome_fantasia.errors %}<small class="text-danger">{{ error }}</small>{% endfor %}
+                </div>
+                <div class="field">
+                    <label for="{{ empresa_create_form.cnpj.id_for_label }}">CNPJ *</label>
+                    {{ empresa_create_form.cnpj }}
+                    {% for error in empresa_create_form.cnpj.errors %}<small class="text-danger">{{ error }}</small>{% endfor %}
+                </div>
+                <div class="field">
+                    <label for="{{ empresa_create_form.telefone.id_for_label }}">Telefone</label>
+                    {{ empresa_create_form.telefone }}
+                    {% for error in empresa_create_form.telefone.errors %}<small class="text-danger">{{ error }}</small>{% endfor %}
+                </div>
+                <div class="field">
+                    <label for="{{ empresa_create_form.email.id_for_label }}">Email principal</label>
+                    {{ empresa_create_form.email }}
+                    {% for error in empresa_create_form.email.errors %}<small class="text-danger">{{ error }}</small>{% endfor %}
+                </div>
+                <div class="field" style="grid-column: 1 / -1;">
+                    <label for="{{ empresa_create_form.endereco.id_for_label }}">Endereco</label>
+                    {{ empresa_create_form.endereco }}
+                    {% for error in empresa_create_form.endereco.errors %}<small class="text-danger">{{ error }}</small>{% endfor %}
+                </div>
+                <div class="field">
+                    <label for="{{ empresa_create_form.ativo.id_for_label }}">Status</label>
+                    <div>{{ empresa_create_form.ativo }} Empresa ativa</div>
+                    {% for error in empresa_create_form.ativo.errors %}<small class="text-danger">{{ error }}</small>{% endfor %}
+                </div>
+            </div>
+            {% if empresa_create_form.non_field_errors %}
+            <div class="messages" style="margin-top: 12px;">
+                {% for error in empresa_create_form.non_field_errors %}
+                <div class="message error">{{ error }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            <div class="actions">
+                <button type="submit" class="btn">Criar Empresa</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="panel" style="margin-bottom: 24px;">
+        <div class="toolbar">
+            <div>
                 <h3>Empresa em Gestao</h3>
                 <p class="muted">Selecione a empresa para consultar a base SaaS e administrar o usuario admin da empresa.</p>
             </div>
@@ -46,6 +106,7 @@
     {% if empresa %}
     <section class="panel" style="margin-bottom: 24px;">
         <h3>{{ empresa.nome }}</h3>
+        {% if empresa.nome_fantasia %}<p>Nome fantasia: {{ empresa.nome_fantasia }}</p>{% endif %}
         <p>CNPJ: {{ empresa.cnpj }}</p>
         <p class="muted">A partir desta area a Construtask cria o admin principal da empresa. A gestao diaria da empresa ocorre no ambiente do admin da propria empresa.</p>
     </section>
