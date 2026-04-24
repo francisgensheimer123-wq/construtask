@@ -165,14 +165,16 @@ class DocumentoCreateView(LoginRequiredMixin, CreateView):
             documento.save()
 
             arquivo = form.cleaned_data["arquivo_inicial"]
-            revisao = DocumentoRevisao.objects.create(
+            checksum = _calcular_checksum_arquivo(arquivo)
+            revisao = DocumentoRevisao(
                 documento=documento,
                 versao=1,
-                arquivo=arquivo,
-                checksum=_calcular_checksum_arquivo(arquivo),
+                checksum=checksum,
                 status="ELABORACAO",
                 criado_por=self.request.user,
             )
+            revisao.arquivo.save(arquivo.name, arquivo, save=False)
+            revisao.save()
             documento.versao_atual = revisao.versao
             documento.save(update_fields=["versao_atual", "atualizado_em"])
 

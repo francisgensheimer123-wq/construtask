@@ -16,6 +16,7 @@ from django.contrib.messages import get_messages
 from django.core.cache import cache, caches
 from django.core.management import call_command
 from django.core.exceptions import ValidationError
+from django.core.files.storage import default_storage
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, RequestFactory, TestCase, override_settings
 from django.urls import reverse
@@ -1283,9 +1284,45 @@ class AppViewsTests(BaseFinanceTestCase):
         self.assertEqual(revisao.status, "ELABORACAO")
         self.assertTrue(revisao.checksum)
         self.assertGreater(revisao.arquivo.size, 0)
+        self.assertTrue(default_storage.exists(revisao.arquivo.name))
+        self.assertIn("/documentos/revisoes/", revisao.arquivo.name)
 
         detail_response = self.client.get(reverse("documento_detail", args=[documento.pk]))
         self.assertContains(detail_response, "v001")
+
+    def test_nao_conformidade_tratamento_salva_anexo_do_workflow(self):
+        nc = QualidadeWorkflowService.abrir(
+            empresa=self.empresa,
+            obra=self.obra,
+            plano_contas=self.analitico,
+            descricao="Falha com evidencia em tratamento",
+            responsavel=self.user,
+            criado_por=self.user,
+        )
+
+        response = self.client.post(
+            reverse("nao_conformidade_detail", args=[nc.pk]),
+            {
+                "acao": "TRATAMENTO",
+                "observacao": "Tratamento iniciado com evidencia.",
+                "evidencia_tratamento": "Registro fotografico anexado.",
+                "evidencia_tratamento_anexo": SimpleUploadedFile(
+                    "tratamento.pdf",
+                    b"%PDF-1.4 tratamento",
+                    content_type="application/pdf",
+                ),
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        nc.refresh_from_db()
+        self.assertEqual(nc.status, "EM_TRATAMENTO")
+        self.assertTrue(nc.evidencia_tratamento_anexo)
+        self.assertTrue(default_storage.exists(nc.evidencia_tratamento_anexo.name))
+        self.assertIn("/qualidade/nao-conformidades-tratamento/", nc.evidencia_tratamento_anexo.name)
+
+        detail_response = self.client.get(reverse("nao_conformidade_detail", args=[nc.pk]))
+        self.assertContains(detail_response, "Visualizar anexo atual")
 
     def test_nao_conformidade_verificacao_exige_anexo_de_tratamento(self):
         nc = QualidadeWorkflowService.abrir(
@@ -1453,6 +1490,9 @@ class AppViewsTests(BaseFinanceTestCase):
             response["Content-Type"],
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
+        self.assertIn("X-Export-Storage-Path", response)
+        self.assertTrue(default_storage.exists(response["X-Export-Storage-Path"]))
+        self.assertTrue(response["X-Export-Storage-Path"].endswith("/plano_de_contas.xlsx"))
 
     def test_busca_em_compromissos_por_fornecedor(self):
         response = self.client.get(reverse("compromisso_list"), {"q": "Fornecedor A"})

@@ -62,6 +62,9 @@
             </div>
             <div class="field">
                 <label for="id_evidencia_tratamento_anexo">Anexo da evidencia de tratamento</label>
+                {% if nc.evidencia_tratamento_anexo %}
+                <p><a href="{{ nc.evidencia_tratamento_anexo.url }}" target="_blank" rel="noopener">Visualizar anexo atual</a></p>
+                {% endif %}
                 <input id="id_evidencia_tratamento_anexo" type="file" name="evidencia_tratamento_anexo">
             </div>
             <div class="field">
@@ -70,6 +73,9 @@
             </div>
             <div class="field">
                 <label for="id_evidencia_encerramento_anexo">Anexo da evidencia de encerramento</label>
+                {% if nc.evidencia_encerramento_anexo %}
+                <p><a href="{{ nc.evidencia_encerramento_anexo.url }}" target="_blank" rel="noopener">Visualizar anexo atual</a></p>
+                {% endif %}
                 <input id="id_evidencia_encerramento_anexo" type="file" name="evidencia_encerramento_anexo">
             </div>
             <div class="actions">

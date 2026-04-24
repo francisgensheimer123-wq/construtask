@@ -101,3 +101,74 @@ def upload_nao_conformidade_tratamento(instancia, filename):
 
 def upload_nao_conformidade_encerramento(instancia, filename):
     return caminho_anexo_hierarquico(instancia, filename, "qualidade", "nao-conformidades-encerramento")
+
+
+def _empresa_obra_do_request(request):
+    empresa = None
+    obra = None
+    if request is None:
+        return empresa, obra
+
+    obra_id = getattr(request, "session", {}).get("obra_contexto_id")
+    if obra_id:
+        try:
+            from .models import Obra
+
+            obra = Obra.objects.select_related("empresa").filter(pk=obra_id).first()
+        except Exception:
+            obra = None
+
+    if obra is not None:
+        empresa = getattr(obra, "empresa", None)
+
+    if empresa is None and getattr(request, "user", None) and request.user.is_authenticated:
+        try:
+            from .models import UsuarioEmpresa
+
+            vinculo = UsuarioEmpresa.objects.select_related("empresa").filter(usuario=request.user).first()
+            empresa = getattr(vinculo, "empresa", None)
+        except Exception:
+            empresa = None
+
+    return empresa, obra
+
+
+def _modulo_view_do_request(request):
+    if request is None:
+        return "sistema", "exportacoes"
+
+    url_name = getattr(getattr(request, "resolver_match", None), "url_name", None) or ""
+    view = _segmento(url_name.replace("_", "-") or getattr(request, "path", "").strip("/").replace("/", "-"))
+    prefixo = url_name.split("_", 1)[0]
+    mapa_modulos = {
+        "alerta": "operacional",
+        "ata": "comunicacoes",
+        "compromisso": "financeiro",
+        "cotacao": "aquisicoes",
+        "curva": "financeiro",
+        "fechamento": "financeiro",
+        "medicao": "financeiro",
+        "nao": "qualidade",
+        "nota": "financeiro",
+        "pauta": "comunicacoes",
+        "plano": "administracao",
+        "projecao": "financeiro",
+        "reuniao": "comunicacoes",
+        "solicitacao": "aquisicoes",
+    }
+    return mapa_modulos.get(prefixo, "sistema"), view
+
+
+def caminho_exportacao_sistema(filename, request=None):
+    empresa, obra = _empresa_obra_do_request(request)
+    modulo, view = _modulo_view_do_request(request)
+    data = timezone.localtime(timezone.now())
+    return posixpath.join(
+        _segmento(getattr(empresa, "nome", empresa)),
+        _segmento(getattr(obra, "nome", obra)),
+        _segmento(modulo),
+        _segmento(view),
+        str(data.year),
+        f"{data.month:02d}",
+        filename,
+    )

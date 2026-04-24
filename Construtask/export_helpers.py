@@ -6,12 +6,16 @@ import zlib
 from io import BytesIO
 
 import pandas as pd
+from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
 from django.http import HttpResponse
 from django.utils import timezone
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
+from .audit import get_current_request
 from .text_normalization import corrigir_mojibake
+from .upload_paths import caminho_exportacao_sistema
 
 _STATIC_APP_DIR = os.path.join(os.path.dirname(__file__), "static", "app")
 _PDF_LOGO_PATH = os.path.join(_STATIC_APP_DIR, "logo-construtask.png")
@@ -24,6 +28,17 @@ _EXCEL_BORDER = Border(
     top=Side(style="thin", color="000000"),
     bottom=Side(style="thin", color="000000"),
 )
+
+
+def _response_exportacao(nome_arquivo, conteudo, content_type):
+    caminho = default_storage.save(
+        caminho_exportacao_sistema(nome_arquivo, request=get_current_request()),
+        ContentFile(conteudo),
+    )
+    response = HttpResponse(conteudo, content_type=content_type)
+    response["Content-Disposition"] = f'attachment; filename="{nome_arquivo}"'
+    response["X-Export-Storage-Path"] = caminho
+    return response
 
 
 def _datahora_local(datahora):
@@ -145,12 +160,11 @@ def _exportar_excel_response(nome_arquivo, sheet_name, linhas):
         worksheet = writer.book[sheet_name]
         _aplicar_layout_excel_relatorio(worksheet, sheet_name)
     output.seek(0)
-    response = HttpResponse(
+    return _response_exportacao(
+        nome_arquivo,
         output.getvalue(),
         content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
-    response["Content-Disposition"] = f'attachment; filename="{nome_arquivo}"'
-    return response
 
 
 def _pdf_escape(texto):
@@ -866,9 +880,7 @@ def _pdf_relatorio_tabelas_response(nome_arquivo, titulo, resumo, secoes):
         pdf += f"{offset:010d} 00000 n \n".encode("ascii")
     pdf += f"trailer << /Size {len(offsets)} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF".encode("ascii")
 
-    response = HttpResponse(pdf, content_type="application/pdf")
-    response["Content-Disposition"] = f'attachment; filename="{nome_arquivo}"'
-    return response
+    return _response_exportacao(nome_arquivo, pdf, content_type="application/pdf")
 
 
 def _pdf_relatorio_probatorio_response(
@@ -959,9 +971,8 @@ def _exportar_relatorio_probatorio_excel_response(
             pd.DataFrame(extras_normalizados).to_excel(writer, index=False, sheet_name=extras_sheet_name)
             _aplicar_layout_excel_relatorio(writer.book[extras_sheet_name], "RELATORIO PROBATORIO DE APROVACAO", extras_sheet_name)
     output.seek(0)
-    response = HttpResponse(
+    return _response_exportacao(
+        nome_arquivo,
         output.getvalue(),
         content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
-    response["Content-Disposition"] = f'attachment; filename="{nome_arquivo}"'
-    return response

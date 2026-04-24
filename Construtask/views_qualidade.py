@@ -153,23 +153,40 @@ class NaoConformidadeDetailView(LoginRequiredMixin, DetailView):
             messages.error(request, "Seu perfil nao possui permissao para executar esta etapa da qualidade.")
             return redirect("nao_conformidade_detail", pk=self.object.pk)
 
+        campos_arquivo = []
+        if "evidencia_tratamento" in request.POST:
+            self.object.evidencia_tratamento = (
+                request.POST.get("evidencia_tratamento")
+                or self.object.evidencia_tratamento
+                or ""
+            ).strip()
+            campos_arquivo.append("evidencia_tratamento")
+        if request.FILES.get("evidencia_tratamento_anexo"):
+            self.object.evidencia_tratamento_anexo = request.FILES["evidencia_tratamento_anexo"]
+            campos_arquivo.append("evidencia_tratamento_anexo")
+        if "evidencia_encerramento" in request.POST:
+            self.object.evidencia_encerramento = (
+                request.POST.get("evidencia_encerramento")
+                or self.object.evidencia_encerramento
+                or ""
+            ).strip()
+            campos_arquivo.append("evidencia_encerramento")
+        if request.FILES.get("evidencia_encerramento_anexo"):
+            self.object.evidencia_encerramento_anexo = request.FILES["evidencia_encerramento_anexo"]
+            campos_arquivo.append("evidencia_encerramento_anexo")
+
         if acao in {"VERIFICACAO", "ENCERRAMENTO"}:
-            self.object.evidencia_tratamento = (request.POST.get("evidencia_tratamento") or self.object.evidencia_tratamento or "").strip()
-            if request.FILES.get("evidencia_tratamento_anexo"):
-                self.object.evidencia_tratamento_anexo = request.FILES["evidencia_tratamento_anexo"]
             if not self.object.evidencia_tratamento or not self.object.evidencia_tratamento_anexo:
                 messages.error(request, "A comprovacao de tratamento exige descricao e anexo.")
                 return redirect("nao_conformidade_detail", pk=self.object.pk)
 
         if acao == "ENCERRAMENTO":
-            self.object.evidencia_encerramento = (request.POST.get("evidencia_encerramento") or self.object.evidencia_encerramento or "").strip()
-            if request.FILES.get("evidencia_encerramento_anexo"):
-                self.object.evidencia_encerramento_anexo = request.FILES["evidencia_encerramento_anexo"]
             if not self.object.evidencia_encerramento or not self.object.evidencia_encerramento_anexo:
                 messages.error(request, "A comprovacao de encerramento exige descricao e anexo.")
                 return redirect("nao_conformidade_detail", pk=self.object.pk)
 
-        self.object.save()
+        if campos_arquivo:
+            self.object.save(update_fields=[*dict.fromkeys(campos_arquivo), "atualizado_em"])
         if acao == "TRATAMENTO":
             QualidadeWorkflowService.iniciar_tratamento(self.object, request.user, observacao)
         elif acao == "VERIFICACAO":
