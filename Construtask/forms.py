@@ -1251,6 +1251,17 @@ class CotacaoFornecedorComparativoForm(forms.Form):
                 initial=0,
             )
 
+    def has_payload(self):
+        cleaned_data = getattr(self, "cleaned_data", None) or {}
+        if cleaned_data.get("fornecedor") or cleaned_data.get("escolhido") or cleaned_data.get("anexo_arquivo"):
+            return True
+        if (cleaned_data.get("anexo_descricao") or "").strip():
+            return True
+        for item in self.solicitacao_itens:
+            if cleaned_data.get(f"item_{item.pk}_valor_unitario") not in (None, ""):
+                return True
+        return False
+
 
 class CotacaoFornecedorComparativoBaseFormSet(BaseFormSet):
     def __init__(self, *args, **kwargs):
@@ -1271,9 +1282,11 @@ class CotacaoFornecedorComparativoBaseFormSet(BaseFormSet):
         for form in self.forms:
             if not getattr(form, "cleaned_data", None):
                 continue
+            if not form.has_payload():
+                continue
             fornecedor = form.cleaned_data.get("fornecedor")
             if not fornecedor:
-                continue
+                raise forms.ValidationError("Selecione o fornecedor em cada linha de comparacao preenchida.")
             fornecedores.append(fornecedor.pk)
             if form.cleaned_data.get("escolhido"):
                 escolhidos += 1

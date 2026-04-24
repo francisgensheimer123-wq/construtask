@@ -7,6 +7,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import CreateView, DetailView, ListView
 from django.utils import timezone
 from django.db import IntegrityError
+from django.db import transaction
 
 from .forms import (
     CotacaoAnexoFormSet,
@@ -440,40 +441,41 @@ class CotacaoCreateView(LoginRequiredMixin, CreateView):
                 form.add_error(None, "Nao foi possivel identificar a empresa do contexto atual. Selecione novamente a obra e tente outra vez.")
             else:
                 cotacao_vencedora = None
-                for fornecedor_form in fornecedor_formset.forms:
-                    cleaned_data = getattr(fornecedor_form, "cleaned_data", None)
-                    if not cleaned_data:
-                        continue
-                    fornecedor = cleaned_data.get("fornecedor")
-                    if not fornecedor:
-                        continue
-                    escolhido = cleaned_data.get("escolhido", False)
-                    cotacao = Cotacao.objects.create(
-                        empresa=empresa_contexto,
-                        obra=solicitacao.obra,
-                        solicitacao=solicitacao,
-                        fornecedor=fornecedor,
-                        numero="",
-                        status="EM_ANALISE" if escolhido else "REJEITADA",
-                        data_cotacao=form.cleaned_data["data_cotacao"],
-                        validade_ate=form.cleaned_data.get("validade_ate"),
-                        observacoes=form.cleaned_data.get("observacoes", ""),
-                        justificativa_escolha=form.cleaned_data["justificativa_escolha"] if escolhido else "",
-                        criado_por=request.user,
-                    )
-                    for item in itens_solicitacao:
-                        CotacaoItem.objects.create(
-                            cotacao=cotacao,
-                            item_solicitacao=item,
-                            valor_unitario=cleaned_data.get(f"item_{item.pk}_valor_unitario"),
-                            prazo_entrega_dias=cleaned_data.get(f"item_{item.pk}_prazo_entrega_dias") or 0,
+                with transaction.atomic():
+                    for fornecedor_form in fornecedor_formset.forms:
+                        cleaned_data = getattr(fornecedor_form, "cleaned_data", None)
+                        if not cleaned_data or not fornecedor_form.has_payload():
+                            continue
+                        fornecedor = cleaned_data.get("fornecedor")
+                        if not fornecedor:
+                            continue
+                        escolhido = cleaned_data.get("escolhido", False)
+                        cotacao = Cotacao.objects.create(
+                            empresa=empresa_contexto,
+                            obra=solicitacao.obra,
+                            solicitacao=solicitacao,
+                            fornecedor=fornecedor,
+                            numero="",
+                            status="EM_ANALISE" if escolhido else "REJEITADA",
+                            data_cotacao=form.cleaned_data["data_cotacao"],
+                            validade_ate=form.cleaned_data.get("validade_ate"),
+                            observacoes=form.cleaned_data.get("observacoes", ""),
+                            justificativa_escolha=form.cleaned_data["justificativa_escolha"] if escolhido else "",
+                            criado_por=request.user,
                         )
-                    arquivo = cleaned_data.get("anexo_arquivo")
-                    descricao = cleaned_data.get("anexo_descricao", "")
-                    if arquivo:
-                        cotacao.anexos.create(descricao=descricao, arquivo=arquivo)
-                    if escolhido:
-                        cotacao_vencedora = cotacao
+                        for item in itens_solicitacao:
+                            CotacaoItem.objects.create(
+                                cotacao=cotacao,
+                                item_solicitacao=item,
+                                valor_unitario=cleaned_data.get(f"item_{item.pk}_valor_unitario"),
+                                prazo_entrega_dias=cleaned_data.get(f"item_{item.pk}_prazo_entrega_dias") or 0,
+                            )
+                        arquivo = cleaned_data.get("anexo_arquivo")
+                        descricao = (cleaned_data.get("anexo_descricao") or "").strip()
+                        if arquivo:
+                            cotacao.anexos.create(descricao=descricao, arquivo=arquivo)
+                        if escolhido:
+                            cotacao_vencedora = cotacao
                 messages.success(request, "Cotacoes registradas com sucesso para os fornecedores comparados.")
                 if cotacao_vencedora:
                     return redirect("cotacao_detail", pk=cotacao_vencedora.pk)

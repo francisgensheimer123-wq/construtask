@@ -5787,6 +5787,84 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
         self.assertContains(response, "Concreto usinado fck 30")
         self.assertContains(response, "Proposta comercial vencedora")
 
+    def test_fluxo_web_cotacao_comparativa_ignora_linhas_em_branco_e_salva_anexos(self):
+        solicitacao = SolicitacaoCompra.objects.create(
+            empresa=self.empresa,
+            obra=self.obra,
+            plano_contas=self.analitico,
+            titulo="Solicitacao com duas linhas",
+            descricao="Compra com dois itens",
+            solicitante=self.user,
+            data_solicitacao="2026-03-24",
+            status="COTANDO",
+        )
+        item_1 = SolicitacaoCompraItem.objects.create(
+            solicitacao=solicitacao,
+            plano_contas=self.analitico,
+            descricao_tecnica="Cimento CP II",
+            unidade="sc",
+            quantidade=Decimal("10.00"),
+        )
+        item_2 = SolicitacaoCompraItem.objects.create(
+            solicitacao=solicitacao,
+            plano_contas=self.analitico,
+            descricao_tecnica="Areia media",
+            unidade="m3",
+            quantidade=Decimal("4.00"),
+        )
+        fornecedor_2 = Fornecedor.objects.create(
+            empresa=self.empresa,
+            razao_social="Fornecedor Dois LTDA",
+            nome_fantasia="Fornecedor Dois",
+            cnpj="55.555.555/0001-55",
+            telefone="1155555555",
+        )
+
+        response = self.client.post(
+            reverse("cotacao_create"),
+            {
+                "solicitacao": str(solicitacao.pk),
+                "data_cotacao": "2026-03-25",
+                "validade_ate": "2026-03-31",
+                "observacoes": "Comparativo com linhas extras vazias",
+                "justificativa_escolha": "Fornecedor escolhido por melhor combinacao entre custo e prazo.",
+                "fornecedores-TOTAL_FORMS": "4",
+                "fornecedores-INITIAL_FORMS": "0",
+                "fornecedores-MIN_NUM_FORMS": "0",
+                "fornecedores-MAX_NUM_FORMS": "1000",
+                "fornecedores-0-fornecedor": str(self.fornecedor.pk),
+                "fornecedores-0-escolhido": "on",
+                "fornecedores-0-anexo_descricao": "Proposta fornecedor 1",
+                "fornecedores-0-anexo_arquivo": SimpleUploadedFile("proposta-1.pdf", b"arquivo-1", content_type="application/pdf"),
+                f"fornecedores-0-item_{item_1.pk}_valor_unitario": "42.00",
+                f"fornecedores-0-item_{item_1.pk}_prazo_entrega_dias": "5",
+                f"fornecedores-0-item_{item_2.pk}_valor_unitario": "85.00",
+                f"fornecedores-0-item_{item_2.pk}_prazo_entrega_dias": "6",
+                "fornecedores-1-fornecedor": str(fornecedor_2.pk),
+                "fornecedores-1-anexo_descricao": "Proposta fornecedor 2",
+                "fornecedores-1-anexo_arquivo": SimpleUploadedFile("proposta-2.pdf", b"arquivo-2", content_type="application/pdf"),
+                f"fornecedores-1-item_{item_1.pk}_valor_unitario": "44.00",
+                f"fornecedores-1-item_{item_1.pk}_prazo_entrega_dias": "4",
+                f"fornecedores-1-item_{item_2.pk}_valor_unitario": "83.00",
+                f"fornecedores-1-item_{item_2.pk}_prazo_entrega_dias": "5",
+                "fornecedores-2-fornecedor": "",
+                "fornecedores-2-anexo_descricao": "",
+                "fornecedores-3-fornecedor": "",
+                "fornecedores-3-anexo_descricao": "",
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Cotacao.objects.filter(solicitacao=solicitacao).count(), 2)
+        cotacao_vencedora = Cotacao.objects.get(solicitacao=solicitacao, fornecedor=self.fornecedor)
+        cotacao_secundaria = Cotacao.objects.get(solicitacao=solicitacao, fornecedor=fornecedor_2)
+        self.assertEqual(cotacao_vencedora.itens.count(), 2)
+        self.assertEqual(cotacao_secundaria.itens.count(), 2)
+        self.assertEqual(cotacao_vencedora.anexos.count(), 1)
+        self.assertEqual(cotacao_secundaria.anexos.count(), 1)
+        self.assertContains(response, "Proposta fornecedor 1")
+
     def test_rotas_pdf_de_aquisicoes_retorna_pdf(self):
         solicitacao = SolicitacaoCompra.objects.create(
             empresa=self.empresa,
