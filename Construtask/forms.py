@@ -1254,11 +1254,12 @@ class CotacaoFornecedorComparativoForm(forms.Form):
     def get_column_state(self):
         cleaned_data = getattr(self, "cleaned_data", None) or {}
         anexo_descricao = (cleaned_data.get("anexo_descricao") or "").strip()
+        anexo_arquivo = cleaned_data.get("anexo_arquivo")
         itens = []
         coluna_preenchida = bool(
             cleaned_data.get("fornecedor")
             or cleaned_data.get("escolhido")
-            or cleaned_data.get("anexo_arquivo")
+            or anexo_arquivo
             or anexo_descricao
         )
         for item in self.solicitacao_itens:
@@ -1277,7 +1278,7 @@ class CotacaoFornecedorComparativoForm(forms.Form):
             "fornecedor": cleaned_data.get("fornecedor"),
             "escolhido": cleaned_data.get("escolhido", False),
             "anexo_descricao": anexo_descricao,
-            "anexo_arquivo": cleaned_data.get("anexo_arquivo"),
+            "anexo_arquivo": anexo_arquivo,
             "itens": itens,
             "empty": not coluna_preenchida,
         }

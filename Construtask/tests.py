@@ -5815,9 +5815,69 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
         cotacao = Cotacao.objects.get(solicitacao=solicitacao, fornecedor=self.fornecedor)
         self.assertEqual(cotacao.itens.count(), 1)
         self.assertEqual(cotacao.anexos.count(), 1)
+        anexo = cotacao.anexos.first()
+        self.assertIn("/aquisições/cotacoes/", anexo.arquivo.name)
+        self.assertTrue(anexo.arquivo.name.split("/")[-1].startswith("proposta-fornecedor"))
         self.assertEqual(Cotacao.objects.filter(solicitacao=solicitacao).count(), 2)
         self.assertContains(response, "Concreto usinado fck 30")
         self.assertContains(response, "Proposta comercial vencedora")
+
+    def test_fluxo_web_cotacao_comparativa_avisa_que_arquivo_precisa_ser_reanexado_apos_erro(self):
+        solicitacao = SolicitacaoCompra.objects.create(
+            empresa=self.empresa,
+            obra=self.obra,
+            plano_contas=self.analitico,
+            titulo="Solicitacao com erro e arquivo",
+            descricao="Compra com proposta e erro de validacao",
+            solicitante=self.user,
+            data_solicitacao="2026-03-22",
+            status="COTANDO",
+        )
+        item = SolicitacaoCompraItem.objects.create(
+            solicitacao=solicitacao,
+            plano_contas=self.analitico,
+            descricao_tecnica="Concreto usinado fck 40",
+            unidade="m3",
+            quantidade=Decimal("5.00"),
+        )
+        fornecedor_2 = Fornecedor.objects.create(
+            empresa=self.empresa,
+            razao_social="Fornecedor Sem Arquivo LTDA",
+            nome_fantasia="Fornecedor Sem Arquivo",
+            cnpj="88.888.888/0001-88",
+            telefone="1188888888",
+        )
+
+        response = self.client.post(
+            reverse("cotacao_create"),
+            {
+                "solicitacao": str(solicitacao.pk),
+                "data_cotacao": "2026-03-23",
+                "validade_ate": "2026-03-30",
+                "observacoes": "Teste",
+                "justificativa_escolha": "",
+                "fornecedores-TOTAL_FORMS": "4",
+                "fornecedores-INITIAL_FORMS": "0",
+                "fornecedores-MIN_NUM_FORMS": "0",
+                "fornecedores-MAX_NUM_FORMS": "1000",
+                "fornecedores-0-fornecedor": str(self.fornecedor.pk),
+                "fornecedores-0-escolhido": "on",
+                "fornecedores-0-anexo_descricao": "Proposta comercial vencedora",
+                "fornecedores-0-anexo_arquivo": SimpleUploadedFile("proposta.pdf", b"arquivo", content_type="application/pdf"),
+                f"fornecedores-0-item_{item.pk}_valor_unitario": "120.00",
+                f"fornecedores-0-item_{item.pk}_prazo_entrega_dias": "7",
+                "fornecedores-1-fornecedor": str(fornecedor_2.pk),
+                f"fornecedores-1-item_{item.pk}_valor_unitario": "118.00",
+                f"fornecedores-1-item_{item.pk}_prazo_entrega_dias": "5",
+                "fornecedores-2-fornecedor": "",
+                "fornecedores-3-fornecedor": "",
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Os arquivos selecionados precisam ser anexados novamente")
+        self.assertFalse(Cotacao.objects.filter(solicitacao=solicitacao).exists())
 
     def test_fluxo_web_cotacao_comparativa_ignora_linhas_em_branco_e_salva_anexos(self):
         solicitacao = SolicitacaoCompra.objects.create(

@@ -436,7 +436,9 @@ class CotacaoCreateView(LoginRequiredMixin, CreateView):
             solicitacao_itens=itens_solicitacao,
         )
         empresa_contexto = _empresa_contexto(request)
-        if form.is_valid() and fornecedor_formset.is_valid():
+        form_valido = form.is_valid()
+        formset_valido = fornecedor_formset.is_valid()
+        if form_valido and formset_valido:
             if not empresa_contexto:
                 form.add_error(None, "Nao foi possivel identificar a empresa do contexto atual. Selecione novamente a obra e tente outra vez.")
             else:
@@ -475,6 +477,11 @@ class CotacaoCreateView(LoginRequiredMixin, CreateView):
                 if cotacao_vencedora:
                     return redirect("cotacao_detail", pk=cotacao_vencedora.pk)
                 return redirect("solicitacao_compra_detail", pk=solicitacao.pk)
+        elif request.FILES:
+            messages.warning(
+                request,
+                "Os arquivos selecionados precisam ser anexados novamente depois de corrigir os erros do formulario.",
+            )
         return self.render_to_response(
             self.get_context_data(
                 form=form,
