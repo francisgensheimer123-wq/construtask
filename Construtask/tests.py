@@ -11,6 +11,7 @@ import pandas as pd
 from celery.exceptions import SoftTimeLimitExceeded
 from django.contrib import admin
 from django.contrib.auth import get_user_model
+from django.contrib.messages import get_messages
 from django.core.cache import cache, caches
 from django.core.management import call_command
 from django.core.exceptions import ValidationError
@@ -74,9 +75,16 @@ from .models import (
 )
 from .models_planejamento import MapaCorrespondencia, PlanoFisico, PlanoFisicoItem
 from .models_risco import Risco
-from .forms import AditivoContratoItemFormSet, MedicaoForm, NotaFiscalForm, ObraForm
+from .forms import (
+    AditivoContratoItemFormSet,
+    CotacaoForm,
+    CotacaoFornecedorComparativoForm,
+    MedicaoForm,
+    NotaFiscalForm,
+    ObraForm,
+)
 from .importacao_cronograma import CronogramaService, MapeamentoService
-from .queries.financeiro import construir_fluxo_financeiro_contratual
+from .queries.financeiro import construir_dados_projecao_financeira, construir_fluxo_financeiro_contratual
 from .views import ContratoDetailView, HomeView
 from .services import importar_plano_contas_excel, obter_dados_contrato, validar_rateio_nota
 from .services_aquisicoes import AquisicoesService
@@ -789,6 +797,22 @@ class AppViewsTests(BaseFinanceTestCase):
         self.assertContains(response, reverse("modulo_grupo", args=["juridico"]))
         self.assertContains(response, reverse("modulo_grupo", args=["financeiro"]))
 
+    def test_views_operacionais_sem_contexto_redirecionam_para_home(self):
+        session = self.client.session
+        session.pop("obra_contexto_id", None)
+        session.save()
+
+        response = self.client.get(reverse("plano_contas_list"), follow=True)
+
+        self.assertRedirects(response, reverse("home"))
+        messages = list(get_messages(response.wsgi_request))
+        self.assertTrue(
+            any(
+                "Selecione uma obra no menu antes de acessar o plano de contas." in str(message)
+                for message in messages
+            )
+        )
+
     def test_grupos_agrupados_adicionais_respondem_com_sucesso(self):
         cenarios = (
             ("comunicacoes", "Comunicacoes"),
@@ -1226,6 +1250,10 @@ class AppViewsTests(BaseFinanceTestCase):
         self.assertEqual(revisao.versao, 1)
         self.assertEqual(revisao.status, "ELABORACAO")
         self.assertTrue(revisao.checksum)
+        self.assertGreater(revisao.arquivo.size, 0)
+
+        detail_response = self.client.get(reverse("documento_detail", args=[documento.pk]))
+        self.assertContains(detail_response, "v001")
 
     def test_nao_conformidade_verificacao_exige_anexo_de_tratamento(self):
         nc = QualidadeWorkflowService.abrir(
@@ -1529,6 +1557,44 @@ class AppViewsTests(BaseFinanceTestCase):
                 acao="ADMIN_LIST",
             ).exists()
         )
+
+    def test_fornecedor_list_exibe_controles_de_paginacao(self):
+        for indice in range(21):
+            Fornecedor.objects.create(
+                empresa=self.empresa,
+                razao_social=f"Fornecedor Pag {indice:02d} LTDA",
+                nome_fantasia=f"Fornecedor Pag {indice:02d}",
+                cnpj=f"10.000.000/0001-{indice:02d}",
+            )
+
+        response = self.client.get(reverse("fornecedor_list"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context["is_paginated"])
+        self.assertContains(response, "Pagina 1 de 2")
+        self.assertContains(response, "page=2")
+        self.assertContains(response, "Proxima")
+
+    def test_documento_list_exibe_controles_de_paginacao(self):
+        for indice in range(21):
+            Documento.objects.create(
+                empresa=self.empresa,
+                obra=self.obra,
+                processo="ISO 7.5",
+                plano_contas=self.analitico,
+                tipo_documento="PROCEDIMENTO",
+                codigo_documento=f"DOC-PAG-{indice:03d}",
+                titulo=f"Documento paginado {indice:02d}",
+                criado_por=self.user,
+            )
+
+        response = self.client.get(reverse("documento_list"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context["is_paginated"])
+        self.assertContains(response, "Pagina 1 de 2")
+        self.assertContains(response, "page=2")
+        self.assertContains(response, "Proxima")
 
     def test_lgpd_governanca_exibe_inventario_e_trilha(self):
         RegistroAcessoDadoPessoal.objects.create(
@@ -2990,6 +3056,47 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
         self.assertNotIn("torre", nota_form.fields)
         self.assertNotIn("bloco", nota_form.fields)
         self.assertNotIn("etapa", nota_form.fields)
+
+    def test_medicao_form_preenche_infos_do_contrato_selecionado(self):
+        contrato = Compromisso.objects.create(
+            tipo="CONTRATO",
+            obra=self.obra,
+            centro_custo=self.analitico,
+            descricao="Contrato para medicao",
+            fornecedor="Fornecedor Correto LTDA",
+            cnpj="12.345.678/0001-90",
+            responsavel="Maria",
+            telefone="11999999999",
+            valor_contratado=Decimal("100.00"),
+            data_assinatura="2026-03-01",
+            status="APROVADO",
+        )
+        form = MedicaoForm(data={"contrato": str(contrato.pk)}, obra_contexto=self.obra)
+
+        self.assertEqual(form.fields["fornecedor_info"].initial, contrato.fornecedor)
+        self.assertEqual(form.fields["cnpj_info"].initial, contrato.cnpj)
+        self.assertEqual(form.fields["responsavel_info"].initial, contrato.responsavel)
+
+    def test_cotacao_form_exibe_fornecedor_por_razao_social(self):
+        fornecedor = Fornecedor.objects.create(
+            empresa=self.empresa,
+            razao_social="Fornecedor Razao Social Ltda",
+            nome_fantasia="Nome Fantasia Curto",
+            cnpj="11.222.333/0001-44",
+        )
+        form = CotacaoForm(empresa=self.empresa, obra_contexto=self.obra)
+        comparativo_form = CotacaoFornecedorComparativoForm(
+            fornecedor_queryset=Fornecedor.objects.filter(pk=fornecedor.pk),
+        )
+
+        self.assertEqual(
+            form.fields["fornecedor"].label_from_instance(fornecedor),
+            "Fornecedor Razao Social Ltda",
+        )
+        self.assertEqual(
+            comparativo_form.fields["fornecedor"].label_from_instance(fornecedor),
+            "Fornecedor Razao Social Ltda",
+        )
 
     def test_medicao_nao_pode_ser_criada_para_contrato_nao_aprovado(self):
         contrato = Compromisso.objects.create(
@@ -4955,6 +5062,20 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
 
         self.assertEqual(job.status, "CONCLUIDO")
         self.assertTrue(bool(job.arquivo_resultado))
+
+    def test_projecao_financeira_remove_acoes_de_job_e_aceita_horizonte_de_18_meses(self):
+        dados = construir_dados_projecao_financeira(obra=self.obra, meses_qtd=18)
+        response = self.client.get(reverse("projecao_financeira"), {"meses": 18})
+
+        self.assertEqual(dados["meses_qtd"], 18)
+        self.assertEqual(len(dados["series"]), 18)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "18 meses")
+        self.assertContains(response, "Total Executado")
+        self.assertContains(response, "Executado")
+        self.assertNotContains(response, "Gerar por Job")
+        self.assertNotContains(response, "Ver Jobs")
+        self.assertNotContains(response, "Jobs Recentes")
 
     def test_jobs_assincronos_lista_registros_do_contexto(self):
         JobAssincrono.objects.create(

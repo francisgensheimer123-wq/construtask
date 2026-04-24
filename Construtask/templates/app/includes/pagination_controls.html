@@ -1,0 +1,15 @@
+{% if is_paginated %}
+<div class="toolbar" style="margin-top:18px; gap:10px; align-items:center;">
+    <span class="muted">Pagina {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        {% if page_obj.has_previous %}
+        <a class="btn secondary" href="?{% if querystring_sem_pagina %}{{ querystring_sem_pagina }}&{% endif %}page=1">Primeira</a>
+        <a class="btn secondary" href="?{% if querystring_sem_pagina %}{{ querystring_sem_pagina }}&{% endif %}page={{ page_obj.previous_page_number }}">Anterior</a>
+        {% endif %}
+        {% if page_obj.has_next %}
+        <a class="btn secondary" href="?{% if querystring_sem_pagina %}{{ querystring_sem_pagina }}&{% endif %}page={{ page_obj.next_page_number }}">Proxima</a>
+        <a class="btn secondary" href="?{% if querystring_sem_pagina %}{{ querystring_sem_pagina }}&{% endif %}page={{ page_obj.paginator.num_pages }}">Ultima</a>
+        {% endif %}
+    </div>
+</div>
+{% endif %}

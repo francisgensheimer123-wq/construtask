@@ -8,17 +8,11 @@
 <div class="toolbar">
     <div>
         <h2>Projecao Financeira</h2>
-        <p>Entradas pela medicao do mes sobre o valor orcado e saidas pelas notas fiscais por competencia.</p>
+        <p>Executado mensal apurado pelo corte no ultimo dia de cada mes e saidas pelas notas fiscais por competencia.</p>
     </div>
     <div style="display:flex; gap:8px; flex-wrap:wrap;">
         <a class="btn secondary" href="{% url 'projecao_financeira_export' %}?meses={{ meses_qtd }}">Exportar Excel</a>
         <a class="btn secondary" href="{% url 'projecao_financeira_pdf' %}?meses={{ meses_qtd }}">Exportar PDF</a>
-        <form method="post" action="{% url 'projecao_financeira_job' %}">
-            {% csrf_token %}
-            <input type="hidden" name="meses" value="{{ meses_qtd }}">
-            <button class="btn secondary" type="submit">Gerar por Job</button>
-        </form>
-        <a class="btn secondary" href="{% url 'jobs_assincronos' %}">Ver Jobs</a>
     </div>
     <form method="get" style="display:flex; gap:10px; align-items:center;">
         <label class="muted" style="font-weight:600;">Horizonte</label>
@@ -32,39 +26,9 @@
 </div>
 
 <section class="cards">
-    <div class="card"><span>Total Entradas</span><strong class="money" style="text-align:left;">{{ total_entradas|money_br }}</strong></div>
+    <div class="card"><span>Total Executado</span><strong class="money" style="text-align:left;">{{ total_executado|money_br }}</strong></div>
     <div class="card"><span>Total Saidas</span><strong class="money" style="text-align:left;">{{ total_saidas|money_br }}</strong></div>
     <div class="card"><span>Saldo no Horizonte</span><strong class="money" style="text-align:left;">{{ total_saldo|money_br }}</strong></div>
-</section>
-
-<section class="panel">
-    <h3>Jobs Recentes</h3>
-    {% if jobs_recentes %}
-    <div class="table-scroll">
-    <table class="compact-table" style="margin-bottom:18px; min-width:780px;">
-        <thead>
-            <tr>
-                <th>Criado em</th>
-                <th>Tipo</th>
-                <th>Status</th>
-                <th>Resultado</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for job in jobs_recentes %}
-            <tr>
-                <td>{{ job.criado_em|date:"d/m/Y H:i" }}</td>
-                <td>{{ job.get_tipo_display }}</td>
-                <td>{{ job.get_status_display }}</td>
-                <td>{% if job.arquivo_resultado %}<a href="{{ job.arquivo_resultado.url }}">Baixar arquivo</a>{% else %}{{ job.erro|default:"-" }}{% endif %}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    </div>
-    {% else %}
-    <p class="empty">Nenhum job recente para o contexto atual.</p>
-    {% endif %}
 </section>
 
 <section class="panel">
@@ -74,7 +38,7 @@
         <thead>
             <tr>
                 <th>Mes</th>
-                <th class="text-right">Entradas</th>
+                <th class="text-right">Executado</th>
                 <th class="text-right">Saidas</th>
                 <th class="text-right">Saldo</th>
             </tr>
@@ -83,7 +47,7 @@
             {% for mes in series %}
             <tr>
                 <td>{{ mes.label }}</td>
-                <td class="money">{{ mes.entrada|money_br }}</td>
+                <td class="money">{{ mes.executado|money_br }}</td>
                 <td class="money">{{ mes.saida|money_br }}</td>
                 <td class="money">{{ mes.saldo|money_br }}</td>
             </tr>

@@ -2460,7 +2460,7 @@ class PlanoContasConsultaView(DefaultPaginationMixin, ListView):
 
     def dispatch(self, request, *args, **kwargs):
         if not _exigir_obra_contexto_view(request, mensagem="Selecione uma obra no menu antes de acessar o plano de contas."):
-            return redirect("obra_list")
+            return redirect("home")
         return super().dispatch(request, *args, **kwargs)
 
     def get_queryset(self):
@@ -2701,7 +2701,7 @@ class CompromissoListView(DefaultPaginationMixin, ListView):
 
     def dispatch(self, request, *args, **kwargs):
         if not _exigir_obra_contexto_view(request, mensagem="Selecione uma obra no menu antes de acessar compras e contratacoes."):
-            return redirect("obra_list")
+            return redirect("home")
         return super().dispatch(request, *args, **kwargs)
 
     def get_queryset(self):
@@ -2741,7 +2741,7 @@ class CompromissoCreateView(CreateView):
     def dispatch(self, request, *args, **kwargs):
         obra = _exigir_obra_contexto_view(request, mensagem="Selecione uma obra no menu antes de criar compras ou contratacoes.")
         if not obra:
-            return redirect("obra_list")
+            return redirect("home")
         motivo = _bloqueio_lancamento_obra(obra)
         if motivo:
             messages.error(request, motivo)
@@ -3246,7 +3246,7 @@ class MedicaoListView(DefaultPaginationMixin, ListView):
 
     def dispatch(self, request, *args, **kwargs):
         if not _exigir_obra_contexto_view(request, mensagem="Selecione uma obra no menu antes de acessar medicoes."):
-            return redirect("obra_list")
+            return redirect("home")
         return super().dispatch(request, *args, **kwargs)
 
     def get_queryset(self):
@@ -3282,7 +3282,7 @@ class MedicaoCreateView(CreateView):
     def dispatch(self, request, *args, **kwargs):
         obra = _exigir_obra_contexto_view(request, mensagem="Selecione uma obra no menu antes de criar medicoes.")
         if not obra:
-            return redirect("obra_list")
+            return redirect("home")
         motivo = _bloqueio_lancamento_obra(obra)
         if motivo:
             messages.error(request, motivo)
@@ -3573,7 +3573,7 @@ class NotaFiscalListView(DefaultPaginationMixin, ListView):
 
     def dispatch(self, request, *args, **kwargs):
         if not _exigir_obra_contexto_view(request, mensagem="Selecione uma obra no menu antes de acessar notas fiscais."):
-            return redirect("obra_list")
+            return redirect("home")
         return super().dispatch(request, *args, **kwargs)
 
     def get_queryset(self):
@@ -3608,7 +3608,7 @@ class NotaFiscalCreateView(CreateView):
     def dispatch(self, request, *args, **kwargs):
         obra = _exigir_obra_contexto_view(request, mensagem="Selecione uma obra no menu antes de criar notas fiscais.")
         if not obra:
-            return redirect("obra_list")
+            return redirect("home")
         motivo = _bloqueio_lancamento_obra(obra)
         if motivo:
             messages.error(request, motivo)

@@ -136,7 +136,7 @@
                                 <span class="badge bg-info">{{ documento.get_tipo_documento_display }}</span>
                             </td>
                             <td class="col-versao">
-                                <span class="badge bg-secondary">v{{ documento.versao_atual }}</span>
+                                <span class="badge bg-secondary">v{{ documento.versao_atual|stringformat:"03d" }}</span>
                             </td>
                             <td>
                                 <span class="badge bg-{{ documento.status_badge_class }}">{{ documento.get_status_display }}</span>
@@ -181,5 +181,6 @@
             </div>
         </div>
     </div>
+    {% include "app/includes/pagination_controls.html" %}
 </div>
 {% endblock %}

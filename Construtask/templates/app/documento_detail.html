@@ -46,7 +46,7 @@
                         </tr>
                         <tr>
                             <th>Versão Atual:</th>
-                            <td><span class="badge bg-primary">v{{ documento.versao_atual }}</span></td>
+                            <td><span class="badge bg-primary">v{{ documento.versao_atual|stringformat:"03d" }}</span></td>
                         </tr>
                         <tr>
                             <th>Tipo:</th>
@@ -74,7 +74,7 @@
                         </tr>
                         <tr>
                             <th>Última revisão:</th>
-                            <td>{% if ultima_revisao %}v{{ ultima_revisao.versao }}{% else %}-{% endif %}</td>
+                            <td>{% if ultima_revisao %}v{{ ultima_revisao.versao|stringformat:"03d" }}{% else %}-{% endif %}</td>
                         </tr>
                     </table>
                 </div>
@@ -260,7 +260,7 @@
                         <tbody>
                             {% for revisao in revisoes %}
                                 <tr class="{% if revisao.status == 'APROVADO' %}table-success{% elif revisao.status == 'REVISAO' %}table-warning{% endif %}">
-                                    <td><strong>v{{ revisao.versao }}</strong></td>
+                                            <td><strong>v{{ revisao.versao|stringformat:"03d" }}</strong></td>
                                     <td><span class="badge bg-{{ revisao.status_badge_class }}">{{ revisao.get_status_display }}</span></td>
                                     <td>{{ revisao.status_semantico_display }}</td>
                                     <td>

@@ -246,7 +246,7 @@ class SolicitacaoCompraCreateView(LoginRequiredMixin, CreateView):
         obra = _obra_contexto(request)
         if not obra:
             messages.error(request, "Selecione uma obra no menu antes de criar solicitacoes de compra.")
-            return redirect("obra_list")
+            return redirect("home")
         if obra_em_somente_leitura(obra):
             messages.error(request, descricao_restricao_obra(obra))
             return redirect("solicitacao_compra_list")
@@ -374,7 +374,7 @@ class CotacaoCreateView(LoginRequiredMixin, CreateView):
         obra = _obra_contexto(request)
         if not obra:
             messages.error(request, "Selecione uma obra no menu antes de criar cotacoes.")
-            return redirect("obra_list")
+            return redirect("home")
         if obra_em_somente_leitura(obra):
             messages.error(request, descricao_restricao_obra(obra))
             return redirect("cotacao_list")

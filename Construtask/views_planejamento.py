@@ -185,7 +185,7 @@ class PlanoFisicoListView(DefaultPaginationMixin, ListView):
     def dispatch(self, request, *args, **kwargs):
         if not _obter_obra_contexto(request):
             messages.error(request, "Selecione uma obra no menu antes de acessar o cronograma.")
-            return redirect("obra_list")
+            return redirect("home")
         return super().dispatch(request, *args, **kwargs)
 
     def get_queryset(self):
@@ -258,7 +258,7 @@ class PlanoFisicoCreateView(CreateView):
         obra = _obter_obra_contexto(request)
         if not obra:
             messages.error(request, "Selecione uma obra no menu antes de importar o cronograma.")
-            return redirect("obra_list")
+            return redirect("home")
         if obra_em_somente_leitura(obra):
             messages.error(request, descricao_restricao_obra(obra))
             return redirect("plano_fisico_list")
@@ -330,7 +330,7 @@ class PlanoFisicoDetailView(DetailView):
     def dispatch(self, request, *args, **kwargs):
         if not _obter_obra_contexto(request):
             messages.error(request, "Selecione uma obra no menu antes de acessar o cronograma.")
-            return redirect("obra_list")
+            return redirect("home")
         return super().dispatch(request, *args, **kwargs)
 
     def get_queryset(self):

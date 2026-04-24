@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.views.generic import TemplateView
 
 from .application.financeiro import dados_fechamento_mensal_request, dados_projecao_financeira_request, registrar_fechamento_mensal
-from .permissions import get_empresa_operacional as _get_empresa_operacional, get_obra_do_contexto as _obter_obra_contexto
+from .permissions import get_empresa_operacional as _get_empresa_operacional
 from .services_jobs import listar_jobs_recentes
 from .services_lgpd import registrar_acesso_dado_pessoal
 from .approval_helpers import _registrar_historico
@@ -110,11 +110,6 @@ class ProjecaoFinanceiraView(TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context.update(dados_projecao_financeira_request(self.request))
-        context["jobs_recentes"] = listar_jobs_recentes(
-            empresa=_get_empresa_operacional(self.request),
-            obra=_obter_obra_contexto(self.request),
-            limite=8,
-        )
         return context
 
 
@@ -131,7 +126,7 @@ def projecao_financeira_export_view(request):
         detalhes="Exportacao Excel da projecao financeira.",
     )
     linhas = [
-        {"Mes": item["label"], "Entradas": item["entrada"], "Saidas": item["saida"], "Saldo": item["saldo"]}
+        {"Mes": item["label"], "Executado": item["executado"], "Saidas": item["saida"], "Saldo": item["saldo"]}
         for item in dados["series"]
     ]
     return _exportar_excel_response("projecao_financeira.xlsx", "Projecao Financeira", linhas)
@@ -142,12 +137,12 @@ def projecao_financeira_pdf_view(request):
     dados = dados_projecao_financeira_request(request)
     resumo = {
         "Total Orcado": money_br(dados["total_orcado"]),
-        "Total Entradas": money_br(dados["total_entradas"]),
+        "Total Executado": money_br(dados["total_executado"]),
         "Total Saidas": money_br(dados["total_saidas"]),
         "Saldo no Horizonte": money_br(dados["total_saldo"]),
     }
     extras = [
-        {"Mes": item["label"], "Entradas": money_br(item["entrada"]), "Saidas": money_br(item["saida"]), "Saldo": money_br(item["saldo"])}
+        {"Mes": item["label"], "Executado": money_br(item["executado"]), "Saidas": money_br(item["saida"]), "Saldo": money_br(item["saldo"])}
         for item in dados["series"]
     ]
     return _pdf_relatorio_probatorio_response(
@@ -157,6 +152,6 @@ def projecao_financeira_pdf_view(request):
         [],
         extras,
         extras_titulo="Visao Mensal",
-        extras_colunas=[("Mes", 80), ("Entradas", 135), ("Saidas", 135), ("Saldo", 145)],
+        extras_colunas=[("Mes", 80), ("Executado", 135), ("Saidas", 135), ("Saldo", 145)],
         incluir_historico=False,
     )

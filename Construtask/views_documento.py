@@ -7,6 +7,7 @@ import hashlib
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db import transaction
 from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
@@ -61,6 +62,15 @@ def _snapshot_revisao(revisao):
     }
 
 
+def _calcular_checksum_arquivo(arquivo):
+    sha256 = hashlib.sha256()
+    for chunk in arquivo.chunks():
+        sha256.update(chunk)
+    if hasattr(arquivo, "seek"):
+        arquivo.seek(0)
+    return sha256.hexdigest()
+
+
 class DocumentoListView(LoginRequiredMixin, DefaultPaginationMixin, ListView):
     model = Documento
     template_name = "app/documento_list.html"
@@ -69,7 +79,7 @@ class DocumentoListView(LoginRequiredMixin, DefaultPaginationMixin, ListView):
     def dispatch(self, request, *args, **kwargs):
         if not _get_obra_contexto(request):
             messages.error(request, "Selecione uma obra no menu antes de acessar documentos.")
-            return redirect("obra_list")
+            return redirect("home")
         return super().dispatch(request, *args, **kwargs)
 
     def get_queryset(self):
@@ -121,7 +131,7 @@ class DocumentoCreateView(LoginRequiredMixin, CreateView):
         obra = _get_obra_contexto(request)
         if not obra:
             messages.error(request, "Selecione uma obra no menu antes de criar documentos.")
-            return redirect("obra_list")
+            return redirect("home")
         if obra_em_somente_leitura(obra):
             messages.error(request, descricao_restricao_obra(obra))
             return redirect("documento_list")
@@ -146,26 +156,25 @@ class DocumentoCreateView(LoginRequiredMixin, CreateView):
             form.add_error("obra", descricao_restricao_obra(obra_contexto))
             return self.form_invalid(form)
 
-        documento = form.save(commit=False)
-        documento.criado_por = self.request.user
-        documento.empresa = empresa
-        documento.obra = obra_contexto
-        documento.save()
+        with transaction.atomic():
+            documento = form.save(commit=False)
+            documento.criado_por = self.request.user
+            documento.empresa = empresa
+            documento.obra = obra_contexto
+            documento.versao_atual = 1
+            documento.save()
 
-        arquivo = form.cleaned_data["arquivo_inicial"]
-        sha256 = hashlib.sha256()
-        for chunk in arquivo.chunks():
-            sha256.update(chunk)
-        revisao = DocumentoRevisao.objects.create(
-            documento=documento,
-            versao=1,
-            arquivo=arquivo,
-            checksum=sha256.hexdigest(),
-            status="ELABORACAO",
-            criado_por=self.request.user,
-        )
-        documento.versao_atual = revisao.versao
-        documento.save(update_fields=["versao_atual", "atualizado_em"])
+            arquivo = form.cleaned_data["arquivo_inicial"]
+            revisao = DocumentoRevisao.objects.create(
+                documento=documento,
+                versao=1,
+                arquivo=arquivo,
+                checksum=_calcular_checksum_arquivo(arquivo),
+                status="ELABORACAO",
+                criado_por=self.request.user,
+            )
+            documento.versao_atual = revisao.versao
+            documento.save(update_fields=["versao_atual", "atualizado_em"])
 
         _registrar_evento_documento(self.request, documento, "CREATE", depois=_snapshot_documento(documento))
         messages.success(self.request, f"Documento '{documento.codigo_documento}' criado com sucesso.")
@@ -183,7 +192,7 @@ class DocumentoDetailView(LoginRequiredMixin, DetailView):
     def dispatch(self, request, *args, **kwargs):
         if not _get_obra_contexto(request):
             messages.error(request, "Selecione uma obra no menu antes de acessar documentos.")
-            return redirect("obra_list")
+            return redirect("home")
         return super().dispatch(request, *args, **kwargs)
 
     def get_queryset(self):
@@ -257,10 +266,7 @@ class DocumentoDetailView(LoginRequiredMixin, DetailView):
         revisao.status = "ELABORACAO"
 
         if revisao.arquivo:
-            sha256 = hashlib.sha256()
-            for chunk in revisao.arquivo.chunks():
-                sha256.update(chunk)
-            revisao.checksum = sha256.hexdigest()
+            revisao.checksum = _calcular_checksum_arquivo(revisao.arquivo)
 
         revisao.save()
         documento.versao_atual = revisao.versao

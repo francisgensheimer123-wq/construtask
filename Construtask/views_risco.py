@@ -43,7 +43,7 @@ class RiscoListView(DefaultPaginationMixin, ListView):
     def dispatch(self, request, *args, **kwargs):
         if not _get_obra_contexto(request):
             messages.error(request, "Selecione uma obra no menu antes de acessar riscos.")
-            return redirect("obra_list")
+            return redirect("home")
         return super().dispatch(request, *args, **kwargs)
 
     def get_queryset(self):
@@ -133,7 +133,7 @@ class RiscoCreateView(CreateView):
         obra = _get_obra_contexto(request)
         if not obra:
             messages.error(request, "Selecione uma obra no menu antes de criar riscos.")
-            return redirect("obra_list")
+            return redirect("home")
         if obra_em_somente_leitura(obra):
             messages.error(request, descricao_restricao_obra(obra))
             return redirect("risco_list")
@@ -221,7 +221,7 @@ class RiscoDetailView(DetailView):
     def dispatch(self, request, *args, **kwargs):
         if not _get_obra_contexto(request):
             messages.error(request, "Selecione uma obra no menu antes de acessar riscos.")
-            return redirect("obra_list")
+            return redirect("home")
         return super().dispatch(request, *args, **kwargs)
 
     def get_queryset(self):

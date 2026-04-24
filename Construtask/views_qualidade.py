@@ -38,7 +38,7 @@ class NaoConformidadeListView(LoginRequiredMixin, DefaultPaginationMixin, ListVi
     def dispatch(self, request, *args, **kwargs):
         if not _obra_contexto(request):
             messages.error(request, "Selecione uma obra no menu antes de acessar nao conformidades.")
-            return redirect("obra_list")
+            return redirect("home")
         return super().dispatch(request, *args, **kwargs)
 
     def get_queryset(self):
@@ -68,7 +68,7 @@ class NaoConformidadeCreateView(LoginRequiredMixin, CreateView):
         obra = _obra_contexto(request)
         if not obra:
             messages.error(request, "Selecione uma obra no menu antes de registrar nao conformidades.")
-            return redirect("obra_list")
+            return redirect("home")
         if obra_em_somente_leitura(obra):
             messages.error(request, descricao_restricao_obra(obra))
             return redirect("nao_conformidade_list")
@@ -128,7 +128,7 @@ class NaoConformidadeDetailView(LoginRequiredMixin, DetailView):
     def dispatch(self, request, *args, **kwargs):
         if not _obra_contexto(request):
             messages.error(request, "Selecione uma obra no menu antes de acessar nao conformidades.")
-            return redirect("obra_list")
+            return redirect("home")
         return super().dispatch(request, *args, **kwargs)
 
     def get_queryset(self):

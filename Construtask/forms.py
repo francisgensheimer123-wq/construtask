@@ -107,6 +107,11 @@ class PlanoContasChoiceField(forms.ModelChoiceField):
         return f"{prefixo}{obj.codigo} - {obj.descricao}{unidade}"
 
 
+class FornecedorRazaoSocialChoiceField(forms.ModelChoiceField):
+    def label_from_instance(self, obj):
+        return obj.razao_social
+
+
 class PlanoFisicoItemForm(forms.ModelForm):
     class Meta:
         model = PlanoFisicoItem
@@ -567,11 +572,15 @@ class MedicaoForm(NormalizeTextFieldsMixin, forms.ModelForm):
         self.fields["contrato"].queryset = queryset
         if obra_contexto:
             self.fields["contrato"].queryset = self.fields["contrato"].queryset.filter(obra=obra_contexto)
-        contrato = self.instance.contrato if getattr(self.instance, "contrato_id", None) else None
+        contrato = None
+        if getattr(self.instance, "contrato_id", None):
+            contrato = self.instance.contrato
+        elif contrato_postado:
+            contrato = self.fields["contrato"].queryset.filter(pk=contrato_postado).first()
         if contrato:
-            self.fields["fornecedor_info"].initial = contrato.fornecedor
-            self.fields["cnpj_info"].initial = contrato.cnpj
-            self.fields["responsavel_info"].initial = contrato.responsavel
+            self.fields["fornecedor_info"].initial = contrato.fornecedor or ""
+            self.fields["cnpj_info"].initial = contrato.cnpj or ""
+            self.fields["responsavel_info"].initial = contrato.responsavel or ""
 
     class Meta:
         model = Medicao
@@ -1116,6 +1125,7 @@ SolicitacaoCompraItemFormSet = inlineformset_factory(
 
 class CotacaoForm(NormalizeTextFieldsMixin, forms.ModelForm):
     text_fields_to_normalize = ("status", "observacoes", "justificativa_escolha")
+    fornecedor = FornecedorRazaoSocialChoiceField(queryset=Fornecedor.objects.none())
 
     class Meta:
         model = Cotacao
@@ -1217,7 +1227,7 @@ CotacaoItemFormSet = formset_factory(CotacaoItemForm, formset=CotacaoItemBaseFor
 
 
 class CotacaoFornecedorComparativoForm(forms.Form):
-    fornecedor = forms.ModelChoiceField(queryset=Fornecedor.objects.none(), required=False)
+    fornecedor = FornecedorRazaoSocialChoiceField(queryset=Fornecedor.objects.none(), required=False)
     escolhido = forms.BooleanField(required=False, label="Fornecedor vencedor")
     anexo_descricao = forms.CharField(required=False)
     anexo_arquivo = forms.FileField(required=False)

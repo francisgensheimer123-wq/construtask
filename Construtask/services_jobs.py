@@ -230,13 +230,13 @@ def executar_job_relatorio_financeiro(job):
         meses = int(job.parametros.get("meses") or 12)
         dados = construir_dados_projecao_financeira(obra=obra, meses_qtd=meses)
         linhas = [
-            {"Mes": item["label"], "Entradas": item["entrada"], "Saidas": item["saida"], "Saldo": item["saldo"]}
+            {"Mes": item["label"], "Executado": item["executado"], "Saidas": item["saida"], "Saldo": item["saldo"]}
             for item in dados["series"]
         ]
         metadata = _salvar_csv_job(
             job,
             f"projecao_financeira_{obra.pk}_{meses}m.csv",
-            ["Mes", "Entradas", "Saidas", "Saldo"],
+            ["Mes", "Executado", "Saidas", "Saldo"],
             linhas,
         )
         metadata.update({"relatorio": tipo_relatorio, "meses": meses})

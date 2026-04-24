@@ -151,7 +151,7 @@ def construir_dados_fechamento_mensal(*, obra=None, ano=None, mes=None):
 
 
 def construir_dados_projecao_financeira(*, obra=None, meses_qtd=12):
-    meses_opcoes = [6, 12]
+    meses_opcoes = [6, 12, 18]
     if meses_qtd not in meses_opcoes:
         meses_qtd = 12
 
@@ -179,14 +179,19 @@ def construir_dados_projecao_financeira(*, obra=None, meses_qtd=12):
     )
     if obra:
         medicoes_qs = medicoes_qs.filter(obra=obra)
+    executado_por_mes = {m: Decimal("0.00") for m in month_starts}
     for medicao in medicoes_qs:
         mes_competencia = medicao["mes_competencia"]
         m = date(mes_competencia.year, mes_competencia.month, 1)
-        idx = idx_by_month.get(m)
-        if idx is not None:
-            valor_total_mes = medicao["total"] or Decimal("0.00")
-            percentual_medido = (valor_total_mes / total_orcado) if total_orcado else Decimal("0.00")
-            entradas[idx] += arredondar_moeda(percentual_medido * total_orcado)
+        if m in executado_por_mes:
+            executado_por_mes[m] += medicao["total"] or Decimal("0.00")
+
+    executado_acumulado = Decimal("0.00")
+    executado_anterior = Decimal("0.00")
+    for idx, month_start in enumerate(month_starts):
+        executado_acumulado += executado_por_mes.get(month_start, Decimal("0.00"))
+        entradas[idx] = arredondar_moeda(executado_acumulado - executado_anterior)
+        executado_anterior = executado_acumulado
 
     notas_qs = (
         NotaFiscal.objects.filter(data_emissao__gte=inicio, data_emissao__lt=fim_exclusivo)
@@ -205,17 +210,27 @@ def construir_dados_projecao_financeira(*, obra=None, meses_qtd=12):
 
     series = []
     for i, ms in enumerate(month_starts):
-        entrada = arredondar_moeda(entradas[i])
+        executado = arredondar_moeda(entradas[i])
         saida = arredondar_moeda(saidas[i])
-        saldo = arredondar_moeda(entrada - saida)
-        series.append({"label": ms.strftime("%m/%Y"), "entrada": entrada, "saida": saida, "saldo": saldo})
+        saldo = arredondar_moeda(executado - saida)
+        series.append(
+            {
+                "label": ms.strftime("%m/%Y"),
+                "entrada": executado,
+                "executado": executado,
+                "saida": saida,
+                "saldo": saldo,
+            }
+        )
 
+    total_executado = arredondar_moeda(sum(s["executado"] for s in series))
     return {
         "meses_opcoes": meses_opcoes,
         "meses_qtd": meses_qtd,
         "series": series,
         "total_orcado": total_orcado,
-        "total_entradas": arredondar_moeda(sum(s["entrada"] for s in series)),
+        "total_entradas": total_executado,
+        "total_executado": total_executado,
         "total_saidas": arredondar_moeda(sum(s["saida"] for s in series)),
         "total_saldo": arredondar_moeda(sum(s["saldo"] for s in series)),
     }
