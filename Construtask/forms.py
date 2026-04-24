@@ -1251,22 +1251,46 @@ class CotacaoFornecedorComparativoForm(forms.Form):
                 initial=0,
             )
 
-    def has_payload(self):
+    def get_column_state(self):
         cleaned_data = getattr(self, "cleaned_data", None) or {}
-        if cleaned_data.get("fornecedor") or cleaned_data.get("escolhido") or cleaned_data.get("anexo_arquivo"):
-            return True
-        if (cleaned_data.get("anexo_descricao") or "").strip():
-            return True
+        anexo_descricao = (cleaned_data.get("anexo_descricao") or "").strip()
+        itens = []
+        coluna_preenchida = bool(
+            cleaned_data.get("fornecedor")
+            or cleaned_data.get("escolhido")
+            or cleaned_data.get("anexo_arquivo")
+            or anexo_descricao
+        )
         for item in self.solicitacao_itens:
-            if cleaned_data.get(f"item_{item.pk}_valor_unitario") not in (None, ""):
-                return True
-        return False
+            valor_unitario = cleaned_data.get(f"item_{item.pk}_valor_unitario")
+            prazo_entrega_dias = cleaned_data.get(f"item_{item.pk}_prazo_entrega_dias")
+            if valor_unitario not in (None, "") or prazo_entrega_dias not in (None, ""):
+                coluna_preenchida = True
+            itens.append(
+                {
+                    "item": item,
+                    "valor_unitario": valor_unitario,
+                    "prazo_entrega_dias": prazo_entrega_dias,
+                }
+            )
+        return {
+            "fornecedor": cleaned_data.get("fornecedor"),
+            "escolhido": cleaned_data.get("escolhido", False),
+            "anexo_descricao": anexo_descricao,
+            "anexo_arquivo": cleaned_data.get("anexo_arquivo"),
+            "itens": itens,
+            "empty": not coluna_preenchida,
+        }
+
+    def has_payload(self):
+        return not self.get_column_state()["empty"]
 
 
 class CotacaoFornecedorComparativoBaseFormSet(BaseFormSet):
     def __init__(self, *args, **kwargs):
         self.fornecedor_queryset = kwargs.pop("fornecedor_queryset", Fornecedor.objects.none())
         self.solicitacao_itens = kwargs.pop("solicitacao_itens", [])
+        self._fornecedores_preenchidos = []
         super().__init__(*args, **kwargs)
 
     def get_form_kwargs(self, index):
@@ -1279,35 +1303,50 @@ class CotacaoFornecedorComparativoBaseFormSet(BaseFormSet):
         super().clean()
         fornecedores = []
         escolhidos = 0
+        fornecedores_preenchidos = []
+        houve_erro_coluna = False
         for form in self.forms:
             if not getattr(form, "cleaned_data", None):
                 continue
-            if not form.has_payload():
+            coluna = form.get_column_state()
+            if coluna["empty"]:
                 continue
-            fornecedor = form.cleaned_data.get("fornecedor")
+            fornecedor = coluna["fornecedor"]
             if not fornecedor:
-                raise forms.ValidationError("Selecione o fornecedor em cada linha de comparacao preenchida.")
+                form.add_error("fornecedor", "Selecione o fornecedor em cada coluna de comparacao preenchida.")
+                houve_erro_coluna = True
+                continue
             fornecedores.append(fornecedor.pk)
-            if form.cleaned_data.get("escolhido"):
+            if coluna["escolhido"]:
                 escolhidos += 1
-            for item in self.solicitacao_itens:
-                valor = form.cleaned_data.get(f"item_{item.pk}_valor_unitario")
-                if valor in (None, ""):
-                    raise forms.ValidationError(
-                        "Informe o valor unitario de todos os itens para cada fornecedor comparado."
+            for item_data in coluna["itens"]:
+                if item_data["valor_unitario"] in (None, ""):
+                    form.add_error(
+                        f"item_{item_data['item'].pk}_valor_unitario",
+                        "Informe o valor unitario para todos os itens do fornecedor preenchido.",
                     )
+                    houve_erro_coluna = True
+            fornecedores_preenchidos.append(coluna)
+        if houve_erro_coluna:
+            raise forms.ValidationError("Revise as colunas de fornecedores preenchidas antes de salvar a cotacao.")
         if len(fornecedores) < 2:
             raise forms.ValidationError("Informe pelo menos 2 fornecedores para realizar a comparacao.")
         if len(set(fornecedores)) != len(fornecedores):
             raise forms.ValidationError("Nao repita o mesmo fornecedor na comparacao.")
         if escolhidos != 1:
             raise forms.ValidationError("Selecione exatamente 1 fornecedor vencedor na cotacao.")
+        self._fornecedores_preenchidos = fornecedores_preenchidos
+
+    def get_fornecedores_preenchidos(self):
+        return list(self._fornecedores_preenchidos)
 
 
 CotacaoFornecedorComparativoFormSet = formset_factory(
     CotacaoFornecedorComparativoForm,
     formset=CotacaoFornecedorComparativoBaseFormSet,
     extra=4,
+    max_num=4,
+    validate_max=True,
 )
 
 

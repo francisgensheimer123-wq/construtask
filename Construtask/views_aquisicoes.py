@@ -442,14 +442,9 @@ class CotacaoCreateView(LoginRequiredMixin, CreateView):
             else:
                 cotacao_vencedora = None
                 with transaction.atomic():
-                    for fornecedor_form in fornecedor_formset.forms:
-                        cleaned_data = getattr(fornecedor_form, "cleaned_data", None)
-                        if not cleaned_data or not fornecedor_form.has_payload():
-                            continue
-                        fornecedor = cleaned_data.get("fornecedor")
-                        if not fornecedor:
-                            continue
-                        escolhido = cleaned_data.get("escolhido", False)
+                    for fornecedor_data in fornecedor_formset.get_fornecedores_preenchidos():
+                        fornecedor = fornecedor_data["fornecedor"]
+                        escolhido = fornecedor_data["escolhido"]
                         cotacao = Cotacao.objects.create(
                             empresa=empresa_contexto,
                             obra=solicitacao.obra,
@@ -463,15 +458,15 @@ class CotacaoCreateView(LoginRequiredMixin, CreateView):
                             justificativa_escolha=form.cleaned_data["justificativa_escolha"] if escolhido else "",
                             criado_por=request.user,
                         )
-                        for item in itens_solicitacao:
+                        for item_data in fornecedor_data["itens"]:
                             CotacaoItem.objects.create(
                                 cotacao=cotacao,
-                                item_solicitacao=item,
-                                valor_unitario=cleaned_data.get(f"item_{item.pk}_valor_unitario"),
-                                prazo_entrega_dias=cleaned_data.get(f"item_{item.pk}_prazo_entrega_dias") or 0,
+                                item_solicitacao=item_data["item"],
+                                valor_unitario=item_data["valor_unitario"],
+                                prazo_entrega_dias=item_data["prazo_entrega_dias"] or 0,
                             )
-                        arquivo = cleaned_data.get("anexo_arquivo")
-                        descricao = (cleaned_data.get("anexo_descricao") or "").strip()
+                        arquivo = fornecedor_data["anexo_arquivo"]
+                        descricao = fornecedor_data["anexo_descricao"]
                         if arquivo:
                             cotacao.anexos.create(descricao=descricao, arquivo=arquivo)
                         if escolhido:
