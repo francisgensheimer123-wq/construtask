@@ -19,6 +19,13 @@ from .domain import (
     validar_nota_fiscal,
 )
 from .tenant_querysets import TenantScopedManager
+from .upload_paths import (
+    upload_anexo_operacional,
+    upload_documento_aprovado,
+    upload_documento_revisao,
+    upload_job_entrada,
+    upload_job_resultado,
+)
 
 
 # Validators
@@ -391,8 +398,8 @@ class JobAssincrono(models.Model):
     iniciado_em = models.DateTimeField(null=True, blank=True)
     concluido_em = models.DateTimeField(null=True, blank=True)
     atualizado_em = models.DateTimeField(auto_now=True)
-    arquivo_entrada = models.FileField(upload_to="jobs/input/", blank=True, null=True)
-    arquivo_resultado = models.FileField(upload_to="jobs/output/", blank=True, null=True)
+    arquivo_entrada = models.FileField(upload_to=upload_job_entrada, blank=True, null=True)
+    arquivo_resultado = models.FileField(upload_to=upload_job_resultado, blank=True, null=True)
     objects = TenantScopedManager()
 
     def __str__(self):
@@ -1567,7 +1574,7 @@ class AnexoOperacional(models.Model):
     medicao = models.ForeignKey(Medicao, on_delete=models.CASCADE, null=True, blank=True, related_name="anexos")
     nota_fiscal = models.ForeignKey(NotaFiscal, on_delete=models.CASCADE, null=True, blank=True, related_name="anexos")
     descricao = models.CharField(max_length=900)
-    arquivo = models.FileField(upload_to="anexos/%Y/%m", blank=True)
+    arquivo = models.FileField(upload_to=upload_anexo_operacional, blank=True)
     criado_em = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -1780,7 +1787,7 @@ class DocumentoRevisao(models.Model):
     documento = models.ForeignKey(Documento, on_delete=models.CASCADE, related_name="revisoes")
     versao = models.PositiveIntegerField()
     
-    arquivo = models.FileField(upload_to="documentos/%Y/%m", help_text="Arquivo do documento (PDF, DOCX)")
+    arquivo = models.FileField(upload_to=upload_documento_revisao, help_text="Arquivo do documento (PDF, DOCX)")
     checksum = models.CharField(max_length=64, blank=True, help_text="Hash SHA-256 do arquivo para integridade")
     
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="ELABORACAO")
@@ -1808,7 +1815,7 @@ class DocumentoRevisao(models.Model):
     
     parecer = models.TextField(blank=True, help_text="Parecer sobre a revisÃ£o")
     arquivo_aprovado = models.FileField(
-        upload_to="documentos/aprovados/%Y/%m",
+        upload_to=upload_documento_aprovado,
         blank=True,
         help_text="CÃ³pia imutÃ¡vel do arquivo aprovado"
     )

@@ -4,6 +4,7 @@ from django.utils import timezone
 
 from .domain import gerar_numero_documento
 from .tenant_querysets import TenantScopedManager
+from .upload_paths import upload_nao_conformidade_encerramento, upload_nao_conformidade_tratamento
 
 
 class NaoConformidade(models.Model):
@@ -39,13 +40,13 @@ class NaoConformidade(models.Model):
     acao_corretiva = models.TextField(blank=True)
     evidencia_tratamento = models.TextField(blank=True)
     evidencia_tratamento_anexo = models.FileField(
-        upload_to="qualidade/nao_conformidades/tratamento/%Y/%m/",
+        upload_to=upload_nao_conformidade_tratamento,
         blank=True,
         null=True,
     )
     evidencia_encerramento = models.TextField(blank=True)
     evidencia_encerramento_anexo = models.FileField(
-        upload_to="qualidade/nao_conformidades/encerramento/%Y/%m/",
+        upload_to=upload_nao_conformidade_encerramento,
         blank=True,
         null=True,
     )

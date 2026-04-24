@@ -5,6 +5,7 @@ from io import BytesIO
 from io import StringIO
 import json
 import os
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import pandas as pd
@@ -117,6 +118,7 @@ from .services_alertas import (
 from .cache_utils import critical_cache_set
 from .templatetags.formatters import money_br, trunc2
 from .text_normalization import corrigir_mojibake, normalizar_texto_cadastral
+from .upload_paths import upload_anexo_operacional, upload_cotacao_anexo
 
 
 class PlanoContasTests(TestCase):
@@ -134,6 +136,36 @@ class NumericParsingTests(TestCase):
 
     def test_calcular_total_item_aceita_virgula_brasileira(self):
         self.assertEqual(calcular_total_item("10,5", "1.234,56"), Decimal("12962.88"))
+
+
+class UploadPathsTests(TestCase):
+    def test_cotacao_anexo_usa_hierarquia_empresa_obra_modulo_view_ano_mes(self):
+        empresa = SimpleNamespace(nome="Empresa Modelo")
+        obra = SimpleNamespace(nome="Obra Central", empresa=empresa)
+        cotacao = SimpleNamespace(empresa=empresa, obra=obra)
+        instancia = SimpleNamespace(cotacao=cotacao)
+        data = timezone.localtime(timezone.now())
+
+        caminho = upload_cotacao_anexo(instancia, "proposta.pdf")
+
+        self.assertEqual(
+            caminho,
+            f"Empresa Modelo/Obra Central/aquisições/cotacoes/{data.year}/{data.month:02d}/proposta.pdf",
+        )
+
+    def test_anexo_operacional_herda_empresa_e_obra_do_compromisso(self):
+        empresa = SimpleNamespace(nome="Empresa/Com Barra")
+        obra = SimpleNamespace(nome="Obra Torre A", empresa=empresa)
+        compromisso = SimpleNamespace(obra=obra)
+        instancia = SimpleNamespace(compromisso=compromisso)
+        data = timezone.localtime(timezone.now())
+
+        caminho = upload_anexo_operacional(instancia, "contrato.pdf")
+
+        self.assertEqual(
+            caminho,
+            f"Empresa-Com Barra/Obra Torre A/operacional/anexos/{data.year}/{data.month:02d}/contrato.pdf",
+        )
 
 
 class BaseFinanceTestCase(TestCase):

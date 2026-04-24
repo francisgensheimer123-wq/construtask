@@ -5,6 +5,7 @@ from django.db import models
 
 from .domain import arredondar_moeda, calcular_total_item, gerar_numero_documento
 from .tenant_querysets import TenantScopedManager
+from .upload_paths import upload_cotacao_anexo
 
 
 class Fornecedor(models.Model):
@@ -226,7 +227,7 @@ class CotacaoAnexo(models.Model):
 
     cotacao = models.ForeignKey(Cotacao, on_delete=models.CASCADE, related_name="anexos")
     descricao = models.CharField(max_length=255, blank=True)
-    arquivo = models.FileField(upload_to="cotacoes/%Y/%m")
+    arquivo = models.FileField(upload_to=upload_cotacao_anexo)
     criado_em = models.DateTimeField(auto_now_add=True)
 
     def save(self, *args, **kwargs):

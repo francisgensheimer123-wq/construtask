@@ -10,6 +10,7 @@ from django.utils import timezone
 from django.urls import reverse_lazy
 
 from .domain import gerar_numero_documento
+from .upload_paths import upload_cronograma_baseline, upload_cronograma_origem
 
 
 class PlanoFisico(models.Model):
@@ -43,7 +44,7 @@ class PlanoFisico(models.Model):
     titulo = models.CharField(max_length=200, help_text="Titulo do cronograma")
     descricao = models.TextField(blank=True)
     arquivo_origem = models.FileField(
-        upload_to="cronogramas/%Y/%m",
+        upload_to=upload_cronograma_origem,
         blank=True,
         null=True,
         help_text="Arquivo original importado (MPP/XLSX)",
@@ -383,7 +384,7 @@ class PlanoFisicoBaseline(models.Model):
 
     plano = models.ForeignKey(PlanoFisico, on_delete=models.CASCADE, related_name="historico_baseline")
     versao = models.PositiveIntegerField()
-    arquivo = models.FileField(upload_to="cronogramas/baselines/%Y/%m", blank=True, null=True)
+    arquivo = models.FileField(upload_to=upload_cronograma_baseline, blank=True, null=True)
     observacao = models.TextField(blank=True)
     responsavel = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
     data_criacao = models.DateTimeField(auto_now_add=True)
