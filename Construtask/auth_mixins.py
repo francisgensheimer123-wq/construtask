@@ -6,9 +6,11 @@ Mantem compatibilidade com imports legados, usando a trilha oficial de tenant.
 from datetime import timedelta
 
 from django.conf import settings
+from django.contrib.auth import SESSION_KEY
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin as DjangoLoginRequiredMixin
 from django.contrib.auth.views import LoginView, LogoutView
+from django.contrib.sessions.models import Session
 from django.db.models import Q
 from django.http import HttpResponseRedirect
 from django.urls import reverse_lazy
@@ -55,6 +57,19 @@ class ConstrutaskLoginView(LoginView):
         if not self.request.session.session_key:
             self.request.session.create()
         return self.request.session.session_key
+
+    def _cached_session_is_active_for_user(self, estado, user):
+        session_key = estado.get("session_key")
+        if not session_key:
+            return False
+        sessao = Session.objects.filter(session_key=session_key, expire_date__gt=timezone.now()).first()
+        if not sessao:
+            return False
+        try:
+            dados_sessao = sessao.get_decoded()
+        except Exception:
+            return False
+        return str(dados_sessao.get(SESSION_KEY)) == str(user.pk)
 
     def _lock_state(self, cache_key):
         return critical_cache_get(cache_key) or {"tentativas": 0, "bloqueado_ate": None}
@@ -106,19 +121,22 @@ class ConstrutaskLoginView(LoginView):
 
     def form_valid(self, form):
         user = form.get_user()
-        estado = critical_cache_get(self._user_ip_cache_key(user)) or {}
+        user_ip_cache_key = self._user_ip_cache_key(user)
+        estado = critical_cache_get(user_ip_cache_key) or {}
         ip_atual = self._client_ip()
         sessao_atual = self._session_key()
         if estado.get("ip") and estado.get("ip") != ip_atual and estado.get("session_key") != sessao_atual:
-            form.add_error(None, "Este usuario ja possui uma sessao ativa em outro endereco IP.")
-            return self.form_invalid(form)
+            if self._cached_session_is_active_for_user(estado, user):
+                form.add_error(None, "Este usuario ja possui uma sessao ativa em outro endereco IP.")
+                return self.form_invalid(form)
+            critical_cache_delete(user_ip_cache_key)
 
         for cache_key in self._lock_config():
             critical_cache_delete(cache_key)
 
         response = super().form_valid(form)
         critical_cache_set(
-            self._user_ip_cache_key(user),
+            user_ip_cache_key,
             {"ip": ip_atual, "session_key": self.request.session.session_key},
             timeout=max(int(getattr(settings, "SESSION_COOKIE_AGE", 1209600) or 1209600), 300),
         )

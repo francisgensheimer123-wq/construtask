@@ -13,6 +13,7 @@ from celery.exceptions import SoftTimeLimitExceeded
 from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.contrib.messages import get_messages
+from django.contrib.sessions.backends.db import SessionStore
 from django.core.cache import cache, caches
 from django.core.management import call_command
 from django.core.exceptions import ValidationError
@@ -115,7 +116,7 @@ from .services_alertas import (
     sincronizar_alertas_planejamento_suprimentos,
     sincronizar_alertas_risco_vencido,
 )
-from .cache_utils import critical_cache_set
+from .cache_utils import critical_cache_get, critical_cache_set
 from .templatetags.formatters import money_br, trunc2
 from .text_normalization import corrigir_mojibake, normalizar_texto_cadastral
 from .upload_paths import upload_anexo_operacional, upload_cotacao_anexo
@@ -7099,10 +7100,13 @@ class HardeningProducaoTests(BaseFinanceTestCase):
             is_admin_empresa=True,
             papel_aprovacao="GERENTE_OBRAS",
         )
+        sessao_remota = SessionStore()
+        sessao_remota["_auth_user_id"] = str(usuario.pk)
+        sessao_remota.save()
 
         critical_cache_set(
             f"construtask:user-active-ip:{usuario.pk}",
-            {"ip": "189.1.1.1", "session_key": "sessao-remota"},
+            {"ip": "189.1.1.1", "session_key": sessao_remota.session_key},
             timeout=3600,
         )
         segunda = self.client.post(
@@ -7113,6 +7117,31 @@ class HardeningProducaoTests(BaseFinanceTestCase):
 
         self.assertEqual(segunda.status_code, 200)
         self.assertContains(segunda, "sessao ativa em outro endereco IP")
+
+    def test_login_remove_trava_fantasma_quando_sessao_cacheada_nao_existe(self):
+        self.client.logout()
+        usuario = get_user_model().objects.create_user(username="sessao_fantasma", password="senha12345")
+        UsuarioEmpresa.objects.create(
+            usuario=usuario,
+            empresa=self.empresa,
+            is_admin_empresa=True,
+            papel_aprovacao="GERENTE_OBRAS",
+        )
+        critical_cache_set(
+            f"construtask:user-active-ip:{usuario.pk}",
+            {"ip": "189.1.1.1", "session_key": "sessao-inexistente"},
+            timeout=3600,
+        )
+
+        response = self.client.post(
+            reverse("login"),
+            {"username": usuario.username, "password": "senha12345"},
+            REMOTE_ADDR="189.1.1.2",
+        )
+
+        self.assertEqual(response.status_code, 302)
+        estado = critical_cache_get(f"construtask:user-active-ip:{usuario.pk}") or {}
+        self.assertEqual(estado.get("ip"), "189.1.1.2")
 
     @override_settings(
         DEBUG=False,
