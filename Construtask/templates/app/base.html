@@ -5,6 +5,9 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Construtask{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
         :root {
             --black: #0a0a0a;
@@ -20,14 +23,14 @@
             --muted-soft: #c8c8c8;
             --panel-shadow: 0 18px 44px rgba(0, 0, 0, 0.28);
         }
-        body { font-family: "Aptos", "Segoe UI", sans-serif; font-size: 15px; margin: 0; background: radial-gradient(circle at top left, rgba(139, 0, 0, 0.22) 0%, rgba(139, 0, 0, 0.08) 18%, rgba(10, 10, 10, 1) 52%), linear-gradient(180deg, #121212 0%, #0a0a0a 100%); color: var(--white); min-height: 100vh; }
+        body { font-family: "Inter", "Segoe UI", Arial, sans-serif; font-size: 15px; margin: 0; background: radial-gradient(circle at top left, rgba(139, 0, 0, 0.22) 0%, rgba(139, 0, 0, 0.08) 18%, rgba(10, 10, 10, 1) 52%), linear-gradient(180deg, #121212 0%, #0a0a0a 100%); color: var(--white); min-height: 100vh; }
         h1, h2, h3, h4, h5, h6 {
             color: var(--white);
             margin-top: 0;
             letter-spacing: 0.01em;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            white-space: normal;
+            overflow: visible;
+            text-overflow: clip;
         }
         a { color: var(--muted-soft); }
         a:hover { color: var(--white); }
@@ -196,9 +199,9 @@
         .card h4,
         .card h5,
         .card h6 {
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            white-space: normal;
+            overflow: visible;
+            text-overflow: clip;
         }
         .btn {
             display: inline-flex;
@@ -466,6 +469,7 @@
             .toolbar { flex-direction: column; align-items: stretch; }
         }
     </style>
+    <link rel="stylesheet" href="{% static 'app/design-system.css' %}">
     {% block extra_head %}{% endblock %}
 </head>
 <body>
@@ -478,7 +482,7 @@
                     <form method="post" action="{% url 'selecionar_obra_contexto' %}" class="nav-context">
                         {% csrf_token %}
                         <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                        <select name="obra_contexto" style="min-width:132px; width:132px; padding:6px 8px; border-radius:8px; border:1px solid #d1d5db;">
+                        <select name="obra_contexto" style="min-width:132px; width:auto; padding:6px 8px; border-radius:8px; border:1px solid #d1d5db;">
                             {% if not obras_contexto %}
                             <option value="">-- Selecione uma Obra --</option>
                             {% else %}
@@ -564,9 +568,9 @@
         {% endif %}
         {% block content %}{% endblock %}
     </main>
-    <footer style="width:100%; max-width:none; margin:0 0 24px; padding:0 18px; color:#5e6772; font-size:0.92rem; box-sizing:border-box;">
+    <footer style="width:100%; max-width:none; margin:0 0 24px; padding:0 18px; font-size:0.92rem; box-sizing:border-box;">
         <div class="panel" style="box-shadow:none;">
-            <strong style="display:block; margin-bottom:8px; color:#2f343a;">Transparência e Uso do Sistema</strong>
+            <strong style="display:block; margin-bottom:8px;">Transparência e Uso do Sistema</strong>
             <a href="{% url 'termos_uso' %}" style="margin-right:18px;">Termos de Uso</a>
             <a href="{% url 'politica_privacidade' %}">Política de Privacidade</a>
         </div>
@@ -610,6 +614,43 @@
                 document.addEventListener("DOMContentLoaded", marcarCamposSemQuebra);
             } else {
                 marcarCamposSemQuebra();
+            }
+        })();
+        (function () {
+            function habilitarLoadingDeSubmit() {
+                document.querySelectorAll("form").forEach((form) => {
+                    form.addEventListener("submit", (event) => {
+                        if (event.defaultPrevented) {
+                            return;
+                        }
+                        if (form.dataset.submitting === "true") {
+                            event.preventDefault();
+                            return;
+                        }
+                        form.dataset.submitting = "true";
+                        const submitter = event.submitter || form.querySelector("button[type='submit'], input[type='submit']");
+                        if (!submitter || submitter.dataset.noLoading === "true") {
+                            return;
+                        }
+                        const loadingText = submitter.dataset.loadingText || "Processando...";
+                        if (submitter.tagName === "BUTTON") {
+                            submitter.dataset.originalText = submitter.textContent.trim();
+                            submitter.textContent = loadingText;
+                        } else if (submitter.type === "submit") {
+                            submitter.dataset.originalValue = submitter.value;
+                            submitter.value = loadingText;
+                        }
+                        submitter.classList.add("is-loading");
+                        submitter.setAttribute("aria-busy", "true");
+                        submitter.setAttribute("aria-disabled", "true");
+                    });
+                });
+            }
+
+            if (document.readyState === "loading") {
+                document.addEventListener("DOMContentLoaded", habilitarLoadingDeSubmit);
+            } else {
+                habilitarLoadingDeSubmit();
             }
         })();
     </script>

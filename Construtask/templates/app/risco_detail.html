@@ -61,13 +61,7 @@
                 <tr>
                     <td><strong>{{ linha.0.impacto }}</strong></td>
                     {% for celula in linha %}
-                    <td style="text-align:center; font-weight:700; background:
-                        {% if celula.cor == 'success' %}#dcfce7
-                        {% elif celula.cor == 'warning' %}#fef3c7
-                        {% elif celula.cor == 'danger' %}#fee2e2
-                        {% else %}#111827; color:#fff
-                        {% endif %};
-                        {% if celula.atual %}outline:3px solid #7f1d1d;{% endif %}">
+                    <td class="{{ celula.cor }}{% if celula.atual %} risk-current{% endif %}">
                         {{ celula.nivel }}
                     </td>
                     {% endfor %}

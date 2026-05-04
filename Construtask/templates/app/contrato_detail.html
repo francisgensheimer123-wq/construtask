@@ -36,10 +36,10 @@
                 </div>
                 <div style="display:flex; gap:10px; flex-wrap:wrap;">
                     {% if pode_enviar_para_aprovacao and contrato.status == "RASCUNHO" %}
-                    <button type="submit" class="btn" name="acao" value="enviar_para_aprovacao">Enviar para Aprovação</button>
+                    <button type="submit" class="btn" name="acao" value="enviar_para_aprovacao" data-loading-text="Enviando...">Enviar para Aprovação</button>
                     {% endif %}
                     {% if pode_aprovar and contrato.status == "EM_APROVACAO" %}
-                    <button type="submit" class="btn" name="acao" value="aprovar">Aprovar</button>
+                    <button type="submit" class="btn" name="acao" value="aprovar" data-loading-text="Aprovando...">Aprovar</button>
                     <button type="submit" class="btn secondary" name="acao" value="retornar_para_ajuste">Retornar para Ajuste</button>
                     {% endif %}
                 </div>
@@ -213,10 +213,10 @@
                         <input type="text" name="parecer_aprovacao" placeholder="Parecer da aprovação" style="width:100%; margin-bottom:6px;">
                         <div style="display:flex; gap:6px; flex-wrap:wrap;">
                             {% if aditivo.status == "RASCUNHO" and pode_enviar_para_aprovacao %}
-                            <button class="btn secondary" type="submit" name="acao" value="enviar_para_aprovacao">Enviar</button>
+                            <button class="btn secondary" type="submit" name="acao" value="enviar_para_aprovacao" data-loading-text="Enviando...">Enviar</button>
                             {% endif %}
                             {% if aditivo.status == "EM_APROVACAO" and pode_aprovar_aditivo_workflow %}
-                            <button class="btn" type="submit" name="acao" value="aprovar">Aprovar</button>
+                            <button class="btn" type="submit" name="acao" value="aprovar" data-loading-text="Aprovando...">Aprovar</button>
                             <button class="btn secondary" type="submit" name="acao" value="retornar_para_ajuste">Devolver</button>
                             {% endif %}
                         </div>

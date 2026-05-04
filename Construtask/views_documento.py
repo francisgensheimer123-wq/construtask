@@ -22,6 +22,7 @@ from .permissions import (
     filtrar_por_empresa as _filtrar_por_empresa,
     get_empresa_operacional as _get_empresa_do_request,
     get_obra_do_contexto as _get_obra_contexto,
+    is_admin_empresa_vinculado,
     obra_em_somente_leitura,
 )
 from .services_aprovacao import can_approve_document, can_submit_for_approval
@@ -69,6 +70,19 @@ def _calcular_checksum_arquivo(arquivo):
     if hasattr(arquivo, "seek"):
         arquivo.seek(0)
     return sha256.hexdigest()
+
+
+def _usuario_e_admin_da_empresa_do_documento(user, documento):
+    if not is_admin_empresa_vinculado(user):
+        return False
+    usuario_empresa = getattr(user, "usuario_empresa", None)
+    return bool(usuario_empresa and usuario_empresa.empresa_id == documento.empresa_id)
+
+
+def _pode_baixar_documento(user, documento):
+    if documento.status != "OBSOLETO":
+        return True
+    return _usuario_e_admin_da_empresa_do_documento(user, documento)
 
 
 class DocumentoListView(LoginRequiredMixin, DefaultPaginationMixin, ListView):
@@ -214,6 +228,7 @@ class DocumentoDetailView(LoginRequiredMixin, DetailView):
         context["revisoes"] = documento.revisoes.all().order_by("-versao")
         context["ultima_revisao"] = ultima_revisao
         context["versao_aprovada"] = documento.get_versao_aprovada()
+        context["pode_baixar_documento"] = _pode_baixar_documento(self.request.user, documento)
         context["pode_revisar"] = documento.pode_revisar() and not obra_em_somente_leitura(documento.obra)
         context["pode_enviar_revisao"] = (
             documento.status == "RASCUNHO"
@@ -484,6 +499,8 @@ def documento_download_view(request, pk, revisao_pk=None):
     if empresa and documento.empresa_id != empresa.id:
         raise Http404("Documento nao encontrado.")
     if obra_contexto and documento.obra_id != obra_contexto.id:
+        raise Http404("Documento nao encontrado.")
+    if not _pode_baixar_documento(request.user, documento):
         raise Http404("Documento nao encontrado.")
 
     if revisao_pk:

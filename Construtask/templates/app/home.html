@@ -7,12 +7,35 @@
 {% block content %}
 <style>
     .dashboard-cards {
-        grid-template-columns: repeat(8, minmax(0, 1fr));
+        grid-template-columns: minmax(280px, 1.75fr) repeat(7, minmax(130px, 1fr));
         align-items: stretch;
         width: 100%;
     }
     .dashboard-cards .card {
         min-width: 0;
+    }
+    .dashboard-cards > .score-summary-card {
+        border-left: 5px solid #ef4444;
+        padding-left: 20px;
+    }
+    .dashboard-cards > .score-summary-card::before {
+        height: 0;
+        background: none;
+    }
+    .dashboard-cards > .score-summary-card.score-status-excelente {
+        border-left-color: #22c55e;
+    }
+    .dashboard-cards > .score-summary-card.score-status-saudavel {
+        border-left-color: #3b82f6;
+    }
+    .dashboard-cards > .score-summary-card.score-status-atencao {
+        border-left-color: #f97316;
+    }
+    .dashboard-cards > .score-summary-card.score-status-critico {
+        border-left-color: #ef4444;
+    }
+    .dashboard-cards > .score-summary-card strong {
+        font-size: 2rem;
     }
     .dashboard-cards > .card:nth-child(6) small {
         display: none;
@@ -20,6 +43,9 @@
     @media (max-width: 1400px) {
         .dashboard-cards {
             grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+        .dashboard-cards > .score-summary-card {
+            grid-column: span 2;
         }
     }
     .score-donut-wrap {
@@ -104,6 +130,43 @@
         color: var(--muted-soft);
         font-size: 13px;
     }
+    .score-status-text,
+    .score-status-value {
+        font-weight: 800;
+    }
+    .score-status-excelente {
+        color: #22c55e !important;
+    }
+    .score-status-saudavel {
+        color: #3b82f6 !important;
+    }
+    .score-status-atencao {
+        color: #f97316 !important;
+    }
+    .score-status-critico {
+        color: #ef4444 !important;
+    }
+    .score-status-badge {
+        border: 0;
+        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.24);
+        font-weight: 900;
+    }
+    .score-status-badge.score-status-excelente {
+        background: #22c55e;
+        color: #052e16 !important;
+    }
+    .score-status-badge.score-status-saudavel {
+        background: #2563eb;
+        color: #ffffff !important;
+    }
+    .score-status-badge.score-status-atencao {
+        background: #f97316;
+        color: #1f1300 !important;
+    }
+    .score-status-badge.score-status-critico {
+        background: #dc2626;
+        color: #ffffff !important;
+    }
     .chart-track {
         background: rgba(255,255,255,.06);
     }
@@ -123,10 +186,16 @@
         .dashboard-cards {
             grid-template-columns: repeat(2, minmax(0, 1fr));
         }
+        .dashboard-cards > .score-summary-card {
+            grid-column: span 2;
+        }
     }
     @media (max-width: 480px) {
         .dashboard-cards {
             grid-template-columns: repeat(1, minmax(0, 1fr));
+        }
+        .dashboard-cards > .score-summary-card {
+            grid-column: span 1;
         }
     }
 </style>
@@ -145,14 +214,20 @@
 
 {% if sem_obra_selecionada %}
 <div class="panel">
-    <p class="empty">Selecione uma obra no cabecalho para carregar o dashboard executivo.</p>
+    <div class="empty-state">
+        <span class="empty-state__mark">i</span>
+        <div>
+            <h3>Selecione uma obra para iniciar</h3>
+            <p>Use o seletor no cabeçalho para carregar score, custos, riscos e alertas executivos.</p>
+        </div>
+    </div>
 </div>
 {% else %}
 <section class="cards dashboard-cards">
-    <div class="card">
+    <div class="card score-summary-card {% if score_operacional.faixa == 'Excelente' %}score-status-excelente{% elif score_operacional.faixa == 'Saudavel' %}score-status-saudavel{% elif score_operacional.faixa == 'Atencao' %}score-status-atencao{% else %}score-status-critico{% endif %}">
         <span>Score Operacional</span>
-        <strong>{{ score_operacional.pontuacao|trunc2 }}</strong>
-        <small class="text-muted">{{ score_operacional.faixa }}</small>
+        <strong class="score-status-value {% if score_operacional.faixa == 'Excelente' %}score-status-excelente{% elif score_operacional.faixa == 'Saudavel' %}score-status-saudavel{% elif score_operacional.faixa == 'Atencao' %}score-status-atencao{% else %}score-status-critico{% endif %}">{{ score_operacional.pontuacao|trunc2 }}</strong>
+        <small class="score-status-text {% if score_operacional.faixa == 'Excelente' %}score-status-excelente{% elif score_operacional.faixa == 'Saudavel' %}score-status-saudavel{% elif score_operacional.faixa == 'Atencao' %}score-status-atencao{% else %}score-status-critico{% endif %}">{{ score_operacional.faixa }}</small>
     </div>
     <div class="card"><span>Orçado</span><strong>{{ indicadores_exec.orcado|money_br }}</strong></div>
     <div class="card"><span>Executado</span><strong>{{ indicadores_exec.executado|money_br }}</strong></div>
@@ -176,8 +251,8 @@
         <div class="score-donut">
             <div class="score-donut-center">
                 <span>Score Total</span>
-                <strong>{{ score_operacional.pontuacao|trunc2 }}</strong>
-                <small class="text-muted">{{ score_operacional.faixa }}</small>
+                <strong class="score-status-value {% if score_operacional.faixa == 'Excelente' %}score-status-excelente{% elif score_operacional.faixa == 'Saudavel' %}score-status-saudavel{% elif score_operacional.faixa == 'Atencao' %}score-status-atencao{% else %}score-status-critico{% endif %}">{{ score_operacional.pontuacao|trunc2 }}</strong>
+                <small class="score-status-text {% if score_operacional.faixa == 'Excelente' %}score-status-excelente{% elif score_operacional.faixa == 'Saudavel' %}score-status-saudavel{% elif score_operacional.faixa == 'Atencao' %}score-status-atencao{% else %}score-status-critico{% endif %}">{{ score_operacional.faixa }}</small>
             </div>
         </div>
         <div class="score-component-legend">
@@ -190,7 +265,7 @@
                 <strong>{{ item.nome }}</strong>
                 <div class="meta">
                     <span>{{ item.pontuacao|trunc2 }} / 25,00</span>
-                    <span class="badge {% if item.nivel == 'critico' %}badge-danger{% elif item.nivel == 'atencao' %}badge-warning{% elif item.nivel == 'saudavel' %}badge-info{% else %}badge-success{% endif %}">{{ item.nivel|upper }}</span>
+                    <span class="badge score-status-badge {% if item.nivel == 'excelente' %}score-status-excelente{% elif item.nivel == 'saudavel' %}score-status-saudavel{% elif item.nivel == 'atencao' %}score-status-atencao{% else %}score-status-critico{% endif %}">{{ item.nivel|upper }}</span>
                 </div>
                 <div style="margin-top:10px;">
                     <small class="text-muted">{{ item.detalhe }}</small>
@@ -206,7 +281,13 @@
         <span class="badge bg-dark">NCs abertas: {{ score_operacional.total_ncs_abertas }}</span>
     </div>
     {% else %}
-    <p class="empty">Selecione uma obra com dados operacionais para calcular o score.</p>
+    <div class="empty-state">
+        <span class="empty-state__mark">i</span>
+        <div>
+            <h3>Score ainda sem dados suficientes</h3>
+            <p>Cadastre cronograma, riscos, qualidade e aquisições para liberar a leitura executiva da obra.</p>
+        </div>
+    </div>
     {% endif %}
 </section>
 
@@ -316,7 +397,7 @@
                 <tr>
                     <td>{{ item.frente }}</td>
                     <td>
-                        <span class="badge {% if item.nivel == 'critico' %}badge-danger{% elif item.nivel == 'alto' %}badge-warning{% elif item.nivel == 'medio' %}badge-info{% else %}badge-secondary{% endif %}">
+                        <span class="badge {% if item.nivel == 'critico' %}risk-critical{% elif item.nivel == 'alto' %}risk-high{% elif item.nivel == 'medio' %}risk-medium{% else %}risk-low{% endif %}">
                             {{ item.nivel|upper }}
                         </span>
                     </td>
@@ -351,7 +432,7 @@
                 <tr>
                     <td>{{ item.titulo }}</td>
                     <td>
-                        <span class="badge {% if item.nivel == 'critico' %}badge-danger{% elif item.nivel == 'alto' %}badge-warning{% elif item.nivel == 'medio' %}badge-info{% else %}badge-secondary{% endif %}">
+                        <span class="badge {% if item.nivel == 'critico' %}risk-critical{% elif item.nivel == 'alto' %}risk-high{% elif item.nivel == 'medio' %}risk-medium{% else %}risk-low{% endif %}">
                             {{ item.nivel|upper }}
                         </span>
                     </td>

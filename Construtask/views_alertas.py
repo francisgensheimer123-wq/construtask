@@ -9,6 +9,7 @@ from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.generic import DetailView, TemplateView
 
 from .application.alertas import (
@@ -23,6 +24,16 @@ from .services_alertas import atualizar_status_alerta, obter_regra_operacional
 from .services_aprovacao import can_assume_alert, can_close_alert, can_justify_alert
 from .export_helpers import _exportar_excel_response, _pdf_relatorio_probatorio_response
 from .navigation_helpers import _grafico_score_operacional, _obter_grupos_navegacao
+
+
+def _url_retorno_segura(request, url, fallback):
+    if url and url_has_allowed_host_and_scheme(
+        url=url,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        return url
+    return fallback
 
 
 class CentralAlertasOperacionaisView(LoginRequiredMixin, TemplateView):
@@ -97,7 +108,11 @@ def alerta_operacional_workflow_view(request, pk):
     acao = (request.POST.get("acao") or "").strip()
     observacao = (request.POST.get("observacao") or "").strip()
     prazo_solucao = (request.POST.get("prazo_solucao_em") or "").strip()
-    next_url = (request.POST.get("next") or "").strip() or reverse("alerta_operacional_detail", args=[alerta.pk])
+    next_url = _url_retorno_segura(
+        request,
+        (request.POST.get("next") or "").strip(),
+        reverse("alerta_operacional_detail", args=[alerta.pk]),
+    )
 
     if acao == "assumir":
         if not can_assume_alert(request.user):

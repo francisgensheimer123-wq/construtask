@@ -5,17 +5,15 @@
 {% block content %}
 <div class="form-page-shell">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2><i class="bi bi-exclamation-triangle"></i> {{ titulo }}</h2>
-        <a href="{% url 'risco_list' %}" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left"></i> Voltar
-        </a>
+        <h2>{{ titulo }}</h2>
+        <a href="{% url 'risco_list' %}" class="btn btn-outline-secondary">Voltar</a>
     </div>
 
     <div class="card">
         <div class="card-body">
             <form method="post">
                 {% csrf_token %}
-                
+
                 <div class="row mb-3">
                     <div class="col-md-6">
                         <label class="form-label">Obra *</label>
@@ -87,9 +85,9 @@
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Nível (calculado)</label>
-                        <div class="alert alert-{% if risco and risco.nivel_texto == 'BAIXO' %}success{% elif risco and risco.nivel_texto == 'MÉDIO' %}warning{% elif risco and risco.nivel_texto == 'ALTO' %}danger{% else %}dark{% endif %} mb-0">
+                        <div class="alert {% if not risco %}bg-secondary{% elif risco.nivel_texto == 'BAIXO' %}risk-low{% elif risco.nivel_texto == 'MÉDIO' %}risk-medium{% elif risco.nivel_texto == 'ALTO' %}risk-high{% else %}risk-critical{% endif %} mb-0">
                             <h4 class="mb-0">{{ risco.nivel|default:'-' }}</h4>
-                            <small>{{ risco.get_probabilidade_display }} × {{ risco.get_impacto_display }}</small>
+                            <small>{{ risco.get_probabilidade_display }} x {{ risco.get_impacto_display }}</small>
                         </div>
                     </div>
                 </div>
@@ -123,9 +121,7 @@
 
                 <div class="d-flex justify-content-between">
                     <a href="{% if voltar_url %}{{ voltar_url }}{% else %}{% url 'risco_list' %}{% endif %}" class="btn btn-secondary">Cancelar</a>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-save"></i> Salvar
-                    </button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
                 </div>
             </form>
         </div>

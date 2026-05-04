@@ -236,9 +236,9 @@ def construir_dados_projecao_financeira(*, obra=None, meses_qtd=12):
     }
 
 
-def construir_fluxo_financeiro_contratual(*, obra=None, meses_qtd=12):
-    hoje = date.today()
-    inicio = date(hoje.year, hoje.month, 1)
+def construir_fluxo_financeiro_contratual(*, obra=None, meses_qtd=12, data_referencia=None):
+    referencia = data_referencia or date.today()
+    inicio = date(referencia.year, referencia.month, 1)
 
     def add_one_month(data_base):
         return adicionar_um_mes(data_base)

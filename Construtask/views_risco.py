@@ -259,16 +259,16 @@ class RiscoDetailView(DetailView):
             for prob in range(1, 6):
                 nivel = prob * impacto
                 if nivel <= 4:
-                    cor = "success"
+                    cor = "risk-low"
                     texto = "Baixo"
                 elif nivel <= 9:
-                    cor = "warning"
+                    cor = "risk-medium"
                     texto = "Médio"
                 elif nivel <= 15:
-                    cor = "danger"
+                    cor = "risk-high"
                     texto = "Alto"
                 else:
-                    cor = "dark"
+                    cor = "risk-critical"
                     texto = "Crítico"
                 
                 # Verificar se é o risco atual

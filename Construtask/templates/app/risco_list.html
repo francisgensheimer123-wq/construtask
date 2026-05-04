@@ -85,14 +85,7 @@
             {% for risco in riscos %}
             <tr>
                 <td>
-                    <span class="badge" style="background:
-                    {% if risco.nivel_texto == 'BAIXO' %}#166534
-                    {% elif risco.nivel_texto == 'MÉDIO' %}#a16207
-                    {% elif risco.nivel_texto == 'ALTO' %}#991b1b
-                    {% else %}#111827{% endif %};
-                    color:#fff; padding:6px 10px; border-radius:999px;">
-                        {{ risco.nivel }} - {{ risco.nivel_texto }}
-                    </span>
+                    <span class="badge {{ risco.nivel_cor }}">{{ risco.nivel }} - {{ risco.nivel_texto }}</span>
                 </td>
                 <td><a href="{% url 'risco_detail' risco.pk %}">{% if risco.codigo %}{{ risco.codigo }} - {% endif %}{{ risco.titulo }}</a></td>
                 <td>{{ risco.get_categoria_display }}</td>

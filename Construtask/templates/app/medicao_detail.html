@@ -35,10 +35,10 @@
                 </div>
                 <div style="display:flex; gap:10px; flex-wrap:wrap;">
                     {% if pode_enviar_para_aprovacao and medicao.status == "EM_ELABORACAO" %}
-                    <button type="submit" class="btn" name="acao" value="enviar_para_aprovacao">Enviar para Aprovação</button>
+                    <button type="submit" class="btn" name="acao" value="enviar_para_aprovacao" data-loading-text="Enviando...">Enviar para Aprovação</button>
                     {% endif %}
                     {% if pode_aprovar and medicao.status == "EM_APROVACAO" %}
-                    <button type="submit" class="btn" name="acao" value="aprovar">Aprovar</button>
+                    <button type="submit" class="btn" name="acao" value="aprovar" data-loading-text="Aprovando...">Aprovar</button>
                     <button type="submit" class="btn secondary" name="acao" value="retornar_para_ajuste">Retornar para Ajuste</button>
                     {% endif %}
                 </div>

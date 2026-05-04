@@ -1,9 +1,26 @@
+from django.core.exceptions import ValidationError
 from django.utils import timezone
 
 from .models_qualidade import NaoConformidade, NaoConformidadeHistorico
 
 
 class QualidadeWorkflowService:
+    TRANSICOES_PERMITIDAS = {
+        "ABERTA": {"EM_TRATAMENTO", "CANCELADA"},
+        "EM_TRATAMENTO": {"EM_VERIFICACAO", "CANCELADA"},
+        "EM_VERIFICACAO": {"ENCERRADA", "CANCELADA"},
+        "ENCERRADA": set(),
+        "CANCELADA": set(),
+    }
+
+    @classmethod
+    def _validar_transicao(cls, nc, novo_status):
+        if novo_status not in cls.TRANSICOES_PERMITIDAS.get(nc.status, set()):
+            raise ValidationError(
+                f"Transicao invalida de {nc.get_status_display()} para "
+                f"{dict(NaoConformidade.STATUS_CHOICES).get(novo_status, novo_status)}."
+            )
+
     @staticmethod
     def _snapshot(nc):
         return {
@@ -40,6 +57,7 @@ class QualidadeWorkflowService:
 
     @classmethod
     def iniciar_tratamento(cls, nc, usuario, observacao=""):
+        cls._validar_transicao(nc, "EM_TRATAMENTO")
         antes = cls._snapshot(nc)
         nc.status = "EM_TRATAMENTO"
         nc.save()
@@ -55,6 +73,7 @@ class QualidadeWorkflowService:
 
     @classmethod
     def enviar_para_verificacao(cls, nc, usuario, observacao=""):
+        cls._validar_transicao(nc, "EM_VERIFICACAO")
         antes = cls._snapshot(nc)
         nc.eficacia_verificada_por = usuario
         nc.eficacia_verificada_em = timezone.now()
@@ -72,6 +91,7 @@ class QualidadeWorkflowService:
 
     @classmethod
     def encerrar(cls, nc, usuario, observacao=""):
+        cls._validar_transicao(nc, "ENCERRADA")
         antes = cls._snapshot(nc)
         nc.eficacia_verificada_por = usuario
         nc.eficacia_verificada_em = timezone.now()
@@ -89,6 +109,7 @@ class QualidadeWorkflowService:
 
     @classmethod
     def cancelar(cls, nc, usuario, observacao=""):
+        cls._validar_transicao(nc, "CANCELADA")
         antes = cls._snapshot(nc)
         nc.status = "CANCELADA"
         nc.save()

@@ -15,6 +15,7 @@ from django.db.models import Case, Count, DecimalField, ExpressionWrapper, F, Pr
 from django.db.models.functions import Coalesce
 from django.db.models.deletion import ProtectedError
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.http import Http404, HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
@@ -100,6 +101,7 @@ from .application.financeiro import (
     dados_fechamento_mensal_request,
     dados_projecao_financeira_request,
     registrar_fechamento_mensal,
+    resolver_obra_financeira,
 )
 from .navigation_helpers import (
     _calcular_percentual,
@@ -1446,13 +1448,25 @@ def _apagar_objeto(request, queryset, success_url):
     return redirect(success_url)
 
 
+def _url_retorno_segura(request, url, fallback="home"):
+    if url and url_has_allowed_host_and_scheme(
+        url=url,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        return url
+    if str(fallback).startswith("/"):
+        return fallback
+    return reverse_lazy(fallback)
+
+
 def _registrar_historico(acao, objeto, descricao, usuario=None):
     return _approval_registrar_historico(acao, objeto, descricao, usuario)
 
 
 @login_required
 def selecionar_obra_contexto_view(request):
-    proxima_url = request.POST.get("next") or reverse_lazy("home")
+    proxima_url = _url_retorno_segura(request, request.POST.get("next"), "home")
     obra_id = request.POST.get("obra_contexto")
     if obra_id:
         obra = _get_obras_permitidas(request.user).filter(pk=obra_id).first()
@@ -1971,7 +1985,11 @@ def alerta_operacional_workflow_view(request, pk):
     acao = (request.POST.get("acao") or "").strip()
     observacao = (request.POST.get("observacao") or "").strip()
     prazo_solucao = (request.POST.get("prazo_solucao_em") or "").strip()
-    next_url = (request.POST.get("next") or "").strip() or reverse("alerta_operacional_detail", args=[alerta.pk])
+    next_url = _url_retorno_segura(
+        request,
+        (request.POST.get("next") or "").strip(),
+        reverse("alerta_operacional_detail", args=[alerta.pk]),
+    )
 
     if acao == "assumir":
         if not can_assume_alert(request.user):
@@ -2523,7 +2541,8 @@ class PlanoContasUpdateView(UpdateView):
 
 @login_required
 def plano_contas_delete_view(request):
-    return _apagar_objeto(request, PlanoContas.objects.all(), "plano_contas_list")
+    queryset = _filtrar_por_obra_contexto(request, PlanoContas.objects.all(), vazio_quando_sem_obra=True)
+    return _apagar_objeto(request, queryset, "plano_contas_list")
 
 
 @login_required
@@ -3037,7 +3056,8 @@ def aditivo_contrato_workflow_view(request, pk):
 
 
 def compromisso_delete_view(request):
-    return _apagar_objeto(request, Compromisso.objects.all(), "compromisso_list")
+    queryset = _filtrar_por_obra_contexto(request, Compromisso.objects.all(), vazio_quando_sem_obra=True)
+    return _apagar_objeto(request, queryset, "compromisso_list")
 
 
 def compromisso_export_view(request):
@@ -3451,7 +3471,8 @@ class MedicaoDetailView(DetailView):
 
 
 def medicao_delete_view(request):
-    return _apagar_objeto(request, Medicao.objects.all(), "medicao_list")
+    queryset = _filtrar_por_obra_contexto(request, Medicao.objects.all(), vazio_quando_sem_obra=True)
+    return _apagar_objeto(request, queryset, "medicao_list")
 
 
 @login_required
@@ -3863,7 +3884,10 @@ class FechamentoMensalView(TemplateView):
             raw = raw.replace(".", "").replace(",", "")
             return int(raw)
 
-        obra = get_object_or_404(Obra, pk=request.POST.get("obra"))
+        obra = resolver_obra_financeira(request=request, obra_id=request.POST.get("obra"))
+        if not obra:
+            messages.error(request, "Voce nao tem acesso a obra selecionada para fechamento.")
+            return redirect(reverse_lazy("fechamento_mensal"))
         ano = _parse_int_br(request.POST.get("ano"))
         mes = _parse_int_br(request.POST.get("mes"))
         fechamento, _ = FechamentoMensal.objects.update_or_create(
@@ -4121,7 +4145,10 @@ class FechamentoMensalView(TemplateView):
             raw = raw.replace(".", "").replace(",", "")
             return int(raw)
 
-        obra = get_object_or_404(Obra, pk=request.POST.get("obra"))
+        obra = resolver_obra_financeira(request=request, obra_id=request.POST.get("obra"))
+        if not obra:
+            messages.error(request, "Voce nao tem acesso a obra selecionada para fechamento.")
+            return redirect(reverse_lazy("fechamento_mensal"))
         ano = _parse_int_br(request.POST.get("ano"))
         mes = _parse_int_br(request.POST.get("mes"))
         fechamento = registrar_fechamento_mensal(obra=obra, ano=ano, mes=mes)
@@ -4303,7 +4330,8 @@ def projecao_financeira_pdf_view(request):
 
 
 def nota_fiscal_delete_view(request):
-    return _apagar_objeto(request, NotaFiscal.objects.all(), "nota_fiscal_list")
+    queryset = _filtrar_por_obra_contexto(request, NotaFiscal.objects.all(), vazio_quando_sem_obra=True)
+    return _apagar_objeto(request, queryset, "nota_fiscal_list")
 
 
 def nota_fiscal_export_view(request):

@@ -885,17 +885,22 @@ class DocumentoForm(NormalizeTextFieldsMixin, forms.ModelForm):
     def __init__(self, *args, **kwargs):
         empresa = kwargs.pop('empresa', None)
         obra_contexto = kwargs.pop("obra_contexto", None)
+        self.empresa = empresa
+        self.obra_contexto = obra_contexto
         super().__init__(*args, **kwargs)
         if empresa:
-            self.fields['obra'].queryset = filtrar_obras_liberadas_para_lancamento(empresa.obras.all()).order_by("codigo")
+            self.fields["empresa"].initial = empresa
             if obra_contexto and obra_contexto.empresa_id == empresa.id:
+                self.fields['obra'].queryset = Obra.objects.filter(pk=obra_contexto.pk)
                 self.fields["obra"].initial = obra_contexto
                 self.fields["plano_contas"].queryset = PlanoContas.objects.filter(obra=obra_contexto).order_by("tree_id", "lft")
             else:
+                self.fields['obra'].queryset = filtrar_obras_liberadas_para_lancamento(empresa.obras.all()).order_by("codigo")
                 self.fields['plano_contas'].queryset = PlanoContas.objects.filter(obra__empresa=empresa).order_by("tree_id", "lft")
         else:
             self.fields['obra'].queryset = Obra.objects.none()
             self.fields['plano_contas'].queryset = PlanoContas.objects.none()
+        self.fields["empresa"].required = False
         self.fields["obra"].required = True
         self.fields["codigo_documento"].required = False
         if self.instance and self.instance.pk:
@@ -904,6 +909,13 @@ class DocumentoForm(NormalizeTextFieldsMixin, forms.ModelForm):
     def clean(self):
         cleaned_data = super().clean()
         obra = cleaned_data.get("obra")
+        plano_contas = cleaned_data.get("plano_contas")
+        if self.empresa and cleaned_data.get("empresa") != self.empresa:
+            cleaned_data["empresa"] = self.empresa
+        if self.obra_contexto and obra != self.obra_contexto:
+            self.add_error("obra", "O documento deve pertencer a obra selecionada no contexto.")
+        if plano_contas and obra and plano_contas.obra_id != obra.id:
+            self.add_error("plano_contas", "A EAP deve pertencer a obra selecionada.")
         if obra_em_somente_leitura(obra):
             self.add_error("obra", "Obras concluidas ou paralisadas permitem apenas visualizacao.")
         return cleaned_data
@@ -977,11 +989,15 @@ class NaoConformidadeForm(NormalizeTextFieldsMixin, forms.ModelForm):
     def __init__(self, *args, **kwargs):
         empresa = kwargs.pop("empresa", None)
         obra_contexto = kwargs.pop("obra_contexto", None)
+        self.obra_contexto = obra_contexto
         super().__init__(*args, **kwargs)
         if empresa:
-            self.fields["obra"].queryset = filtrar_obras_liberadas_para_lancamento(
-                Obra.objects.filter(empresa=empresa)
-            ).order_by("codigo")
+            if obra_contexto and obra_contexto.empresa_id == empresa.id:
+                self.fields["obra"].queryset = Obra.objects.filter(pk=obra_contexto.pk)
+            else:
+                self.fields["obra"].queryset = filtrar_obras_liberadas_para_lancamento(
+                    Obra.objects.filter(empresa=empresa)
+                ).order_by("codigo")
         else:
             self.fields["obra"].queryset = Obra.objects.none()
         if obra_contexto:
@@ -993,18 +1009,25 @@ class NaoConformidadeForm(NormalizeTextFieldsMixin, forms.ModelForm):
     def clean(self):
         cleaned_data = super().clean()
         obra = cleaned_data.get("obra")
+        plano_contas = cleaned_data.get("plano_contas")
         status = cleaned_data.get("status")
+        if self.obra_contexto and obra != self.obra_contexto:
+            self.add_error("obra", "A nao conformidade deve pertencer a obra selecionada no contexto.")
+        if plano_contas and obra and plano_contas.obra_id != obra.id:
+            self.add_error("plano_contas", "O centro de custo deve pertencer a obra selecionada.")
         if obra_em_somente_leitura(obra):
             self.add_error("obra", "Obras concluidas ou paralisadas permitem apenas visualizacao.")
+        evidencia_tratamento_anexo = cleaned_data.get("evidencia_tratamento_anexo") or getattr(self.instance, "evidencia_tratamento_anexo", None)
+        evidencia_encerramento_anexo = cleaned_data.get("evidencia_encerramento_anexo") or getattr(self.instance, "evidencia_encerramento_anexo", None)
         if status in {"EM_VERIFICACAO", "ENCERRADA"}:
             if not (cleaned_data.get("evidencia_tratamento") or "").strip():
                 self.add_error("evidencia_tratamento", "Informe a evidencia de tratamento antes de enviar para verificacao.")
-            if not cleaned_data.get("evidencia_tratamento_anexo"):
+            if not evidencia_tratamento_anexo:
                 self.add_error("evidencia_tratamento_anexo", "Anexe a comprovacao da evidencia de tratamento.")
         if status == "ENCERRADA":
             if not (cleaned_data.get("evidencia_encerramento") or "").strip():
                 self.add_error("evidencia_encerramento", "Informe a evidencia de encerramento antes de encerrar a NC.")
-            if not cleaned_data.get("evidencia_encerramento_anexo"):
+            if not evidencia_encerramento_anexo:
                 self.add_error("evidencia_encerramento_anexo", "Anexe a comprovacao da evidencia de encerramento.")
         return cleaned_data
 

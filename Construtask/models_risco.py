@@ -186,13 +186,13 @@ class Risco(models.Model):
     def nivel_cor(self):
         """Retorna cor do nível de risco para UI."""
         if self.nivel <= 4:
-            return "success"
+            return "risk-low"
         elif self.nivel <= 9:
-            return "warning"
+            return "risk-medium"
         elif self.nivel <= 15:
-            return "danger"
+            return "risk-high"
         else:
-            return "dark"
+            return "risk-critical"
 
 
 class RiscoHistorico(models.Model):

@@ -1,5 +1,7 @@
+from datetime import date
+
 from ..models import FechamentoMensal, Obra
-from ..permissions import get_obra_do_contexto
+from ..permissions import get_obra_do_contexto, get_obras_permitidas
 from ..queries.financeiro import (
     construir_dados_fechamento_mensal,
     construir_dados_projecao_financeira,
@@ -12,19 +14,20 @@ def dados_fechamento_mensal_request(request):
     obra_contexto = get_obra_do_contexto(request)
     obra_id = (request.GET.get("obra") or "").strip()
     dados_base = construir_dados_fechamento_mensal(
-        obra=resolver_obra_financeira(obra_contexto=obra_contexto, obra_id=obra_id),
+        obra=resolver_obra_financeira(request=request, obra_contexto=obra_contexto, obra_id=obra_id),
         ano=parse_int_query_param(request.GET.get("ano"), None),
         mes=parse_int_query_param(request.GET.get("mes"), None),
     )
     return dados_base
 
 
-def resolver_obra_financeira(*, obra_contexto=None, obra_id=None):
-    obras = Obra.objects.order_by("codigo")
+def resolver_obra_financeira(*, request=None, obra_contexto=None, obra_id=None):
+    obras = get_obras_permitidas(request.user).order_by("codigo") if request is not None else Obra.objects.order_by("codigo")
     if obra_id:
         obra = obras.filter(pk=obra_id).first()
         if obra:
             return obra
+        return obra_contexto
     if obra_contexto:
         return obra_contexto
     return obras.first()
@@ -54,4 +57,14 @@ def dados_projecao_financeira_request(request):
 def dados_fluxo_financeiro_contratual_request(request):
     obra = get_obra_do_contexto(request)
     meses_qtd = parse_int_query_param(request.GET.get("meses"), 12)
-    return construir_fluxo_financeiro_contratual(obra=obra, meses_qtd=meses_qtd)
+    data_referencia = _parse_data_referencia(request.GET.get("data_referencia") or request.GET.get("inicio"))
+    return construir_fluxo_financeiro_contratual(obra=obra, meses_qtd=meses_qtd, data_referencia=data_referencia)
+
+
+def _parse_data_referencia(value):
+    if not value:
+        return None
+    try:
+        return date.fromisoformat(str(value).strip())
+    except (TypeError, ValueError):
+        return None

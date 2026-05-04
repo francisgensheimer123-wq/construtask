@@ -6,18 +6,19 @@
 {% block extra_head %}
 <style>
     .login-shell {
-        min-height: calc(100vh - 230px);
+        min-height: calc(100vh - 220px);
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 18px 0 30px;
+        padding: 40px 16px 54px;
     }
     .login-card {
         width: min(100%, 460px);
-        background: linear-gradient(180deg, rgba(61,61,61,.97) 0%, rgba(28,28,28,.99) 100%);
-        border-radius: 18px;
-        border: 1px solid rgba(255,255,255,.12);
-        box-shadow: var(--panel-shadow);
+        background: linear-gradient(180deg, rgba(61, 61, 61, 0.98) 0%, rgba(28, 28, 28, 0.99) 100%) !important;
+        color: var(--text);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 14px;
+        box-shadow: 0 24px 58px rgba(0, 0, 0, 0.46);
         overflow: hidden;
         position: relative;
     }
@@ -26,25 +27,28 @@
         position: absolute;
         inset: 0 0 auto 0;
         height: 4px;
-        background: linear-gradient(90deg, var(--red-dark) 0%, var(--red-soft) 55%, rgba(255,255,255,.14) 100%);
+        background: linear-gradient(90deg, var(--red-dark) 0%, var(--red-soft) 58%, rgba(255, 255, 255, 0.16) 100%);
     }
     .login-head {
-        padding: 26px 26px 18px;
+        padding: 34px 32px 22px;
         text-align: center;
-        border-bottom: 1px solid rgba(255,255,255,.08);
-        background: linear-gradient(180deg, rgba(139,0,0,.18) 0%, rgba(61,61,61,.2) 100%);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+        background: linear-gradient(135deg, rgba(139, 0, 0, 0.18) 0%, rgba(44, 44, 44, 0.88) 54%, rgba(18, 18, 18, 0.94) 100%);
     }
     .login-head h1 {
         margin: 0 0 8px;
-        font-size: 1.65rem;
-        color: var(--white);
+        font-size: 1.7rem;
+        color: var(--white) !important;
+        font-weight: 800;
+        line-height: 1.2;
     }
     .login-head p {
         margin: 0;
-        color: var(--muted-soft);
+        color: var(--text-soft) !important;
+        font-weight: 650;
     }
     .login-body {
-        padding: 24px 26px 22px;
+        padding: 28px 32px 26px;
     }
     .login-field {
         margin-bottom: 16px;
@@ -52,29 +56,30 @@
     .login-field label {
         display: block;
         margin-bottom: 8px;
-        color: var(--white);
+        color: var(--text-soft) !important;
         font-weight: 700;
     }
     .login-field input {
         width: 100%;
-        background: rgba(18,18,18,.92);
-        border: 1px solid rgba(200,200,200,.18);
-        color: var(--white);
-        border-radius: 12px;
-        padding: 12px 14px;
+        background: rgba(10, 10, 10, 0.56) !important;
+        border: 1px solid rgba(255, 255, 255, 0.18) !important;
+        color: var(--white) !important;
+        border-radius: 9px !important;
+        padding: 12px 13px;
         box-sizing: border-box;
+        font-weight: 650;
     }
     .login-field input:focus {
         outline: none;
-        border-color: rgba(180,180,180,.3);
-        box-shadow: 0 0 0 3px rgba(139,0,0,.16);
+        border-color: var(--red-soft) !important;
+        box-shadow: var(--focus-ring) !important;
     }
     .login-error {
         margin-bottom: 16px;
         padding: 12px 14px;
-        border-radius: 12px;
-        border: 1px solid rgba(192,57,43,.5);
-        background: rgba(192,57,43,.13);
+        border-radius: 8px;
+        border: 1px solid rgba(192, 57, 43, 0.46);
+        background: rgba(139, 0, 0, 0.20);
         color: #ffd6d0;
     }
     .login-remember {
@@ -83,13 +88,14 @@
         justify-content: flex-start;
         gap: 10px;
         margin-bottom: 18px;
-        color: var(--muted-soft);
+        color: var(--text-soft) !important;
         cursor: pointer;
         width: fit-content;
+        font-weight: 650;
     }
     .login-remember input {
         width: auto;
-        height: auto;
+        height: 14px;
         margin: 0;
         flex: 0 0 auto;
         accent-color: #c71f1f;
@@ -99,21 +105,53 @@
         line-height: 1.2;
     }
     .login-submit {
+        display: flex !important;
         width: 100%;
-        justify-content: center;
+        min-height: 44px !important;
+        justify-content: center !important;
+        align-items: center !important;
+        padding: 10px 14px !important;
+        background: linear-gradient(180deg, #b01b1b 0%, #8b0000 100%) !important;
+        border: 1px solid rgba(255, 255, 255, 0.18) !important;
+        border-radius: 9px !important;
+        color: #ffffff !important;
+        font-weight: 800 !important;
+        text-decoration: none !important;
+        box-shadow: 0 10px 22px rgba(139, 0, 0, 0.30), inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
+    }
+    .login-submit:hover {
+        background: linear-gradient(180deg, #c72a2a 0%, #9a0f0f 100%) !important;
+        border-color: rgba(255, 255, 255, 0.24) !important;
+        color: #ffffff !important;
+        text-decoration: none !important;
     }
     .login-footer {
-        padding: 16px 26px 22px;
-        border-top: 1px solid rgba(255,255,255,.08);
+        padding: 18px 32px 24px;
+        border-top: 1px solid rgba(255, 255, 255, 0.12);
         text-align: center;
-        color: var(--muted-soft);
+        color: var(--muted) !important;
+        background: rgba(10, 10, 10, 0.24);
     }
     .login-footer a {
-        color: var(--white);
+        color: #f0b4ad !important;
         text-decoration: none;
+        font-weight: 750;
     }
     .login-footer a:hover {
-        color: #f5d7d7;
+        color: #ffffff !important;
+        text-decoration: underline;
+    }
+    @media (max-width: 520px) {
+        .login-shell {
+            align-items: flex-start;
+            padding-top: 18px;
+        }
+        .login-head,
+        .login-body,
+        .login-footer {
+            padding-left: 20px;
+            padding-right: 20px;
+        }
     }
 </style>
 {% endblock %}
@@ -123,19 +161,19 @@
     <section class="login-card">
         <div class="login-head">
             <h1>Construtask</h1>
-            <p>Sistema de Gestao de Obras</p>
+            <p>Sistema de Gestão de Obras</p>
         </div>
 
         <div class="login-body">
             {% if form.errors %}
             <div class="login-error">
-                <strong>Erro de autenticacao.</strong>
+                <strong>Erro de autenticação.</strong>
                 {% if form.non_field_errors %}
                     {% for erro in form.non_field_errors %}
                     <div>{{ erro }}</div>
                     {% endfor %}
                 {% else %}
-                <div>Usuario ou senha invalidos.</div>
+                <div>Usuário ou senha inválidos.</div>
                 {% endif %}
             </div>
             {% endif %}
@@ -143,7 +181,7 @@
             <form method="post">
                 {% csrf_token %}
                 <div class="login-field">
-                    <label for="id_username">Usuario</label>
+                    <label for="id_username">Usuário</label>
                     <input type="text" name="username" id="id_username" required autofocus>
                 </div>
                 <div class="login-field">
@@ -159,10 +197,10 @@
         </div>
 
         <div class="login-footer">
-            <small>Sistema de gestao construtiva</small>
+            <small>Sistema de gestão construtiva</small>
             <div style="margin-top:8px;">
                 <a href="{% url 'termos_uso' %}">Termos de Uso</a> |
-                <a href="{% url 'politica_privacidade' %}">Politica de Privacidade</a>
+                <a href="{% url 'politica_privacidade' %}">Política de Privacidade</a>
             </div>
         </div>
     </section>

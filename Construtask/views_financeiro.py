@@ -2,15 +2,19 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.views.generic import TemplateView
 
-from .application.financeiro import dados_fechamento_mensal_request, dados_projecao_financeira_request, registrar_fechamento_mensal
+from .application.financeiro import (
+    dados_fechamento_mensal_request,
+    dados_projecao_financeira_request,
+    registrar_fechamento_mensal,
+    resolver_obra_financeira,
+)
 from .permissions import get_empresa_operacional as _get_empresa_operacional
 from .services_jobs import listar_jobs_recentes
 from .services_lgpd import registrar_acesso_dado_pessoal
 from .approval_helpers import _registrar_historico
 from .export_helpers import _datahora_local, _exportar_excel_response, _pdf_relatorio_probatorio_response
 from .templatetags.formatters import money_br
-from .models import Obra
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import redirect
 from django.urls import reverse_lazy
 
 
@@ -37,7 +41,10 @@ class FechamentoMensalView(TemplateView):
             raw = raw.replace(".", "").replace(",", "")
             return int(raw)
 
-        obra = get_object_or_404(Obra, pk=request.POST.get("obra"))
+        obra = resolver_obra_financeira(request=request, obra_id=request.POST.get("obra"))
+        if not obra:
+            messages.error(request, "Voce nao tem acesso a obra selecionada para fechamento.")
+            return redirect(reverse_lazy("fechamento_mensal"))
         ano = _parse_int_br(request.POST.get("ano"))
         mes = _parse_int_br(request.POST.get("mes"))
         fechamento = registrar_fechamento_mensal(obra=obra, ano=ano, mes=mes)

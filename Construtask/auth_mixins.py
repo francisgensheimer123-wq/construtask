@@ -13,6 +13,7 @@ from django.db.models import Q
 from django.http import HttpResponseRedirect
 from django.urls import reverse_lazy
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 
 from .cache_utils import critical_cache_delete, critical_cache_get, critical_cache_set
 from .permissions import get_empresa_do_usuario
@@ -102,7 +103,14 @@ class ConstrutaskLoginView(LoginView):
         return super().dispatch(request, *args, **kwargs)
 
     def get_success_url(self):
-        return self.request.GET.get("next", reverse_lazy("home"))
+        next_url = self.request.GET.get("next")
+        if next_url and url_has_allowed_host_and_scheme(
+            url=next_url,
+            allowed_hosts={self.request.get_host()},
+            require_https=self.request.is_secure(),
+        ):
+            return next_url
+        return reverse_lazy("home")
 
     def form_valid(self, form):
         user = form.get_user()

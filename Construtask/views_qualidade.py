@@ -1,9 +1,11 @@
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import CreateView, DetailView, ListView, UpdateView
 from django.utils import timezone
+from django.core.exceptions import ValidationError
 
 from .forms import NaoConformidadeForm
 from .models import Obra
@@ -116,6 +118,8 @@ class NaoConformidadeCreateView(LoginRequiredMixin, CreateView):
             QualidadeWorkflowService.iniciar_tratamento(nc, self.request.user)
             QualidadeWorkflowService.enviar_para_verificacao(nc, self.request.user)
             QualidadeWorkflowService.encerrar(nc, self.request.user)
+        elif status == "CANCELADA":
+            QualidadeWorkflowService.cancelar(nc, self.request.user)
         messages.success(self.request, "Nao conformidade registrada com sucesso.")
         return redirect("nao_conformidade_detail", pk=nc.pk)
 
@@ -187,14 +191,21 @@ class NaoConformidadeDetailView(LoginRequiredMixin, DetailView):
 
         if campos_arquivo:
             self.object.save(update_fields=[*dict.fromkeys(campos_arquivo), "atualizado_em"])
-        if acao == "TRATAMENTO":
-            QualidadeWorkflowService.iniciar_tratamento(self.object, request.user, observacao)
-        elif acao == "VERIFICACAO":
-            QualidadeWorkflowService.enviar_para_verificacao(self.object, request.user, observacao)
-        elif acao == "ENCERRAMENTO":
-            QualidadeWorkflowService.encerrar(self.object, request.user, observacao)
-        elif acao == "CANCELAMENTO":
-            QualidadeWorkflowService.cancelar(self.object, request.user, observacao)
+        try:
+            if acao == "TRATAMENTO":
+                QualidadeWorkflowService.iniciar_tratamento(self.object, request.user, observacao)
+            elif acao == "VERIFICACAO":
+                QualidadeWorkflowService.enviar_para_verificacao(self.object, request.user, observacao)
+            elif acao == "ENCERRAMENTO":
+                QualidadeWorkflowService.encerrar(self.object, request.user, observacao)
+            elif acao == "CANCELAMENTO":
+                QualidadeWorkflowService.cancelar(self.object, request.user, observacao)
+            else:
+                messages.error(request, "Acao de workflow invalida.")
+                return redirect("nao_conformidade_detail", pk=self.object.pk)
+        except ValidationError as exc:
+            messages.error(request, exc.messages[0] if hasattr(exc, "messages") else str(exc))
+            return redirect("nao_conformidade_detail", pk=self.object.pk)
         messages.success(request, "Workflow da nao conformidade atualizado.")
         return redirect("nao_conformidade_detail", pk=self.object.pk)
 
@@ -204,6 +215,16 @@ class NaoConformidadeUpdateView(LoginRequiredMixin, UpdateView):
     form_class = NaoConformidadeForm
     template_name = "app/nao_conformidade_form.html"
 
+    def get_queryset(self):
+        empresa = get_empresa_operacional(self.request)
+        obra = _obra_contexto(self.request)
+        if not obra:
+            return NaoConformidade.objects.none()
+        queryset = NaoConformidade.objects.select_related("obra", "plano_contas", "responsavel", "criado_por")
+        if empresa:
+            queryset = queryset.filter(empresa=empresa)
+        return queryset.filter(obra=obra)
+
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs["empresa"] = get_empresa_operacional(self.request, obra=self.object.obra)
@@ -211,6 +232,9 @@ class NaoConformidadeUpdateView(LoginRequiredMixin, UpdateView):
         return kwargs
 
     def dispatch(self, request, *args, **kwargs):
+        if not _obra_contexto(request):
+            messages.error(request, "Selecione uma obra no menu antes de editar nao conformidades.")
+            return redirect("home")
         self.object = self.get_object()
         if obra_em_somente_leitura(self.object.obra):
             messages.error(request, descricao_restricao_obra(self.object.obra))
@@ -221,15 +245,22 @@ class NaoConformidadeUpdateView(LoginRequiredMixin, UpdateView):
         messages.success(self.request, "Nao conformidade atualizada com sucesso.")
         return reverse_lazy("nao_conformidade_detail", kwargs={"pk": self.object.pk})
 
+    def form_valid(self, form):
+        if form.cleaned_data.get("status") != self.object.status:
+            form.add_error("status", "Altere o status pela area de workflow para manter o historico da NC.")
+            return self.form_invalid(form)
+        return super().form_valid(form)
+
 
 def _nao_conformidades_queryset(request):
+    obra = _obra_contexto(request)
+    if not obra:
+        return NaoConformidade.objects.none()
     empresa = get_empresa_operacional(request)
     queryset = NaoConformidade.objects.select_related("obra", "plano_contas", "responsavel", "criado_por")
     if empresa:
         queryset = queryset.filter(empresa=empresa)
-    obra = _obra_contexto(request)
-    if obra:
-        queryset = queryset.filter(obra=obra)
+    queryset = queryset.filter(obra=obra)
     termo = request.GET.get("q", "").strip()
     status = request.GET.get("status", "").strip()
     if termo:
@@ -239,7 +270,11 @@ def _nao_conformidades_queryset(request):
     return queryset.order_by("-criado_em")
 
 
+@login_required
 def nao_conformidade_export_view(request):
+    if not _obra_contexto(request):
+        messages.error(request, "Selecione uma obra no menu antes de exportar nao conformidades.")
+        return redirect("home")
     queryset = _nao_conformidades_queryset(request)
     linhas = [
         {
@@ -256,7 +291,11 @@ def nao_conformidade_export_view(request):
     return _exportar_excel_response("nao_conformidades.xlsx", "Nao Conformidades", linhas)
 
 
+@login_required
 def nao_conformidade_pdf_view(request):
+    if not _obra_contexto(request):
+        messages.error(request, "Selecione uma obra no menu antes de exportar nao conformidades.")
+        return redirect("home")
     queryset = _nao_conformidades_queryset(request)
     resumo = {"Quantidade de Registros": queryset.count(), "Emitido em": _datahora_local(timezone.now()).strftime("%d/%m/%Y %H:%M")}
     extras = [
@@ -325,7 +364,11 @@ def _dados_probatorio_nc(nc):
     return resumo, historico, extras
 
 
+@login_required
 def nao_conformidade_aprovacao_pdf_view(request, pk):
+    if not _obra_contexto(request):
+        messages.error(request, "Selecione uma obra no menu antes de exportar nao conformidades.")
+        return redirect("home")
     nc = get_object_or_404(_nao_conformidades_queryset(request).prefetch_related("historico__usuario"), pk=pk)
     resumo, historico, extras = _dados_probatorio_nc(nc)
     return _pdf_relatorio_probatorio_response(
@@ -339,7 +382,11 @@ def nao_conformidade_aprovacao_pdf_view(request, pk):
     )
 
 
+@login_required
 def nao_conformidade_aprovacao_excel_view(request, pk):
+    if not _obra_contexto(request):
+        messages.error(request, "Selecione uma obra no menu antes de exportar nao conformidades.")
+        return redirect("home")
     nc = get_object_or_404(_nao_conformidades_queryset(request).prefetch_related("historico__usuario"), pk=pk)
     resumo, historico, extras = _dados_probatorio_nc(nc)
     return _exportar_relatorio_probatorio_excel_response(

@@ -1,295 +1,249 @@
 {% extends "app/base.html" %}
 
+{% block main_class %}main-full{% endblock %}
+{% block title %}Documento {{ documento.codigo_documento }} | Construtask{% endblock %}
+
 {% block content %}
-<div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h1><i class="bi bi-file-earmark-text"></i> {{ documento.codigo_documento }}</h1>
-            <p class="text-muted mb-0">{{ documento.titulo }}</p>
-        </div>
-        <div>
-            <a href="{% url 'documento_list' %}" class="btn btn-outline-secondary">
-                <i class="bi bi-arrow-left"></i> Voltar
-            </a>
-            {% if documento.status == "RASCUNHO" %}
-                <a href="{% url 'documento_update' documento.pk %}" class="btn btn-outline-primary">
-                    <i class="bi bi-pencil"></i> Editar
-                </a>
-            {% endif %}
-        </div>
+<div class="toolbar">
+    <div>
+        <h2>{{ documento.codigo_documento }}</h2>
+        <p>{{ documento.titulo }}</p>
     </div>
-
-    {% if messages %}
-        {% for message in messages %}
-            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        {% endfor %}
-    {% endif %}
-
-    <div class="row">
-        <div class="col-md-4">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="bi bi-info-circle"></i> Informações</h5>
-                </div>
-                <div class="card-body">
-                    <table class="table table-sm">
-                        <tr>
-                            <th>Status:</th>
-                            <td><span class="badge bg-{{ documento.status_badge_class }}">{{ documento.get_status_display }}</span></td>
-                        </tr>
-                        <tr>
-                            <th>Etapa do fluxo:</th>
-                            <td>{{ documento.status_semantico_display }}</td>
-                        </tr>
-                        <tr>
-                            <th>Versão Atual:</th>
-                            <td><span class="badge bg-primary">v{{ documento.versao_atual|stringformat:"03d" }}</span></td>
-                        </tr>
-                        <tr>
-                            <th>Tipo:</th>
-                            <td>{{ documento.get_tipo_documento_display }}</td>
-                        </tr>
-                        <tr>
-                            <th>Processo:</th>
-                            <td>{{ documento.processo|default:"-" }}</td>
-                        </tr>
-                        <tr>
-                            <th>Obra:</th>
-                            <td>{{ documento.obra|default:"-" }}</td>
-                        </tr>
-                        <tr>
-                            <th>EAP (N5):</th>
-                            <td>{{ documento.plano_contas.codigo|default:"-" }} {{ documento.plano_contas.descricao|truncatechars:30|default:"-" }}</td>
-                        </tr>
-                        <tr>
-                            <th>Criado por:</th>
-                            <td>{{ documento.criado_por }}</td>
-                        </tr>
-                        <tr>
-                            <th>Criado em:</th>
-                            <td>{{ documento.criado_em|date:"d/m/Y H:i" }}</td>
-                        </tr>
-                        <tr>
-                            <th>Última revisão:</th>
-                            <td>{% if ultima_revisao %}v{{ ultima_revisao.versao|stringformat:"03d" }}{% else %}-{% endif %}</td>
-                        </tr>
-                    </table>
-                </div>
-            </div>
-
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="bi bi-gear"></i> Ações</h5>
-                </div>
-                <div class="card-body">
-                    {% if pode_enviar_revisao %}
-                        <form method="POST" action="." class="mb-3">
-                            {% csrf_token %}
-                            <input type="hidden" name="acao" value="ENVIAR_REVISAO">
-                            <input type="hidden" name="workflow_action" value="1">
-                            <div class="mb-2">
-                                <label class="form-label">Parecer de envio</label>
-                                <textarea name="parecer" class="form-control" rows="2" placeholder="Opcional"></textarea>
-                            </div>
-                            <button type="submit" class="btn btn-warning w-100">
-                                <i class="bi bi-send"></i> Enviar para Validação
-                            </button>
-                        </form>
-                    {% endif %}
-
-                    {% if pode_aprovar %}
-                        <form method="POST" action="." class="mb-2">
-                            {% csrf_token %}
-                            <input type="hidden" name="acao" value="APROVAR">
-                            <input type="hidden" name="workflow_action" value="1">
-                            <div class="mb-2">
-                                <label class="form-label">Parecer da aprovação</label>
-                                <textarea name="parecer" class="form-control" rows="2" placeholder="Opcional"></textarea>
-                            </div>
-                            <button type="submit" class="btn btn-success w-100">
-                                <i class="bi bi-check-circle"></i> Aprovar Documento
-                            </button>
-                        </form>
-                        <form method="POST" action="." class="mb-3">
-                            {% csrf_token %}
-                            <input type="hidden" name="acao" value="DEVOLVER_AJUSTE">
-                            <input type="hidden" name="workflow_action" value="1">
-                            <div class="mb-2">
-                                <label class="form-label">Parecer da devolução</label>
-                                <textarea name="parecer" class="form-control" rows="2" placeholder="Obrigatório"></textarea>
-                            </div>
-                            <button type="submit" class="btn btn-outline-danger w-100">
-                                <i class="bi bi-arrow-counterclockwise"></i> Devolver para Ajuste
-                            </button>
-                        </form>
-                    {% endif %}
-
-                    {% if pode_tornar_obsoleto %}
-                        <form method="POST" action=".">
-                            {% csrf_token %}
-                            <input type="hidden" name="acao" value="TORNAR_OBSOLETO">
-                            <input type="hidden" name="workflow_action" value="1">
-                            <button type="submit" class="btn btn-outline-dark w-100" onclick="return confirm('Tornar este documento obsoleto?')">
-                                <i class="bi bi-slash-circle"></i> Tornar Obsoleto
-                            </button>
-                        </form>
-                    {% endif %}
-
-                    {% if versao_aprovada %}
-                        <hr>
-                        <a href="{% url 'documento_download' documento.pk %}" class="btn btn-primary w-100">
-                            <i class="bi bi-download"></i> Baixar Documento Aprovado
-                        </a>
-                    {% endif %}
-                </div>
-            </div>
-
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="bi bi-diagram-3"></i> Semântica do Fluxo</h5>
-                </div>
-                <div class="card-body">
-                    <ul class="mb-0">
-                        <li><strong>Rascunho</strong>: elaboração e ajustes.</li>
-                        <li><strong>Em Revisão</strong>: submetido para validação.</li>
-                        <li><strong>Aprovado</strong>: documento validado para uso.</li>
-                        <li><strong>Obsoleto</strong>: documento encerrado para operação.</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-8">
-            {% if pode_revisar %}
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h5 class="mb-0"><i class="bi bi-upload"></i> Upload de Nova Revisão</h5>
-                    </div>
-                    <div class="card-body">
-                        <form method="POST" enctype="multipart/form-data" action=".">
-                            {% csrf_token %}
-                            <input type="hidden" name="upload_revisao" value="1">
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Versão:</label>
-                                    {{ revisao_form.versao }}
-                                    {% if revisao_form.versao.errors %}
-                                        <div class="text-danger">{{ revisao_form.versao.errors }}</div>
-                                    {% endif %}
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Arquivo (PDF, DOC, DOCX):</label>
-                                    {{ revisao_form.arquivo }}
-                                    {% if revisao_form.arquivo.errors %}
-                                        <div class="text-danger">{{ revisao_form.arquivo.errors }}</div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Observações:</label>
-                                {{ revisao_form.parecer }}
-                            </div>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-upload"></i> Salvar Revisão
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            {% endif %}
-
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="bi bi-clock-history"></i> Histórico de Workflow</h5>
-                </div>
-                <div class="card-body">
-                    <table class="table table-sm">
-                        <thead>
-                            <tr>
-                                <th>Data</th>
-                                <th>Ação</th>
-                                <th>Usuário</th>
-                                <th>Depois</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for evento in workflow_events %}
-                                <tr>
-                                    <td>{{ evento.timestamp|date:"d/m/Y H:i" }}</td>
-                                    <td>{{ evento.get_acao_display }}</td>
-                                    <td>{{ evento.usuario|default:"-" }}</td>
-                                    <td>
-                                        {% if evento.depois.status %}
-                                            {{ evento.depois.status }}
-                                        {% elif evento.depois.documento.status %}
-                                            {{ evento.depois.documento.status }}
-                                        {% else %}
-                                            -
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                            {% empty %}
-                                <tr>
-                                    <td colspan="4" class="text-center text-muted py-3">Nenhum evento de workflow encontrado.</td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="bi bi-files"></i> Histórico de Revisões</h5>
-                </div>
-                <div class="card-body">
-                    <table class="table table-sm">
-                        <thead>
-                            <tr>
-                                <th>Versão</th>
-                                <th>Status</th>
-                                <th>Etapa</th>
-                                <th>Arquivo</th>
-                                <th>Criado por</th>
-                                <th>Data</th>
-                                <th>Checksum</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for revisao in revisoes %}
-                                <tr class="{% if revisao.status == 'APROVADO' %}table-success{% elif revisao.status == 'REVISAO' %}table-warning{% endif %}">
-                                            <td><strong>v{{ revisao.versao|stringformat:"03d" }}</strong></td>
-                                    <td><span class="badge bg-{{ revisao.status_badge_class }}">{{ revisao.get_status_display }}</span></td>
-                                    <td>{{ revisao.status_semantico_display }}</td>
-                                    <td>
-                                        {% if revisao.arquivo %}
-                                            <a href="{% url 'documento_download_revisao' documento.pk revisao.pk %}" class="btn btn-sm btn-outline-primary">
-                                                <i class="bi bi-download"></i>
-                                            </a>
-                                        {% else %}
-                                            -
-                                        {% endif %}
-                                    </td>
-                                    <td>{{ revisao.criado_por }}</td>
-                                    <td>{{ revisao.criado_em|date:"d/m/Y H:i" }}</td>
-                                    <td>
-                                        <small class="text-muted" title="{{ revisao.checksum }}">
-                                            {{ revisao.checksum|truncatechars:12|default:"-" }}
-                                        </small>
-                                    </td>
-                                </tr>
-                            {% empty %}
-                                <tr>
-                                    <td colspan="7" class="text-center text-muted py-4">Nenhuma revisão encontrada.</td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        {% if documento.status == "RASCUNHO" %}
+        <a class="btn secondary" href="{% url 'documento_update' documento.pk %}">Editar</a>
+        {% endif %}
+        <a class="btn secondary" href="{% url 'documento_list' %}">Voltar</a>
     </div>
 </div>
+
+<section class="cards">
+    <div class="card">
+        <span>Status</span>
+        <strong style="text-align:left;">{{ documento.get_status_display }}</strong>
+        <small class="text-muted">{{ documento.status_semantico_display }}</small>
+    </div>
+    <div class="card">
+        <span>Versao Atual</span>
+        <strong>v{{ documento.versao_atual|stringformat:"03d" }}</strong>
+    </div>
+    <div class="card">
+        <span>Tipo</span>
+        <strong style="text-align:left;">{{ documento.get_tipo_documento_display }}</strong>
+    </div>
+    <div class="card">
+        <span>Ultima Revisao</span>
+        <strong>{% if ultima_revisao %}v{{ ultima_revisao.versao|stringformat:"03d" }}{% else %}-{% endif %}</strong>
+    </div>
+</section>
+
+<section class="grid-2">
+    <div class="panel">
+        <h3>Informacoes</h3>
+        <table class="compact-table">
+            <tbody>
+                <tr><td>Status</td><td><span class="badge bg-{{ documento.status_badge_class }}">{{ documento.get_status_display }}</span></td></tr>
+                <tr><td>Etapa do fluxo</td><td>{{ documento.status_semantico_display }}</td></tr>
+                <tr><td>Versao Atual</td><td><span class="badge bg-primary">v{{ documento.versao_atual|stringformat:"03d" }}</span></td></tr>
+                <tr><td>Tipo</td><td>{{ documento.get_tipo_documento_display }}</td></tr>
+                <tr><td>Processo</td><td>{{ documento.processo|default:"-" }}</td></tr>
+                <tr><td>Obra</td><td>{{ documento.obra|default:"-" }}</td></tr>
+                <tr><td>EAP (N5)</td><td>{{ documento.plano_contas.codigo|default:"-" }} {{ documento.plano_contas.descricao|default:"-" }}</td></tr>
+                <tr><td>Criado por</td><td>{{ documento.criado_por }}</td></tr>
+                <tr><td>Criado em</td><td>{{ documento.criado_em|date:"d/m/Y H:i" }}</td></tr>
+                <tr><td>Ultima revisao</td><td>{% if ultima_revisao %}v{{ ultima_revisao.versao|stringformat:"03d" }}{% else %}-{% endif %}</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="panel">
+        <h3>Acoes</h3>
+        {% if pode_enviar_revisao %}
+        <form method="post" action=".">
+            {% csrf_token %}
+            <input type="hidden" name="acao" value="ENVIAR_REVISAO">
+            <input type="hidden" name="workflow_action" value="1">
+            <div class="field">
+                <label for="id_parecer_envio">Parecer de envio</label>
+                <textarea id="id_parecer_envio" name="parecer" rows="3" placeholder="Opcional"></textarea>
+            </div>
+            <div class="actions">
+                <button type="submit" class="btn" data-loading-text="Enviando...">Enviar para Validacao</button>
+            </div>
+        </form>
+        {% endif %}
+
+        {% if pode_aprovar %}
+        <form method="post" action="." style="margin-top:18px;">
+            {% csrf_token %}
+            <input type="hidden" name="acao" value="APROVAR">
+            <input type="hidden" name="workflow_action" value="1">
+            <div class="field">
+                <label for="id_parecer_aprovacao">Parecer da aprovacao</label>
+                <textarea id="id_parecer_aprovacao" name="parecer" rows="3" placeholder="Opcional"></textarea>
+            </div>
+            <div class="actions">
+                <button type="submit" class="btn" data-loading-text="Aprovando...">Aprovar Documento</button>
+            </div>
+        </form>
+
+        <form method="post" action="." style="margin-top:18px;">
+            {% csrf_token %}
+            <input type="hidden" name="acao" value="DEVOLVER_AJUSTE">
+            <input type="hidden" name="workflow_action" value="1">
+            <div class="field">
+                <label for="id_parecer_devolucao">Parecer da devolucao</label>
+                <textarea id="id_parecer_devolucao" name="parecer" rows="3" placeholder="Obrigatorio"></textarea>
+            </div>
+            <div class="actions">
+                <button type="submit" class="btn secondary">Devolver para Ajuste</button>
+            </div>
+        </form>
+        {% endif %}
+
+        {% if pode_tornar_obsoleto %}
+        <form method="post" action="." style="margin-top:18px;">
+            {% csrf_token %}
+            <input type="hidden" name="acao" value="TORNAR_OBSOLETO">
+            <input type="hidden" name="workflow_action" value="1">
+            <div class="actions">
+                <button type="submit" class="btn secondary" onclick="return confirm('Tornar este documento obsoleto?')">Tornar Obsoleto</button>
+            </div>
+        </form>
+        {% endif %}
+
+        {% if versao_aprovada and pode_baixar_documento %}
+        <div class="actions" style="margin-top:18px;">
+            <a href="{% url 'documento_download' documento.pk %}" class="btn">Baixar Documento Aprovado</a>
+        </div>
+        {% endif %}
+
+        {% if versao_aprovada and not pode_baixar_documento %}
+        <p class="empty">Download restrito ao administrador da empresa.</p>
+        {% endif %}
+
+        {% if not pode_enviar_revisao and not pode_aprovar and not pode_tornar_obsoleto and not versao_aprovada %}
+        <p class="empty">Nenhuma acao disponivel para o status atual.</p>
+        {% endif %}
+    </div>
+</section>
+
+<section class="grid-2">
+    <div class="panel">
+        <h3>Semantica do Fluxo</h3>
+        <ul>
+            <li><strong style="display:inline; font-size:inherit; margin:0; text-align:left;">Rascunho</strong>: elaboracao e ajustes.</li>
+            <li><strong style="display:inline; font-size:inherit; margin:0; text-align:left;">Em Revisao</strong>: submetido para validacao.</li>
+            <li><strong style="display:inline; font-size:inherit; margin:0; text-align:left;">Aprovado</strong>: documento validado para uso.</li>
+            <li><strong style="display:inline; font-size:inherit; margin:0; text-align:left;">Obsoleto</strong>: documento encerrado para operacao.</li>
+        </ul>
+    </div>
+
+    {% if pode_revisar %}
+    <div class="panel">
+        <h3>Upload de Nova Revisao</h3>
+        <form method="post" enctype="multipart/form-data" action=".">
+            {% csrf_token %}
+            <input type="hidden" name="upload_revisao" value="1">
+            <div class="grid-2" style="margin:0 0 18px;">
+                <div class="field">
+                    <label for="{{ revisao_form.versao.id_for_label }}">Versao</label>
+                    {{ revisao_form.versao }}
+                    {% if revisao_form.versao.errors %}
+                    <div style="color:#b91c1c; margin-top:6px;">{{ revisao_form.versao.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="field">
+                    <label for="{{ revisao_form.arquivo.id_for_label }}">Arquivo (PDF, DOC, DOCX)</label>
+                    {{ revisao_form.arquivo }}
+                    {% if revisao_form.arquivo.errors %}
+                    <div style="color:#b91c1c; margin-top:6px;">{{ revisao_form.arquivo.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="field">
+                <label for="{{ revisao_form.parecer.id_for_label }}">Observacoes</label>
+                {{ revisao_form.parecer }}
+            </div>
+            <div class="actions">
+                <button type="submit" class="btn">Salvar Revisao</button>
+            </div>
+        </form>
+    </div>
+    {% endif %}
+</section>
+
+<section class="grid-2">
+    <div class="panel">
+        <h3>Historico de Workflow</h3>
+        <table class="compact-table">
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Acao</th>
+                    <th>Usuario</th>
+                    <th>Depois</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for evento in workflow_events %}
+                <tr>
+                    <td>{{ evento.timestamp|date:"d/m/Y H:i" }}</td>
+                    <td>{{ evento.get_acao_display }}</td>
+                    <td>{{ evento.usuario|default:"-" }}</td>
+                    <td>
+                        {% if evento.depois.status %}
+                            {{ evento.depois.status }}
+                        {% elif evento.depois.documento.status %}
+                            {{ evento.depois.documento.status }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4" class="text-center">Nenhum evento de workflow encontrado.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="panel">
+        <h3>Historico de Revisoes</h3>
+        <table class="compact-table">
+            <thead>
+                <tr>
+                    <th>Versao</th>
+                    <th>Status</th>
+                    <th>Etapa</th>
+                    <th>Arquivo</th>
+                    <th>Criado por</th>
+                    <th>Data</th>
+                    <th>Checksum</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for revisao in revisoes %}
+                <tr>
+                    <td>v{{ revisao.versao|stringformat:"03d" }}</td>
+                    <td><span class="badge bg-{{ revisao.status_badge_class }}">{{ revisao.get_status_display }}</span></td>
+                    <td>{{ revisao.status_semantico_display }}</td>
+                    <td>
+                        {% if revisao.arquivo and pode_baixar_documento %}
+                        <a href="{% url 'documento_download_revisao' documento.pk revisao.pk %}">baixar</a>
+                        {% else %}
+                        -
+                        {% endif %}
+                    </td>
+                    <td>{{ revisao.criado_por }}</td>
+                    <td>{{ revisao.criado_em|date:"d/m/Y H:i" }}</td>
+                    <td><small title="{{ revisao.checksum }}">{{ revisao.checksum|truncatechars:12|default:"-" }}</small></td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" class="text-center">Nenhuma revisao encontrada.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
 {% endblock %}

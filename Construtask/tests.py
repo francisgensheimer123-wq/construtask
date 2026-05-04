@@ -86,6 +86,7 @@ from .forms import (
     ObraForm,
 )
 from .importacao_cronograma import CronogramaService, MapeamentoService
+from .export_helpers import _pdf_ajustar_colunas_para_pagina
 from .queries.financeiro import construir_dados_projecao_financeira, construir_fluxo_financeiro_contratual
 from .views import ContratoDetailView, HomeView
 from .services import importar_plano_contas_excel, obter_dados_contrato, validar_rateio_nota
@@ -1290,6 +1291,61 @@ class AppViewsTests(BaseFinanceTestCase):
         detail_response = self.client.get(reverse("documento_detail", args=[documento.pk]))
         self.assertContains(detail_response, "v001")
 
+    def test_documento_obsoleto_bloqueia_download_para_usuario_nao_admin_empresa(self):
+        documento = Documento.objects.create(
+            empresa=self.empresa,
+            obra=self.obra,
+            tipo_documento="PROCEDIMENTO",
+            codigo_documento="PRO-2026-0200",
+            titulo="Procedimento Obsoleto",
+            criado_por=self.user,
+            status="OBSOLETO",
+        )
+        DocumentoRevisao.objects.create(
+            documento=documento,
+            versao=1,
+            arquivo=SimpleUploadedFile("procedimento-obsoleto.pdf", b"%PDF-1.4 obsoleto", content_type="application/pdf"),
+            arquivo_aprovado=SimpleUploadedFile("procedimento-obsoleto-aprovado.pdf", b"%PDF-1.4 aprovado", content_type="application/pdf"),
+            checksum="obs123",
+            status="APROVADO",
+            criado_por=self.user,
+        )
+        usuario = self._criar_usuario_operacional("engenheiro_docs_download", "ENGENHEIRO_OBRAS")
+
+        self.client.force_login(usuario)
+        session = self.client.session
+        session["obra_contexto_id"] = self.obra.pk
+        session.save()
+
+        response = self.client.get(reverse("documento_download", args=[documento.pk]))
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_documento_obsoleto_permite_download_para_admin_empresa(self):
+        documento = Documento.objects.create(
+            empresa=self.empresa,
+            obra=self.obra,
+            tipo_documento="PROCEDIMENTO",
+            codigo_documento="PRO-2026-0201",
+            titulo="Procedimento Obsoleto Admin",
+            criado_por=self.user,
+            status="OBSOLETO",
+        )
+        DocumentoRevisao.objects.create(
+            documento=documento,
+            versao=1,
+            arquivo=SimpleUploadedFile("procedimento-obsoleto-admin.pdf", b"%PDF-1.4 obsoleto", content_type="application/pdf"),
+            arquivo_aprovado=SimpleUploadedFile("procedimento-obsoleto-admin-aprovado.pdf", b"%PDF-1.4 aprovado", content_type="application/pdf"),
+            checksum="obs456",
+            status="APROVADO",
+            criado_por=self.user,
+        )
+
+        response = self.client.get(reverse("documento_download", args=[documento.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("attachment;", response["Content-Disposition"])
+
     def test_nao_conformidade_tratamento_salva_anexo_do_workflow(self):
         nc = QualidadeWorkflowService.abrir(
             empresa=self.empresa,
@@ -1887,7 +1943,7 @@ class AppViewsTests(BaseFinanceTestCase):
             data_prevista_fim="2025-01-20",
         )
 
-        dados = construir_fluxo_financeiro_contratual(obra=self.obra, meses_qtd=6)
+        dados = construir_fluxo_financeiro_contratual(obra=self.obra, meses_qtd=6, data_referencia=date(2026, 4, 1))
 
         self.assertEqual(dados["total_saidas"], Decimal("90.00"))
         self.assertEqual(dados["series"][0]["saida"], Decimal("90.00"))
@@ -6956,6 +7012,13 @@ class ComunicacoesModuleTests(BaseFinanceTestCase):
         )
         self.assertEqual(response_ata_pdf.status_code, 200)
         self.assertEqual(response_ata_pdf["Content-Type"], "application/pdf")
+
+    def test_pdf_da_pauta_ajusta_colunas_a_largura_util_da_pagina(self):
+        colunas = _pdf_ajustar_colunas_para_pagina([("Item", 160), ("Contexto", 435)])
+
+        largura_total = sum(coluna["largura"] for coluna in colunas)
+        self.assertAlmostEqual(largura_total, 495.0, places=2)
+        self.assertLess(colunas[1]["largura"], 435)
 
     def test_envio_e_aprovacao_da_ata(self):
         self.client.post(

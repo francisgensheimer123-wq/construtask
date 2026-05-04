@@ -28,13 +28,15 @@ _EXCEL_BORDER = Border(
     top=Side(style="thin", color="000000"),
     bottom=Side(style="thin", color="000000"),
 )
+_PDF_TABLE_X = 50
+_PDF_TABLE_WIDTH = 495
 
 
 def _response_exportacao(nome_arquivo, conteudo, content_type):
-    caminho = default_storage.save(
-        caminho_exportacao_sistema(nome_arquivo, request=get_current_request()),
-        ContentFile(conteudo),
-    )
+    caminho_destino = caminho_exportacao_sistema(nome_arquivo, request=get_current_request())
+    if default_storage.exists(caminho_destino):
+        default_storage.delete(caminho_destino)
+    caminho = default_storage.save(caminho_destino, ContentFile(conteudo))
     response = HttpResponse(conteudo, content_type=content_type)
     response["Content-Disposition"] = f'attachment; filename="{nome_arquivo}"'
     response["X-Export-Storage-Path"] = caminho
@@ -323,6 +325,15 @@ def _pdf_normalizar_colunas(colunas):
                 }
             )
     return colunas_normalizadas
+
+
+def _pdf_ajustar_colunas_para_pagina(colunas):
+    colunas = _pdf_normalizar_colunas(colunas)
+    largura_total = sum(coluna["largura"] for coluna in colunas)
+    if not largura_total or largura_total <= _PDF_TABLE_WIDTH:
+        return colunas
+    fator = _PDF_TABLE_WIDTH / largura_total
+    return [{**coluna, "largura": coluna["largura"] * fator} for coluna in colunas]
 
 
 def _pdf_inferir_alinhamento_coluna(titulo):
@@ -616,7 +627,7 @@ def desenhar_tabela_padrao(y_topo, titulo, colunas, linhas, *, max_linhas=None):
 
 
 def _pdf_table_commands(y_topo, colunas, linhas, *, titulo=None, max_linhas=None):
-    colunas = _pdf_normalizar_colunas(colunas)
+    colunas = _pdf_ajustar_colunas_para_pagina(colunas)
     comandos = []
     y_atual = y_topo
     if titulo:
@@ -645,11 +656,11 @@ def _pdf_table_commands(y_topo, colunas, linhas, *, titulo=None, max_linhas=None
         [
             "0.90 0.90 0.90 rg",
             "0 0 0 RG",
-            f"50 {y_atual - header_height:.2f} 495 {header_height} re",
+            f"{_PDF_TABLE_X} {y_atual - header_height:.2f} {_PDF_TABLE_WIDTH} {header_height} re",
             "B",
         ]
     )
-    x_cursor = 50
+    x_cursor = _PDF_TABLE_X
     for indice_coluna, coluna in enumerate(colunas):
         largura = coluna["largura"]
         comandos.extend(
@@ -692,7 +703,7 @@ def _pdf_table_commands(y_topo, colunas, linhas, *, titulo=None, max_linhas=None
             conteudos.append(quebrado)
             alturas.append(max(altura_linha, 10 + (len(quebrado) * espacamento_linha)))
         altura = max(alturas)
-        x_cursor = 50
+        x_cursor = _PDF_TABLE_X
         for indice, coluna in enumerate(colunas):
             largura = coluna["largura"]
             comandos.append(f"{x_cursor:.2f} {y_atual - altura:.2f} {largura:.2f} {altura:.2f} re")
@@ -723,7 +734,7 @@ def _pdf_table_commands(y_topo, colunas, linhas, *, titulo=None, max_linhas=None
 
 
 def _pdf_estimar_altura_tabela(colunas, linhas, *, titulo=None):
-    colunas = _pdf_normalizar_colunas(colunas)
+    colunas = _pdf_ajustar_colunas_para_pagina(colunas)
     padding_x = 5
     tamanho_fonte_cabecalho = 7
     tamanho_fonte_corpo = 7

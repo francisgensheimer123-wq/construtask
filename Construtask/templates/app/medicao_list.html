@@ -107,6 +107,15 @@
 </div>
 {% endif %}
 {% else %}
-<p class="empty">Nenhuma medicao cadastrada.</p>
+<div class="empty-state">
+    <span class="empty-state__mark">i</span>
+    <div>
+        <h3>Nenhuma medição cadastrada</h3>
+        <p>Registre a primeira medição para acompanhar execução física, aprovações e vínculo com notas fiscais.</p>
+        <div style="margin-top:12px;">
+            <a class="btn" href="{% url 'medicao_create' %}">Criar medição</a>
+        </div>
+    </div>
+</div>
 {% endif %}
 {% endblock %}

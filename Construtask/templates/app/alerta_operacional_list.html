@@ -82,7 +82,7 @@
             <a class="btn btn-secondary" href="{% url 'jobs_assincronos' %}">Jobs Assincronos</a>
             <form method="post" action="{% url 'alerta_operacional_sincronizar_job' %}" style="display:inline;">
                 {% csrf_token %}
-                <button class="btn" type="submit">Sincronizar por Job</button>
+                <button class="btn" type="submit" data-loading-text="Sincronizando...">Sincronizar por Job</button>
             </form>
         </div>
     </div>

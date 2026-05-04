@@ -1,185 +1,247 @@
 {% extends "app/base.html" %}
 
-{% block title %}Dashboard de Riscos - Construtask{% endblock %}
+{% block main_class %}main-full{% endblock %}
+{% block title %}Dashboard de Riscos | Construtask{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2><i class="bi bi-graph-up"></i> Dashboard de Riscos</h2>
-        <div>
-            <a href="{% url 'risco_list' %}" class="btn btn-outline-secondary">
-                <i class="bi bi-list"></i> Lista de Riscos
-            </a>
-            <a href="{% url 'risco_create' %}" class="btn btn-primary">
-                <i class="bi bi-plus-lg"></i> Novo Risco
-            </a>
-        </div>
+<style>
+    .risk-kpis {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+    .risk-kpis .card {
+        border-top: 4px solid #3b82f6;
+    }
+    .risk-kpis .card::before {
+        height: 0;
+        background: none;
+    }
+    .risk-kpi-low {
+        border-top-color: #22c55e;
+    }
+    .risk-kpi-medium {
+        border-top-color: #facc15;
+    }
+    .risk-kpi-high {
+        border-top-color: #f97316;
+    }
+    .risk-kpi-critical {
+        border-top-color: #dc2626;
+    }
+    .risk-kpi-total {
+        border-top-color: #3b82f6;
+    }
+    .risk-dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+    }
+    .risk-dot {
+        display: inline-block;
+        width: 0.72rem;
+        height: 0.72rem;
+        border-radius: 999px;
+        margin-right: 8px;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.26);
+        vertical-align: middle;
+    }
+    .risk-dot-low {
+        background: #22c55e;
+    }
+    .risk-dot-medium {
+        background: #facc15;
+    }
+    .risk-dot-high {
+        background: #f97316;
+    }
+    .risk-dot-critical {
+        background: #dc2626;
+    }
+    .risk-dot-info {
+        background: #3b82f6;
+    }
+    .risk-dot-muted {
+        background: #8b949e;
+    }
+    .risk-matrix {
+        table-layout: fixed;
+    }
+    .risk-matrix th,
+    .risk-matrix td {
+        text-align: center;
+        vertical-align: middle;
+    }
+    .risk-matrix td:first-child,
+    .risk-matrix th:first-child {
+        text-align: left;
+        width: 22%;
+    }
+    .risk-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 14px;
+    }
+    .risk-legend .badge {
+        min-height: 32px;
+        align-items: center;
+    }
+    @media (max-width: 1100px) {
+        .risk-kpis {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .risk-dashboard-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+    @media (max-width: 560px) {
+        .risk-kpis {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<div class="toolbar">
+    <div>
+        <h2>Dashboard de Riscos</h2>
+        <p>Leitura executiva dos riscos por criticidade, status e matriz de probabilidade x impacto.</p>
     </div>
-
-    <!-- KPIs -->
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card border-primary">
-                <div class="card-body text-center">
-                    <h1 class="display-4">{{ total }}</h1>
-                    <p class="card-text">Total de Riscos</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card border-warning">
-                <div class="card-body text-center">
-                    <h1 class="display-4">{{ medio }}</h1>
-                    <p class="card-text">Riscos Médios</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card border-danger">
-                <div class="card-body text-center">
-                    <h1 class="display-4">{{ alto }}</h1>
-                    <p class="card-text">Riscos Altos</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card border-dark">
-                <div class="card-body text-center">
-                    <h1 class="display-4">{{ critico }}</h1>
-                    <p class="card-text">Riscos Críticos</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row">
-        <!-- Por Nível -->
-        <div class="col-md-6">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="bi bi-pie-chart"></i> Riscos por Nível</h5>
-                </div>
-                <div class="card-body">
-                    <table class="table table-sm">
-                        <tr>
-                            <td><span class="badge bg-success">●</span> Baixo (1-4)</td>
-                            <td class="text-end">{{ baixo }}</td>
-                        </tr>
-                        <tr>
-                            <td><span class="badge bg-warning">●</span> Médio (5-9)</td>
-                            <td class="text-end">{{ medio }}</td>
-                        </tr>
-                        <tr>
-                            <td><span class="badge bg-danger">●</span> Alto (10-15)</td>
-                            <td class="text-end">{{ alto }}</td>
-                        </tr>
-                        <tr>
-                            <td><span class="badge bg-dark">●</span> Crítico (>15)</td>
-                            <td class="text-end">{{ critico }}</td>
-                        </tr>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- Por Status -->
-        <div class="col-md-6">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="bi bi-list-check"></i> Riscos por Status</h5>
-                </div>
-                <div class="card-body">
-                    <table class="table table-sm">
-                        <tr>
-                            <td><span class="badge bg-info">●</span> Identificados</td>
-                            <td class="text-end">{{ identificados }}</td>
-                        </tr>
-                        <tr>
-                            <td><span class="badge bg-warning">●</span> Em Tratamento</td>
-                            <td class="text-end">{{ em_tratamento }}</td>
-                        </tr>
-                        <tr>
-                            <td><span class="badge bg-success">●</span> Mitigados</td>
-                            <td class="text-end">{{ mitigados }}</td>
-                        </tr>
-                        <tr>
-                            <td><span class="badge bg-secondary">●</span> Fechados</td>
-                            <td class="text-end">{{ fechados }}</td>
-                        </tr>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Legenda -->
-    <div class="card">
-        <div class="card-header">
-            <h5 class="mb-0"><i class="bi bi-info-circle"></i> Matriz de Risco - Legenda</h5>
-        </div>
-        <div class="card-body">
-            <table class="table table-bordered text-center">
-                <thead>
-                    <tr>
-                        <th>Impacto ↓ / Probabilidade →</th>
-                        <th>1 (Rara)</th>
-                        <th>2 (Improvável)</th>
-                        <th>3 (Possível)</th>
-                        <th>4 (Provável)</th>
-                        <th>5 (Quase Certa)</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td><strong>5 (Catastrófico)</strong></td>
-                        <td class="bg-warning">5</td>
-                        <td class="bg-warning">10</td>
-                        <td class="bg-danger">15</td>
-                        <td class="bg-danger">20</td>
-                        <td class="bg-dark text-white">25</td>
-                    </tr>
-                    <tr>
-                        <td><strong>4 (Maior)</strong></td>
-                        <td class="bg-success">4</td>
-                        <td class="bg-warning">8</td>
-                        <td class="bg-warning">12</td>
-                        <td class="bg-danger">16</td>
-                        <td class="bg-danger">20</td>
-                    </tr>
-                    <tr>
-                        <td><strong>3 (Moderado)</strong></td>
-                        <td class="bg-success">3</td>
-                        <td class="bg-success">6</td>
-                        <td class="bg-warning">9</td>
-                        <td class="bg-warning">12</td>
-                        <td class="bg-danger">15</td>
-                    </tr>
-                    <tr>
-                        <td><strong>2 (Menor)</strong></td>
-                        <td class="bg-success">2</td>
-                        <td class="bg-success">4</td>
-                        <td class="bg-success">6</td>
-                        <td class="bg-warning">8</td>
-                        <td class="bg-warning">10</td>
-                    </tr>
-                    <tr>
-                        <td><strong>1 (Insignificante)</strong></td>
-                        <td class="bg-success">1</td>
-                        <td class="bg-success">2</td>
-                        <td class="bg-success">3</td>
-                        <td class="bg-success">4</td>
-                        <td class="bg-success">5</td>
-                    </tr>
-                </tbody>
-            </table>
-            
-            <div class="mt-3">
-                <span class="badge bg-success">🟢 Baixo (1-4): Aceitar, monitorar</span>
-                <span class="badge bg-warning">🟡 Médio (5-9): Ação de mitigação necessária</span>
-                <span class="badge bg-danger">🟠 Alto (10-15): Ação imediata necessária</span>
-                <span class="badge bg-dark">🔴 Crítico (>15): Ação urgente, risco inaceitável</span>
-            </div>
-        </div>
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <a href="{% url 'risco_list' %}" class="btn secondary">Lista de Riscos</a>
+        <a href="{% url 'risco_create' %}" class="btn">Novo Risco</a>
     </div>
 </div>
+
+<section class="cards risk-kpis">
+    <div class="card risk-kpi-total">
+        <span>Total de Riscos</span>
+        <strong>{{ total }}</strong>
+    </div>
+    <div class="card risk-kpi-medium">
+        <span>Riscos Médios</span>
+        <strong>{{ medio }}</strong>
+    </div>
+    <div class="card risk-kpi-high">
+        <span>Riscos Altos</span>
+        <strong>{{ alto }}</strong>
+    </div>
+    <div class="card risk-kpi-critical">
+        <span>Riscos Críticos</span>
+        <strong>{{ critico }}</strong>
+    </div>
+</section>
+
+<section class="risk-dashboard-grid">
+    <div class="panel">
+        <h3>Riscos por Nível</h3>
+        <table class="compact-table">
+            <tbody>
+                <tr>
+                    <td><span class="risk-dot risk-dot-low"></span>Baixo (1-4)</td>
+                    <td class="money">{{ baixo }}</td>
+                </tr>
+                <tr>
+                    <td><span class="risk-dot risk-dot-medium"></span>Médio (5-9)</td>
+                    <td class="money">{{ medio }}</td>
+                </tr>
+                <tr>
+                    <td><span class="risk-dot risk-dot-high"></span>Alto (10-15)</td>
+                    <td class="money">{{ alto }}</td>
+                </tr>
+                <tr>
+                    <td><span class="risk-dot risk-dot-critical"></span>Crítico (&gt;15)</td>
+                    <td class="money">{{ critico }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="panel">
+        <h3>Riscos por Status</h3>
+        <table class="compact-table">
+            <tbody>
+                <tr>
+                    <td><span class="risk-dot risk-dot-info"></span>Identificados</td>
+                    <td class="money">{{ identificados }}</td>
+                </tr>
+                <tr>
+                    <td><span class="risk-dot risk-dot-medium"></span>Em Tratamento</td>
+                    <td class="money">{{ em_tratamento }}</td>
+                </tr>
+                <tr>
+                    <td><span class="risk-dot risk-dot-low"></span>Mitigados</td>
+                    <td class="money">{{ mitigados }}</td>
+                </tr>
+                <tr>
+                    <td><span class="risk-dot risk-dot-muted"></span>Fechados</td>
+                    <td class="money">{{ fechados }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="panel">
+    <h3>Matriz de Risco - Legenda</h3>
+    <table class="compact-table risk-matrix">
+        <thead>
+            <tr>
+                <th>Impacto / Probabilidade</th>
+                <th>1 (Rara)</th>
+                <th>2 (Improvável)</th>
+                <th>3 (Possível)</th>
+                <th>4 (Provável)</th>
+                <th>5 (Quase certa)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>5 (Catastrófico)</strong></td>
+                <td class="risk-medium">5</td>
+                <td class="risk-high">10</td>
+                <td class="risk-high">15</td>
+                <td class="risk-critical">20</td>
+                <td class="risk-critical">25</td>
+            </tr>
+            <tr>
+                <td><strong>4 (Maior)</strong></td>
+                <td class="risk-low">4</td>
+                <td class="risk-medium">8</td>
+                <td class="risk-high">12</td>
+                <td class="risk-critical">16</td>
+                <td class="risk-critical">20</td>
+            </tr>
+            <tr>
+                <td><strong>3 (Moderado)</strong></td>
+                <td class="risk-low">3</td>
+                <td class="risk-medium">6</td>
+                <td class="risk-medium">9</td>
+                <td class="risk-high">12</td>
+                <td class="risk-high">15</td>
+            </tr>
+            <tr>
+                <td><strong>2 (Menor)</strong></td>
+                <td class="risk-low">2</td>
+                <td class="risk-low">4</td>
+                <td class="risk-medium">6</td>
+                <td class="risk-medium">8</td>
+                <td class="risk-high">10</td>
+            </tr>
+            <tr>
+                <td><strong>1 (Insignificante)</strong></td>
+                <td class="risk-low">1</td>
+                <td class="risk-low">2</td>
+                <td class="risk-low">3</td>
+                <td class="risk-low">4</td>
+                <td class="risk-medium">5</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="risk-legend">
+        <span class="badge risk-low">Baixo (1-4): aceitar e monitorar</span>
+        <span class="badge risk-medium">Médio (5-9): mitigação necessária</span>
+        <span class="badge risk-high">Alto (10-15): ação imediata necessária</span>
+        <span class="badge risk-critical">Crítico (&gt;15): ação urgente, risco inaceitável</span>
+    </div>
+</section>
 {% endblock %}

@@ -112,6 +112,15 @@
 </div>
 {% endif %}
 {% else %}
-<p class="empty">Nenhuma compra ou contratacao cadastrada.</p>
+<div class="empty-state">
+    <span class="empty-state__mark">i</span>
+    <div>
+        <h3>Nenhuma compra ou contratação cadastrada</h3>
+        <p>Crie o primeiro contrato ou pedido para acompanhar orçamento, aprovações, medições e notas vinculadas.</p>
+        <div style="margin-top:12px;">
+            <a class="btn" href="{% url 'compromisso_create' %}">Criar compra ou contratação</a>
+        </div>
+    </div>
+</div>
 {% endif %}
 {% endblock %}
