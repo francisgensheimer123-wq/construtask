@@ -329,11 +329,19 @@ def _pdf_normalizar_colunas(colunas):
 
 def _pdf_ajustar_colunas_para_pagina(colunas):
     colunas = _pdf_normalizar_colunas(colunas)
-    largura_total = sum(coluna["largura"] for coluna in colunas)
-    if not largura_total or largura_total <= _PDF_TABLE_WIDTH:
+    if not colunas:
         return colunas
+
+    largura_total = sum(coluna["largura"] for coluna in colunas)
+    if not largura_total:
+        largura_padrao = _PDF_TABLE_WIDTH / len(colunas)
+        return [{**coluna, "largura": largura_padrao} for coluna in colunas]
+
     fator = _PDF_TABLE_WIDTH / largura_total
-    return [{**coluna, "largura": coluna["largura"] * fator} for coluna in colunas]
+    colunas_ajustadas = [{**coluna, "largura": coluna["largura"] * fator} for coluna in colunas]
+    diferenca = _PDF_TABLE_WIDTH - sum(coluna["largura"] for coluna in colunas_ajustadas)
+    colunas_ajustadas[-1]["largura"] += diferenca
+    return colunas_ajustadas
 
 
 def _pdf_inferir_alinhamento_coluna(titulo):

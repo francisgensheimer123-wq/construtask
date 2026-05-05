@@ -7081,6 +7081,13 @@ class ComunicacoesModuleTests(BaseFinanceTestCase):
         self.assertAlmostEqual(largura_total, 495.0, places=2)
         self.assertLess(colunas[1]["largura"], 435)
 
+    def test_pdf_padroniza_colunas_menores_que_a_largura_util_da_pagina(self):
+        colunas = _pdf_ajustar_colunas_para_pagina([("Item", 210), ("Valor", 120), ("Status", 160)])
+
+        largura_total = sum(coluna["largura"] for coluna in colunas)
+        self.assertAlmostEqual(largura_total, 495.0, places=2)
+        self.assertGreater(colunas[2]["largura"], 160)
+
     def test_envio_e_aprovacao_da_ata(self):
         self.client.post(
             reverse("reuniao_comunicacao_create"),
