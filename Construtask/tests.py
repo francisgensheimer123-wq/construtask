@@ -122,7 +122,7 @@ from .services_alertas import (
 from .cache_utils import critical_cache_get, critical_cache_set
 from .templatetags.formatters import money_br, trunc2
 from .text_normalization import corrigir_mojibake, normalizar_texto_cadastral
-from .upload_paths import upload_anexo_operacional, upload_cotacao_anexo
+from .upload_paths import caminho_exportacao_sistema, upload_anexo_operacional, upload_cotacao_anexo
 
 
 class PlanoContasTests(TestCase):
@@ -169,6 +169,24 @@ class UploadPathsTests(TestCase):
         self.assertEqual(
             caminho,
             f"Empresa-Com Barra/Obra Torre A/operacional/anexos/{data.year}/{data.month:02d}/contrato.pdf",
+        )
+
+    def test_exportacao_dossie_usa_pasta_relatorios(self):
+        empresa = Empresa.objects.create(nome="Empresa Modelo", nome_fantasia="Empresa Modelo", cnpj="11.111.111/0001-11")
+        obra = Obra.objects.create(empresa=empresa, codigo="OBR-001", nome="Obra Central", status="EM_ANDAMENTO")
+        request = SimpleNamespace(
+            session={"obra_contexto_id": obra.pk},
+            user=SimpleNamespace(is_authenticated=False),
+            resolver_match=SimpleNamespace(url_name="dossie_obra_pdf"),
+            path="/relatorios/dossie-obra/pdf/",
+        )
+        data = timezone.localtime(timezone.now())
+
+        caminho = caminho_exportacao_sistema("dossie_obra_OBR-001.pdf", request=request)
+
+        self.assertEqual(
+            caminho,
+            f"Empresa Modelo/Obra Central/relatórios/dossie-obra-pdf/{data.year}/{data.month:02d}/dossie_obra_OBR-001.pdf",
         )
 
 

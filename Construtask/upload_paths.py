@@ -146,6 +146,7 @@ def _modulo_view_do_request(request):
         "compromisso": "financeiro",
         "cotacao": "aquisicoes",
         "curva": "financeiro",
+        "dossie": "relatórios",
         "fechamento": "financeiro",
         "medicao": "financeiro",
         "nao": "qualidade",
