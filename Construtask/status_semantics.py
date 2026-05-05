@@ -12,22 +12,22 @@ DEFAULT_STATUS_META = {
 
 STATUS_META_BY_MODEL = {
     "Compromisso": {
-        "RASCUNHO": {"semantic": "EM_ELABORACAO", "stage_label": "Em elaboracao", "badge": "secondary"},
-        "EM_APROVACAO": {"semantic": "SUBMETIDO_VALIDACAO", "stage_label": "Submetido para validacao", "badge": "warning"},
+        "RASCUNHO": {"semantic": "EM_ELABORACAO", "stage_label": "Em elaboração", "badge": "secondary"},
+        "EM_APROVACAO": {"semantic": "SUBMETIDO_VALIDACAO", "stage_label": "Submetido para validação", "badge": "warning"},
         "APROVADO": {"semantic": "VALIDADO", "stage_label": "Validado", "badge": "success"},
-        "EM_EXECUCAO": {"semantic": "EM_EXECUCAO", "stage_label": "Em execucao", "badge": "primary"},
+        "EM_EXECUCAO": {"semantic": "EM_EXECUCAO", "stage_label": "Em execução", "badge": "primary"},
         "ENCERRADO": {"semantic": "ENCERRADO", "stage_label": "Encerrado", "badge": "dark"},
         "CANCELADO": {"semantic": "CANCELADO", "stage_label": "Cancelado", "badge": "dark"},
     },
     "AditivoContrato": {
-        "RASCUNHO": {"semantic": "EM_ELABORACAO", "stage_label": "Em elaboracao", "badge": "secondary"},
-        "EM_APROVACAO": {"semantic": "SUBMETIDO_VALIDACAO", "stage_label": "Submetido para validacao", "badge": "warning"},
+        "RASCUNHO": {"semantic": "EM_ELABORACAO", "stage_label": "Em elaboração", "badge": "secondary"},
+        "EM_APROVACAO": {"semantic": "SUBMETIDO_VALIDACAO", "stage_label": "Submetido para validação", "badge": "warning"},
         "APROVADO": {"semantic": "VALIDADO", "stage_label": "Validado", "badge": "success"},
         "AJUSTE": {"semantic": "AJUSTE", "stage_label": "Devolvido para ajuste", "badge": "info"},
     },
-    "Medicao": {
-        "EM_ELABORACAO": {"semantic": "EM_ELABORACAO", "stage_label": "Em elaboracao", "badge": "secondary"},
-        "EM_APROVACAO": {"semantic": "SUBMETIDO_VALIDACAO", "stage_label": "Submetida para validacao", "badge": "warning"},
+    "Medição": {
+        "EM_ELABORACAO": {"semantic": "EM_ELABORACAO", "stage_label": "Em elaboração", "badge": "secondary"},
+        "EM_APROVACAO": {"semantic": "SUBMETIDO_VALIDACAO", "stage_label": "Submetida para validação", "badge": "warning"},
         "CONFERIDA": {"semantic": "VALIDADO", "stage_label": "Conferida", "badge": "info"},
         "APROVADA": {"semantic": "VALIDADO", "stage_label": "Aprovada", "badge": "success"},
         "FATURADA": {"semantic": "ENCERRADO", "stage_label": "Faturada", "badge": "dark"},
@@ -38,21 +38,21 @@ STATUS_META_BY_MODEL = {
         "PAGA": {"semantic": "ENCERRADO", "stage_label": "Paga", "badge": "success"},
     },
     "SolicitacaoCompra": {
-        "RASCUNHO": {"semantic": "EM_ELABORACAO", "stage_label": "Em elaboracao", "badge": "secondary"},
+        "RASCUNHO": {"semantic": "EM_ELABORACAO", "stage_label": "Em elaboração", "badge": "secondary"},
         "APROVADA": {"semantic": "VALIDADO", "stage_label": "Validada", "badge": "success"},
-        "COTANDO": {"semantic": "EM_EXECUCAO", "stage_label": "Em cotacao", "badge": "primary"},
+        "COTANDO": {"semantic": "EM_EXECUCAO", "stage_label": "Em cotação", "badge": "primary"},
         "ENCERRADA": {"semantic": "ENCERRADO", "stage_label": "Encerrada", "badge": "dark"},
         "CANCELADA": {"semantic": "CANCELADO", "stage_label": "Cancelada", "badge": "dark"},
     },
-    "Cotacao": {
-        "EM_ANALISE": {"semantic": "SUBMETIDO_VALIDACAO", "stage_label": "Em analise", "badge": "warning"},
+    "Cotação": {
+        "EM_ANALISE": {"semantic": "SUBMETIDO_VALIDACAO", "stage_label": "Em análise", "badge": "warning"},
         "APROVADA": {"semantic": "VALIDADO", "stage_label": "Aprovada", "badge": "success"},
         "REJEITADA": {"semantic": "CANCELADO", "stage_label": "Rejeitada", "badge": "dark"},
         "CANCELADA": {"semantic": "CANCELADO", "stage_label": "Cancelada", "badge": "dark"},
     },
     "OrdemCompra": {
-        "RASCUNHO": {"semantic": "EM_ELABORACAO", "stage_label": "Em elaboracao", "badge": "secondary"},
-        "EM_APROVACAO": {"semantic": "SUBMETIDO_VALIDACAO", "stage_label": "Submetida para validacao", "badge": "warning"},
+        "RASCUNHO": {"semantic": "EM_ELABORACAO", "stage_label": "Em elaboração", "badge": "secondary"},
+        "EM_APROVACAO": {"semantic": "SUBMETIDO_VALIDACAO", "stage_label": "Submetida para validação", "badge": "warning"},
         "APROVADA": {"semantic": "VALIDADO", "stage_label": "Aprovada", "badge": "success"},
         "PARCIAL": {"semantic": "EM_EXECUCAO", "stage_label": "Atendimento parcial", "badge": "info"},
         "CONCLUIDA": {"semantic": "ENCERRADO", "stage_label": "Concluida", "badge": "dark"},
@@ -67,19 +67,19 @@ STATUS_META_BY_MODEL = {
     },
     "Risco": {
         "IDENTIFICADO": {"semantic": "ABERTO", "stage_label": "Identificado", "badge": "secondary"},
-        "EM_ANALISE": {"semantic": "SUBMETIDO_VALIDACAO", "stage_label": "Em analise", "badge": "warning"},
+        "EM_ANALISE": {"semantic": "SUBMETIDO_VALIDACAO", "stage_label": "Em análise", "badge": "warning"},
         "EM_TRATAMENTO": {"semantic": "EM_EXECUCAO", "stage_label": "Em tratamento", "badge": "primary"},
         "MITIGADO": {"semantic": "VALIDADO", "stage_label": "Mitigado", "badge": "success"},
         "FECHADO": {"semantic": "ENCERRADO", "stage_label": "Fechado", "badge": "dark"},
         "CANCELADO": {"semantic": "CANCELADO", "stage_label": "Cancelado", "badge": "dark"},
     },
     "OrcamentoBaseline": {
-        "RASCUNHO": {"semantic": "EM_ELABORACAO", "stage_label": "Em elaboracao", "badge": "secondary"},
-        "EM_APROVACAO": {"semantic": "SUBMETIDO_VALIDACAO", "stage_label": "Submetida para validacao", "badge": "warning"},
+        "RASCUNHO": {"semantic": "EM_ELABORACAO", "stage_label": "Em elaboração", "badge": "secondary"},
+        "EM_APROVACAO": {"semantic": "SUBMETIDO_VALIDACAO", "stage_label": "Submetida para validação", "badge": "warning"},
         "APROVADA": {"semantic": "VALIDADO", "stage_label": "Aprovada", "badge": "success"},
     },
     "PlanoFisico": {
-        "RASCUNHO": {"semantic": "EM_ELABORACAO", "stage_label": "Em elaboracao", "badge": "secondary"},
+        "RASCUNHO": {"semantic": "EM_ELABORACAO", "stage_label": "Em elaboração", "badge": "secondary"},
         "ATIVO": {"semantic": "EM_EXECUCAO", "stage_label": "Ativo para controle", "badge": "primary"},
         "BASELINE": {"semantic": "VALIDADO", "stage_label": "Baseline vigente", "badge": "success"},
         "OBSOLETO": {"semantic": "ENCERRADO", "stage_label": "Obsoleto", "badge": "dark"},
@@ -87,7 +87,7 @@ STATUS_META_BY_MODEL = {
     "ReuniaoComunicacao": {
         "RASCUNHO": {"semantic": "EM_ELABORACAO", "stage_label": "Pauta em construcao", "badge": "secondary"},
         "PAUTA_VALIDADA": {"semantic": "VALIDADO", "stage_label": "Pauta validada pelo engenheiro", "badge": "info"},
-        "EM_APROVACAO": {"semantic": "SUBMETIDO_VALIDACAO", "stage_label": "Ata submetida para aprovacao", "badge": "warning"},
+        "EM_APROVACAO": {"semantic": "SUBMETIDO_VALIDACAO", "stage_label": "Ata submetida para aprovação", "badge": "warning"},
         "APROVADA": {"semantic": "VALIDADO", "stage_label": "Ata aprovada", "badge": "success"},
     },
     "AlertaOperacional": {
@@ -113,7 +113,7 @@ def _fallback_display(instance: Any, status: str | None) -> str:
             pass
     if status:
         return str(status).replace("_", " ").title()
-    return "Nao informado"
+    return "Não informado"
 
 
 def get_status_metadata(instance: Any) -> dict[str, str]:

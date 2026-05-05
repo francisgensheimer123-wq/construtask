@@ -8,7 +8,7 @@
 <div class="toolbar">
     <div>
         <h2>{{ contrato.get_tipo_display }} {{ contrato.numero }}</h2>
-        <p>Visao consolidada do registro e sua execucao.</p>
+        <p>Visão consolidada do registro e sua execução.</p>
     </div>
     <div style="display:flex; gap:10px;">
         <a class="btn secondary" href="{% url 'compromisso_pdf' contrato.pk %}">Gerar PDF</a>
@@ -25,14 +25,14 @@
     <div style="display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap;">
         <div>
             <strong>Workflow de Aprovação</strong>
-            <p class="muted" style="margin:6px 0 0 0;">Funcao atual: {{ papel_aprovacao|default:"Nao configurada" }} | Alcada: {{ limite_aprovacao_label }}</p>
+            <p class="muted" style="margin:6px 0 0 0;">Função atual: {{ papel_aprovacao|default:"Não configurada" }} | Alçada: {{ limite_aprovacao_label }}</p>
         </div>
         <div style="min-width:min(100%, 420px);">
             <form method="post">
                 {% csrf_token %}
                 <div class="field" style="margin-bottom:10px;">
                     <label for="id_parecer_aprovacao_contrato">Parecer</label>
-                    <textarea id="id_parecer_aprovacao_contrato" name="parecer_aprovacao" rows="3" placeholder="Opcional no envio/aprovacao e obrigatorio na devolucao para ajuste.">{{ contrato.parecer_aprovacao }}</textarea>
+                    <textarea id="id_parecer_aprovacao_contrato" name="parecer_aprovacao" rows="3" placeholder="Opcional no envio/aprovação e obrigatorio na devolucao para ajuste.">{{ contrato.parecer_aprovacao }}</textarea>
                 </div>
                 <div style="display:flex; gap:10px; flex-wrap:wrap;">
                     {% if pode_enviar_para_aprovacao and contrato.status == "RASCUNHO" %}
@@ -64,16 +64,16 @@
             <tbody>
                 <tr><td>Fornecedor</td><td>{{ contrato.fornecedor }}</td></tr>
                 <tr><td>CNPJ</td><td>{{ contrato.cnpj }}</td></tr>
-                <tr><td>Descricao</td><td>{{ contrato.descricao }}</td></tr>
+                <tr><td>Descrição</td><td>{{ contrato.descricao }}</td></tr>
                 <tr><td>Estrutura</td><td>{{ contrato.torre|default:"-" }} / {{ contrato.bloco|default:"-" }} / {{ contrato.etapa|default:"-" }}</td></tr>
-                <tr><td>Responsavel</td><td>{{ contrato.responsavel }}</td></tr>
+                <tr><td>Responsável</td><td>{{ contrato.responsavel }}</td></tr>
                 <tr><td>Data</td><td>{{ contrato.data_assinatura|date:"d/m/Y" }}</td></tr>
                 <tr><td>Enviado para Aprovação</td><td>{% if contrato.enviado_para_aprovacao_por %}{{ contrato.enviado_para_aprovacao_por.username }} em {{ contrato.enviado_para_aprovacao_em|date:"d/m/Y H:i" }}{% else %}-{% endif %}</td></tr>
                 <tr><td>Aprovado por</td><td>{% if contrato.aprovado_por %}{{ contrato.aprovado_por.username }} em {{ contrato.aprovado_em|date:"d/m/Y H:i" }}{% else %}-{% endif %}</td></tr>
                 <tr><td>Último Parecer</td><td>{{ contrato.parecer_aprovacao|default:"-" }}</td></tr>
                 {% if origem_aquisicao %}
-                <tr><td>Solicitacao de Compra</td><td><a href="{% url 'solicitacao_compra_detail' origem_aquisicao.solicitacao.pk %}">{{ origem_aquisicao.solicitacao.numero }}</a></td></tr>
-                <tr><td>Cotacao de Origem</td><td><a href="{% url 'cotacao_detail' origem_aquisicao.cotacao_aprovada.pk %}">{{ origem_aquisicao.cotacao_aprovada.numero }}</a></td></tr>
+                <tr><td>Solicitação de Compra</td><td><a href="{% url 'solicitacao_compra_detail' origem_aquisicao.solicitacao.pk %}">{{ origem_aquisicao.solicitacao.numero }}</a></td></tr>
+                <tr><td>Cotação de Origem</td><td><a href="{% url 'cotacao_detail' origem_aquisicao.cotacao_aprovada.pk %}">{{ origem_aquisicao.cotacao_aprovada.numero }}</a></td></tr>
                 {% endif %}
             </tbody>
         </table>
@@ -110,7 +110,7 @@
             <thead>
                 <tr>
                     <th>Centro de Custo</th>
-                    <th>Descricao Tecnica</th>
+                    <th>Descrição Técnica</th>
                     <th class="text-right">Quantidade</th>
                     <th>Unidade</th>
                     <th class="text-right">Valor Unitario</th>
@@ -133,7 +133,7 @@
     </div>
 
     <div class="panel">
-        <h3>Historico</h3>
+        <h3>Histórico</h3>
         {% if contrato.historicos.all %}
         <table class="compact-table">
             <thead>
@@ -156,7 +156,7 @@
             </tbody>
         </table>
         {% else %}
-        <p class="empty">Nenhum historico registrado.</p>
+        <p class="empty">Nenhum histórico registrado.</p>
         {% endif %}
     </div>
 </section>
@@ -169,7 +169,7 @@
         <thead>
             <tr>
                 <th>Tipo</th>
-                <th>Descricao</th>
+                <th>Descrição</th>
                 <th>Status</th>
                 <th>Motivo</th>
                 <th class="text-right">Delta/Valor</th>
@@ -253,7 +253,7 @@
         </div>
 
         <div class="field">
-            <label for="{{ aditivo_form.descricao.id_for_label }}">Descricao</label>
+            <label for="{{ aditivo_form.descricao.id_for_label }}">Descrição</label>
             {{ aditivo_form.descricao }}
             {% if aditivo_form.descricao.errors %}
                 <div style="color:#b91c1c; margin-top:6px;">{{ aditivo_form.descricao.errors }}</div>
@@ -339,9 +339,9 @@
         <table class="compact-table">
             <thead>
                 <tr>
-                    <th>Numero</th>
+                    <th>Número</th>
                     <th>Status</th>
-                    <th>Descricao</th>
+                    <th>Descrição</th>
                     <th class="text-right">Valor</th>
                 </tr>
             </thead>
@@ -360,7 +360,7 @@
             </tbody>
         </table>
         {% else %}
-        <p class="empty">{% if contrato.tipo == "CONTRATO" %}Nenhuma medicao registrada.{% else %}Este pedido nao possui medicoes; a execucao ocorre diretamente pelas notas fiscais vinculadas.{% endif %}</p>
+        <p class="empty">{% if contrato.tipo == "CONTRATO" %}Nenhuma medição registrada.{% else %}Este pedido não possui medições; a execução ocorre diretamente pelas notas fiscais vinculadas.{% endif %}</p>
         {% endif %}
     </div>
 
@@ -370,9 +370,9 @@
         <table class="compact-table">
             <thead>
                 <tr>
-                    <th>Numero</th>
+                    <th>Número</th>
                     <th>Status</th>
-                    <th>Descricao</th>
+                    <th>Descrição</th>
                     <th class="text-right">Valor</th>
                 </tr>
             </thead>

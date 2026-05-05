@@ -2,18 +2,18 @@
 {% load formatters %}
 
 {% block main_class %}main-full{% endblock %}
-{% block title %}Nao Conformidades | Construtask{% endblock %}
+{% block title %}Não Conformidades | Construtask{% endblock %}
 
 {% block content %}
 <div class="toolbar">
     <div>
-        <h2>Nao Conformidades</h2>
+        <h2>Não Conformidades</h2>
         <p>Controle de qualidade, tratamento e verificacao das ocorrencias da obra.</p>
     </div>
     <div style="display:flex; gap:8px;">
         <a class="btn secondary" href="{% url 'nao_conformidade_export' %}">Exportar Excel</a>
         <a class="btn secondary" href="{% url 'nao_conformidade_pdf' %}">Exportar PDF</a>
-        <a class="btn" href="{% url 'nao_conformidade_create' %}">Nova Nao Conformidade</a>
+        <a class="btn" href="{% url 'nao_conformidade_create' %}">Nova Não Conformidade</a>
     </div>
   </div>
 
@@ -21,7 +21,7 @@
     <form method="get" class="toolbar" style="align-items:end;">
         <div class="field" style="min-width:320px; margin:0;">
             <label for="id_q">Buscar</label>
-            <input id="id_q" type="text" name="q" value="{{ request.GET.q }}" placeholder="Descricao da ocorrencia">
+            <input id="id_q" type="text" name="q" value="{{ request.GET.q }}" placeholder="Descrição da ocorrencia">
         </div>
         <div class="field" style="min-width:220px; margin:0;">
             <label for="id_status">Status</label>
@@ -44,8 +44,8 @@
                 <th>ID</th>
                 <th>Obra</th>
                 <th>Centro de Custo</th>
-                <th>Descricao</th>
-                <th>Responsavel</th>
+                <th>Descrição</th>
+                <th>Responsável</th>
                 <th>Status</th>
                 <th>Data</th>
             </tr>
@@ -67,7 +67,7 @@
         </tbody>
     </table>
     {% else %}
-    <p class="empty">Nenhuma nao conformidade cadastrada para o contexto atual.</p>
+    <p class="empty">Nenhuma não conformidade cadastrada para o contexto atual.</p>
     {% endif %}
     {% include "app/includes/pagination_controls.html" %}
 </div>

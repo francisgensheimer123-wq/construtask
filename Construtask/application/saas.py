@@ -40,7 +40,7 @@ def _check_database():
         return {
             "status": "error",
             "titulo": "Banco operacional",
-            "detalhe": "Em producao a base operacional deve ser PostgreSQL.",
+            "detalhe": "Em produção a base operacional deve ser PostgreSQL.",
             "engine": engine,
             "vendor": vendor,
         }
@@ -70,7 +70,7 @@ def _check_storage():
         return {
             "status": "error",
             "titulo": "Storage de arquivos",
-            "detalhe": f"Backend de storage invalido ou indisponivel: {exc}",
+            "detalhe": f"Backend de storage inválido ou indisponível: {exc}",
             "backend": backend,
             "backend_path": backend_path,
         }
@@ -83,7 +83,7 @@ def _check_storage():
             return {
                 "status": "error",
                 "titulo": "Storage de arquivos",
-                "detalhe": f"Nao foi possivel preparar o diretorio de media: {exc}",
+                "detalhe": f"Não foi possível preparar o diretório de media: {exc}",
                 "backend": backend,
                 "backend_path": backend_path,
             }
@@ -92,7 +92,7 @@ def _check_storage():
         return {
             "status": "error",
             "titulo": "Storage de arquivos",
-            "detalhe": "O storage atual nao foi marcado como persistente para producao.",
+            "detalhe": "O storage atual não foi marcado como persistente para produção.",
             "backend": backend,
             "backend_path": backend_path,
             "localizacao": detalhe_local,
@@ -102,7 +102,7 @@ def _check_storage():
         return {
             "status": "error",
             "titulo": "Storage de arquivos",
-            "detalhe": "Em producao use storage persistente explicito, como volume montado ou backend externo.",
+            "detalhe": "Em produção use storage persistente explicito, como volume montado ou backend externo.",
             "backend": backend,
             "backend_path": backend_path,
             "localizacao": detalhe_local,
@@ -111,7 +111,7 @@ def _check_storage():
     return {
         "status": "ok",
         "titulo": "Storage de arquivos",
-        "detalhe": "Storage pronto para operacao." if persistente else "Storage local aceito para desenvolvimento.",
+        "detalhe": "Storage pronto para operação." if persistente else "Storage local aceito para desenvolvimento.",
         "backend": backend,
         "backend_path": backend_path,
         "localizacao": detalhe_local,
@@ -164,8 +164,8 @@ def _check_backup():
     if not habilitado:
         return {
             "status": "error" if ambiente_produtivo else "ok",
-            "titulo": "Backup e recuperacao",
-            "detalhe": "A politica de backup automatizado nao esta habilitada." if ambiente_produtivo else "Backup automatico opcional no ambiente local.",
+            "titulo": "Backup e recuperação",
+            "detalhe": "A política de backup automatizado não está habilitada." if ambiente_produtivo else "Backup automático opcional no ambiente local.",
             "provedor": provedor_efetivo,
             "retencao_dias": retencao,
             "teste_recuperacao_ok": teste_recuperacao_ok,
@@ -175,8 +175,8 @@ def _check_backup():
     if not provedor or retencao <= 0:
         return {
             "status": "error" if ambiente_produtivo else "ok",
-            "titulo": "Backup e recuperacao",
-            "detalhe": "Configure provedor e retencao para a rotina de backup." if ambiente_produtivo else "Configuracao de backup simplificada para desenvolvimento.",
+            "titulo": "Backup e recuperação",
+            "detalhe": "Configure provedor e retenção para a rotina de backup." if ambiente_produtivo else "Configuração de backup simplificada para desenvolvimento.",
             "provedor": provedor_efetivo,
             "retencao_dias": retencao,
             "teste_recuperacao_ok": teste_recuperacao_ok,
@@ -184,28 +184,28 @@ def _check_backup():
         }
 
     status = "ok"
-    detalhe = "Politica de backup configurada."
+    detalhe = "Política de backup configurada."
     if ultima_execucao:
         limite = timezone.now() - timedelta(hours=janela_horas * 2)
         if ultima_execucao < limite:
             status = "warning" if not ambiente_produtivo else "error"
-            detalhe = "A ultima execucao registrada de backup esta acima da janela esperada."
+            detalhe = "A última execução registrada de backup está acima da janela esperada."
         else:
             detalhe = "Backup recente registrado dentro da janela operacional."
     elif ambiente_produtivo:
         status = "warning"
-        detalhe = "Politica configurada, mas ainda sem ultima execucao registrada."
+        detalhe = "Política configurada, mas ainda sem última execução registrada."
 
     if ambiente_produtivo and not teste_recuperacao_recente:
         status = "error" if status == "ok" else status
         detalhe = (
-            f"{detalhe} Nenhum teste de recuperacao com sucesso foi registrado "
+            f"{detalhe} Nenhum teste de recuperação com sucesso foi registrado "
             f"dentro da janela de {janela_teste_recuperacao_dias} dias."
         )
 
     return {
         "status": status,
-        "titulo": "Backup e recuperacao",
+        "titulo": "Backup e recuperação",
         "detalhe": detalhe,
         "provedor": provedor_efetivo,
         "retencao_dias": retencao,
@@ -228,7 +228,7 @@ def _check_security():
     if not ambiente_produtivo:
         return {
             "status": "ok",
-            "titulo": "Configuracao segura",
+            "titulo": "Configuração segura",
             "detalhe": "Ambiente local com validacoes basicas habilitadas.",
             "ssl_redirect": ssl_redirect,
             "proxy_ssl": proxy_ssl,
@@ -248,8 +248,8 @@ def _check_security():
 
     return {
         "status": "error" if faltas else "ok",
-        "titulo": "Configuracao segura",
-        "detalhe": "Configuracao segura pronta para operacao." if not faltas else f"Ajustes pendentes: {', '.join(faltas)}.",
+        "titulo": "Configuração segura",
+        "detalhe": "Configuração segura pronta para operação." if not faltas else f"Ajustes pendentes: {', '.join(faltas)}.",
         "ssl_redirect": ssl_redirect,
         "proxy_ssl": proxy_ssl,
         "csrf_trusted_origins": csrf_origins,
@@ -282,7 +282,7 @@ def _check_cache_infra():
         return {
             "status": "error",
             "titulo": "Cache e fila",
-            "detalhe": "Em producao, a aplicacao exige cache compartilhado em Redis.",
+            "detalhe": "Em produção, a aplicacao exige cache compartilhado em Redis.",
             "backend": backend,
             "backend_critico": backend_critico,
             "redis_url_configurada": bool(redis_url),
@@ -292,7 +292,7 @@ def _check_cache_infra():
         return {
             "status": "error",
             "titulo": "Cache e fila",
-            "detalhe": "Em producao, o cache critico de seguranca deve usar Redis compartilhado.",
+            "detalhe": "Em produção, o cache crítico de segurança deve usar Redis compartilhado.",
             "backend": backend,
             "backend_critico": backend_critico,
             "redis_url_configurada": bool(redis_url),
@@ -302,7 +302,7 @@ def _check_cache_infra():
         return {
             "status": "error",
             "titulo": "Cache e fila",
-            "detalhe": "Defina REDIS_URL para cache compartilhado e execucao de jobs.",
+            "detalhe": "Defina REDIS_URL para cache compartilhado e execução de jobs.",
             "backend": backend,
             "backend_critico": backend_critico,
             "redis_url_configurada": False,
@@ -316,7 +316,7 @@ def _check_cache_infra():
         return {
             "status": "error",
             "titulo": "Cache e fila",
-            "detalhe": f"Nao foi possivel validar o Redis operacional: {exc}",
+            "detalhe": f"Não foi possível validar o Redis operacional: {exc}",
             "backend": backend,
             "backend_critico": backend_critico,
             "redis_url_configurada": True,

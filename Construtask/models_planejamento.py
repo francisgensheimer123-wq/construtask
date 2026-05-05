@@ -1,5 +1,5 @@
 """
-Modulo de planejamento fisico e controle de cronogramas.
+Módulo de planejamento físico e controle de cronogramas.
 """
 
 from decimal import Decimal, ROUND_HALF_UP
@@ -15,11 +15,11 @@ from .upload_paths import upload_cronograma_baseline, upload_cronograma_origem
 
 class PlanoFisico(models.Model):
     """
-    Cabecalho do cronograma fisico.
+    Cabeçalho do cronograma físico.
     """
 
     class Meta:
-        verbose_name = "Cronograma Fisico"
+        verbose_name = "Cronograma Físico"
         verbose_name_plural = "Cronogramas Fisicos"
         ordering = ["-created_at"]
         indexes = [
@@ -41,7 +41,7 @@ class PlanoFisico(models.Model):
 
     obra = models.ForeignKey("Obra", on_delete=models.CASCADE, related_name="planos_fisicos")
     numero = models.CharField(max_length=30, unique=True, null=True, blank=True, editable=False)
-    titulo = models.CharField(max_length=200, help_text="Titulo do cronograma")
+    titulo = models.CharField(max_length=200, help_text="Título do cronograma")
     descricao = models.TextField(blank=True)
     arquivo_origem = models.FileField(
         upload_to=upload_cronograma_origem,
@@ -58,7 +58,7 @@ class PlanoFisico(models.Model):
         null=True,
         blank=True,
         related_name="baselines",
-        help_text="Qual baseline originou esta versao",
+        help_text="Qual baseline originou esta versão",
     )
     data_base = models.DateField(null=True, blank=True, help_text="Data base do cronograma")
     data_importacao = models.DateTimeField(auto_now_add=True)
@@ -147,17 +147,17 @@ class PlanoFisicoItem(models.Model):
     codigo_eap_importado = models.CharField(
         max_length=100,
         blank=True,
-        help_text="Codigo da EAP informado no arquivo importado",
+        help_text="Código da EAP informado no arquivo importado",
     )
     erro_vinculo_eap = models.CharField(
         max_length=255,
         blank=True,
-        help_text="Erro de vinculo quando o codigo da EAP nao existir",
+        help_text="Erro de vinculo quando o código da EAP não existir",
     )
-    codigo_atividade = models.CharField(max_length=50, help_text="Codigo da atividade (do arquivo)")
+    codigo_atividade = models.CharField(max_length=50, help_text="Código da atividade (do arquivo)")
     atividade = models.CharField(max_length=500, help_text="Nome da atividade")
-    predecessor = models.CharField(max_length=50, blank=True, help_text="Codigo da predecessora")
-    successor = models.CharField(max_length=50, blank=True, help_text="Codigo da sucessora")
+    predecessor = models.CharField(max_length=50, blank=True, help_text="Código da predecessora")
+    successor = models.CharField(max_length=50, blank=True, help_text="Código da sucessora")
     duracao = models.PositiveIntegerField(default=0, help_text="Duracao planejada em dias")
     data_inicio_prevista = models.DateField(null=True, blank=True)
     data_fim_prevista = models.DateField(null=True, blank=True)
@@ -373,7 +373,7 @@ class PlanoFisicoItem(models.Model):
 
 class PlanoFisicoBaseline(models.Model):
     """
-    Historico de versoes de baseline.
+    Histórico de versoes de baseline.
     """
 
     class Meta:
@@ -395,12 +395,12 @@ class PlanoFisicoBaseline(models.Model):
 
 class MapaCorrespondencia(models.Model):
     """
-    Mapeia itens do cronograma para itens do orcamento (EAP).
+    Mapeia itens do cronograma para itens do orçamento (EAP).
     """
 
     class Meta:
-        verbose_name = "Mapeamento Cronograma ↔ Orcamento"
-        verbose_name_plural = "Mapeamentos Cronograma ↔ Orcamento"
+        verbose_name = "Mapeamento Cronograma ↔ Orçamento"
+        verbose_name_plural = "Mapeamentos Cronograma ↔ Orçamento"
         ordering = ["plano_fisico_item"]
         indexes = [
             models.Index(fields=["plano_fisico_item", "status"]),
@@ -438,7 +438,7 @@ class MapaCorrespondencia(models.Model):
     )
 
     def __str__(self):
-        destino = self.plano_contas.codigo if self.plano_contas else "Nao vinculado"
+        destino = self.plano_contas.codigo if self.plano_contas else "Não vinculado"
         return f"{self.plano_fisico_item.codigo_atividade} → {destino} ({self.percentual_rateio}%)"
 
     def clean(self):

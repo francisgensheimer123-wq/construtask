@@ -153,8 +153,8 @@ class CronogramaService:
                         "linha": idx + 2,
                         "codigo": codigo,
                         "atividade": atividade,
-                        "data_inicio": data_inicio.strftime("%d/%m/%Y") if data_inicio else "Nao identificada",
-                        "data_fim": data_fim.strftime("%d/%m/%Y") if data_fim else "Nao identificada",
+                        "data_inicio": data_inicio.strftime("%d/%m/%Y") if data_inicio else "Não identificada",
+                        "data_fim": data_fim.strftime("%d/%m/%Y") if data_fim else "Não identificada",
                         "codigo_eap": codigo_eap or "-",
                         "eap_reconhecida": reconhecida,
                     }
@@ -183,8 +183,8 @@ class CronogramaService:
         Args:
             arquivo: Arquivo Excel uploaded
             obra: Instância de Obra
-            responsavel: Usuário que está importando
-            titulo: Título do cronograma (opcional)
+            responsável: Usuário que está importando
+            título: Título do cronograma (opcional)
             criar_baseline: Se True, cria como baseline
             
         Returns:
@@ -304,7 +304,7 @@ class CronogramaService:
             elif col_upper in {"NÍVEL"}:
                 col_upper = "NIVEL"
             elif col_upper in {"IMPORTÂNCIA"}:
-                col_upper = "IMPORTÃ‚NCIA"
+                col_upper = "IMPORTÂNCIA"
             colunas_normalizadas[col] = mapeamento.get(col_upper, col_upper)
         
         df = df.rename(columns=colunas_normalizadas)
@@ -378,7 +378,7 @@ class CronogramaService:
             if codigo_eap and obra:
                 plano_contas = cls._resolver_plano_contas_por_codigo_eap(obra, codigo_eap)
                 if plano_contas is None:
-                    erro_vinculo_eap = f"Codigo da EAP '{codigo_eap}' nao localizado na EAP da obra."
+                    erro_vinculo_eap = f"Código da EAP '{codigo_eap}' não localizado na EAP da obra."
 
             hierarquia = cls._resolver_hierarquia_item(row, codigo, idx, pilha_por_nivel)
             
@@ -467,7 +467,7 @@ class CronogramaService:
 
     @classmethod
     def _parse_data(cls, valor):
-        """Converte valor para data com tolerancia a formatos do Excel."""
+        """Converte valor para data com tolerância a formatos do Excel."""
         if valor is None:
             return None
 
@@ -912,8 +912,8 @@ class MapeamentoService:
                 for item_id in componente_itens:
                     itens_invalidos.add(item_id)
                     mensagens[item_id] = (
-                        "Configuracao N EAP -> N atividades nao suportada. "
-                        "Quebre o cronograma para manter vinculos 1 EAP -> 1 atividade."
+                        "Configuração N EAP -> N atividades não suportada. "
+                        "Quebre o cronograma para manter vínculos 1 EAP -> 1 atividade."
                     )
 
         valores_item = {item.pk: (item.valor_planejado or Decimal("0.00")) for item in itens}
@@ -990,7 +990,7 @@ class MapeamentoService:
                 item.erro_vinculo_eap = analise["mensagens"].get(item.pk, "")
                 item.plano_contas = None
             elif item.codigo_eap_importado and not codigos_por_item.get(item.pk):
-                item.erro_vinculo_eap = f"Codigo da EAP '{item.codigo_eap_importado}' nao localizado na EAP da obra."
+                item.erro_vinculo_eap = f"Código da EAP '{item.codigo_eap_importado}' não localizado na EAP da obra."
                 item.plano_contas = None
             else:
                 eaps = analise["item_to_eaps"].get(item.pk, [])
@@ -1011,7 +1011,7 @@ class MapeamentoService:
         if item.filhos.exists():
             raise ValidationError("O vinculo com a EAP so pode ser definido em atividades folha do cronograma.")
         if plano_contas.filhos.exists():
-            raise ValidationError("O vinculo com a EAP deve apontar para item analitico da EAP (nivel 6).")
+            raise ValidationError("O vinculo com a EAP deve apontar para item analitico da EAP (nível 6).")
         eaps_item = set(
             MapaCorrespondencia.objects.filter(
                 plano_fisico_item=item,
@@ -1031,8 +1031,8 @@ class MapeamentoService:
         )
         if eaps_item and itens_eap:
             raise ValidationError(
-                "Esse vinculo criaria um cenario N EAP -> N atividades, que nao e suportado. "
-                "Quebre o cronograma para manter vinculos 1 EAP -> 1 atividade."
+                "Esse vinculo criaria um cenario N EAP -> N atividades, que não e suportado. "
+                "Quebre o cronograma para manter vínculos 1 EAP -> 1 atividade."
             )
         return None
 
@@ -1047,7 +1047,7 @@ class MapeamentoService:
         from .models import PlanoContas
         nao_analiticos = PlanoContas.objects.filter(pk__in=plano_contas_ids).exclude(filhos__isnull=True)
         if nao_analiticos.exists():
-            raise ValidationError("O vinculo com a EAP deve apontar apenas para itens analiticos da EAP (nivel 6).")
+            raise ValidationError("O vinculo com a EAP deve apontar apenas para itens analiticos da EAP (nível 6).")
         plano = item.plano
         _, registros = cls._obter_mapeamentos_ativos(plano)
 
@@ -1087,8 +1087,8 @@ class MapeamentoService:
 
         if len(componente_itens) > 1 and len(componente_eaps) > 1:
             raise ValidationError(
-                "Esse vinculo criaria um cenario N EAP -> N atividades, que nao e suportado. "
-                "Quebre o cronograma para manter vinculos 1 EAP -> 1 atividade."
+                "Esse vinculo criaria um cenario N EAP -> N atividades, que não e suportado. "
+                "Quebre o cronograma para manter vínculos 1 EAP -> 1 atividade."
             )
         return None
     
@@ -1169,7 +1169,7 @@ class MapeamentoService:
     @classmethod
     def verificar_divergencias(cls, plano_fisico_id, analise=None):
         """
-        Lista atividades sem vinculo valido ou com estrutura nao suportada.
+        Lista atividades sem vinculo valido ou com estrutura não suportada.
         """
         analise = analise or cls.analisar_vinculos(plano_fisico_id)
         divergencias = []
@@ -1180,7 +1180,7 @@ class MapeamentoService:
                 divergencias.append({
                     'item': item,
                     'tipo': 'VINCULO_N_N',
-                    'mensagem': analise["mensagens"].get(item.pk, "Configuracao N EAP -> N atividades nao suportada."),
+                    'mensagem': analise["mensagens"].get(item.pk, "Configuração N EAP -> N atividades não suportada."),
                 })
             elif not codigos:
                 divergencias.append({

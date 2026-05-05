@@ -38,7 +38,7 @@ from .pagination import DefaultPaginationMixin
 
 def _exigir_permissao_comunicacoes(request, acao):
     if not usuario_tem_permissao_modulo(request.user, "comunicacoes", acao):
-        raise PermissionDenied("Usuario sem permissao para o modulo de comunicacoes.")
+        raise PermissionDenied("Usuário sem permissão para o módulo de comunicacoes.")
 
 
 def _queryset_reunioes(request):
@@ -132,9 +132,9 @@ def _linhas_exportacao_historico(reuniao):
     return [
         {
             "Data": _datahora_local(evento.criado_em).strftime("%d/%m/%Y %H:%M") if evento.criado_em else "-",
-            "Acao": evento.get_acao_display(),
-            "Usuario": getattr(evento.usuario, "username", "-") if evento.usuario else "-",
-            "Descricao": evento.observacao or "-",
+            "Ação": evento.get_acao_display(),
+            "Usuário": getattr(evento.usuario, "username", "-") if evento.usuario else "-",
+            "Descrição": evento.observacao or "-",
         }
         for evento in reuniao.historicos.select_related("usuario").all()
     ]
@@ -143,7 +143,7 @@ def _linhas_exportacao_historico(reuniao):
 def _resumo_exportacao_reuniao(reuniao, *, tipo_documento):
     return {
         "Documento": tipo_documento,
-        "Reuniao": f"{reuniao.numero} - {reuniao.titulo}",
+        "Reunião": f"{reuniao.numero} - {reuniao.titulo}",
         "Tipo": reuniao.get_tipo_reuniao_display(),
         "Obra": f"{reuniao.obra.codigo} - {reuniao.obra.nome}",
         "Status": reuniao.get_status_display(),
@@ -199,7 +199,7 @@ class ReuniaoComunicacaoCreateView(LoginRequiredMixin, CreateView):
         if obra:
             tipo = self.request.GET.get("tipo_reuniao") or "CURTO_PRAZO"
             initial["tipo_reuniao"] = tipo
-            initial["titulo"] = f"Reuniao de {dict(ReuniaoComunicacao.TIPO_REUNIAO_CHOICES).get(tipo, 'Comunicacao')} - {obra.codigo}"
+            initial["titulo"] = f"Reunião de {dict(ReuniaoComunicacao.TIPO_REUNIAO_CHOICES).get(tipo, 'Comunicacao')} - {obra.codigo}"
             initial["data_prevista"] = timezone.localdate()
         return initial
 
@@ -212,7 +212,7 @@ class ReuniaoComunicacaoCreateView(LoginRequiredMixin, CreateView):
     def form_valid(self, form):
         obra = get_obra_do_contexto(self.request)
         if not obra:
-            form.add_error(None, "Selecione uma obra antes de criar uma reuniao.")
+            form.add_error(None, "Selecione uma obra antes de criar uma reunião.")
             return self.form_invalid(form)
         reuniao = criar_reuniao_com_pauta_automatica(
             obra,
@@ -226,7 +226,7 @@ class ReuniaoComunicacaoCreateView(LoginRequiredMixin, CreateView):
         reuniao.save(update_fields=["titulo", "data_realizada", "periodicidade_dias", "atualizado_em"])
         atualizar_resumo_pauta(reuniao)
         self.object = reuniao
-        messages.success(self.request, "Reuniao criada com pauta automatica em rascunho.")
+        messages.success(self.request, "Reunião criada com pauta automática em rascunho.")
         return redirect("reuniao_comunicacao_detail", pk=reuniao.pk)
 
 
@@ -282,7 +282,7 @@ class ReuniaoComunicacaoDetailView(LoginRequiredMixin, DetailView):
             return self._aprovar(request)
         if acao == "retornar_para_ajuste":
             return self._retornar_para_ajuste(request)
-        messages.error(request, "Acao nao reconhecida.")
+        messages.error(request, "Ação não reconhecida.")
         return redirect("reuniao_comunicacao_detail", pk=self.object.pk)
 
     def _render_invalid(self, reuniao_form=None, item_formset=None, item_manual_form=None):
@@ -297,7 +297,7 @@ class ReuniaoComunicacaoDetailView(LoginRequiredMixin, DetailView):
         form = ReuniaoComunicacaoForm(request.POST, instance=self.object)
         if form.is_valid():
             form.save()
-            messages.success(request, "Cabecalho da reuniao atualizado.")
+            messages.success(request, "Cabeçalho da reunião atualizado.")
             return redirect("reuniao_comunicacao_detail", pk=self.object.pk)
         return self._render_invalid(reuniao_form=form)
 
@@ -342,7 +342,7 @@ class ReuniaoComunicacaoDetailView(LoginRequiredMixin, DetailView):
                     self.object,
                     request.user,
                     "PAUTA_VALIDADA",
-                    "Pauta automatica revisada e validada pelo engenheiro da obra.",
+                    "Pauta automática revisada e validada pelo engenheiro da obra.",
                 )
                 messages.success(request, "Pauta validada com sucesso.")
             else:
@@ -359,7 +359,7 @@ class ReuniaoComunicacaoDetailView(LoginRequiredMixin, DetailView):
 
     def _enviar_para_aprovacao(self, request):
         if not can_submit_for_approval(request.user):
-            messages.error(request, "Seu perfil nao pode enviar atas para aprovacao.")
+            messages.error(request, "Seu perfil não pode enviar atas para aprovação.")
             return redirect("reuniao_comunicacao_detail", pk=self.object.pk)
         if not self.object.itens_pauta.filter(ativo=True).exists():
             messages.error(request, "Inclua pelo menos um item ativo na pauta antes de compilar a ata.")
@@ -372,13 +372,13 @@ class ReuniaoComunicacaoDetailView(LoginRequiredMixin, DetailView):
         self.object.aprovado_por = None
         self.object.parecer_aprovacao = (request.POST.get("parecer_aprovacao") or "").strip()
         self.object.save()
-        registrar_historico_reuniao(self.object, request.user, "ENVIO_APROVACAO", "Ata compilada e enviada para aprovacao.")
-        messages.success(request, "Ata compilada e enviada para aprovacao.")
+        registrar_historico_reuniao(self.object, request.user, "ENVIO_APROVACAO", "Ata compilada e enviada para aprovação.")
+        messages.success(request, "Ata compilada e enviada para aprovação.")
         return redirect("reuniao_comunicacao_detail", pk=self.object.pk)
 
     def _aprovar(self, request):
         if not can_approve_document(request.user):
-            messages.error(request, "Seu perfil nao possui alcada documental para aprovar a ata.")
+            messages.error(request, "Seu perfil não possui alçada documental para aprovar a ata.")
             return redirect("reuniao_comunicacao_detail", pk=self.object.pk)
         before = AuditService.instance_to_dict(self.object)
         self.object.status = "APROVADA"
@@ -396,7 +396,7 @@ class ReuniaoComunicacaoDetailView(LoginRequiredMixin, DetailView):
 
     def _retornar_para_ajuste(self, request):
         if not can_approve_document(request.user):
-            messages.error(request, "Seu perfil nao possui alcada documental para devolver a ata.")
+            messages.error(request, "Seu perfil não possui alçada documental para devolver a ata.")
             return redirect("reuniao_comunicacao_detail", pk=self.object.pk)
         parecer = (request.POST.get("parecer_aprovacao") or "").strip()
         if not parecer:
@@ -436,7 +436,7 @@ def reuniao_comunicacao_pauta_excel_view(request, pk):
     linhas = _linhas_exportacao_pauta(reuniao)
     return _exportar_excel_response(
         f"pauta_{reuniao.numero}.xlsx".replace("/", "-"),
-        "Pauta de Reuniao",
+        "Pauta de Reunião",
         linhas or [{"Secao": "-", "Origem": "-", "Item": "-", "Contexto": "-"}],
     )
 
@@ -448,7 +448,7 @@ def reuniao_comunicacao_ata_excel_view(request, pk):
     linhas = _linhas_exportacao_ata(reuniao)
     return _exportar_excel_response(
         f"ata_{reuniao.numero}.xlsx".replace("/", "-"),
-        "Ata de Reuniao",
+        "Ata de Reunião",
         linhas or [{"Secao": "-", "Origem": "-", "Item": "-", "Contexto": "-", "O que sera feito": "-", "Quem fara": "-", "Quando": "-"}],
     )
 
@@ -477,7 +477,7 @@ def reuniao_comunicacao_pauta_pdf_view(request, pk):
         )
     return _pdf_relatorio_probatorio_response(
         f"pauta_{reuniao.numero}.pdf".replace("/", "-"),
-        "Pauta de Reuniao",
+        "Pauta de Reunião",
         _resumo_exportacao_reuniao(reuniao, tipo_documento="Pauta"),
         _linhas_exportacao_historico(reuniao),
         [],
@@ -503,7 +503,7 @@ def reuniao_comunicacao_ata_pdf_view(request, pk):
     ]
     return _pdf_relatorio_probatorio_response(
         f"ata_{reuniao.numero}.pdf".replace("/", "-"),
-        "Ata de Reuniao",
+        "Ata de Reunião",
         _resumo_exportacao_reuniao(reuniao, tipo_documento="Ata"),
         _linhas_exportacao_historico(reuniao),
         [],

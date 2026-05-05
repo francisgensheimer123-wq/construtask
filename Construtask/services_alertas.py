@@ -59,7 +59,7 @@ CODIGO_ALERTA_COMPROMISSO_ACIMA_ORCADO = "COST-BUD-001"
 TITULO_ALERTA_COMPROMISSO_ACIMA_ORCADO = "Compromisso acima do valor orçado"
 
 CODIGO_ALERTA_MULTIPLOS_RISCOS = "RISK-ACC-001"
-TITULO_ALERTA_MULTIPLOS_RISCOS = "Acumulo de riscos operacionais não tratados"
+TITULO_ALERTA_MULTIPLOS_RISCOS = "Acúmulo de riscos operacionais não tratados"
 
 CODIGO_ALERTA_DESVIO_COMBINADO = "COMB-001"
 TITULO_ALERTA_DESVIO_COMBINADO = "Desvio simultâneo de prazo e custo na atividade"
@@ -95,7 +95,7 @@ CATALOGO_REGRAS_OPERACIONAIS = [
         "codigo": CODIGO_ALERTA_PLANEJAMENTO_SUPRIMENTOS,
         "titulo": TITULO_ALERTA_PLANEJAMENTO_SUPRIMENTOS,
         "frente": "Suprimentos e mobilização",
-        "gatilho": "Atividade futura sem solicitação compativel vinculada.",
+        "gatilho": "Atividade futura sem solicitação compatível vinculada.",
         "impacto": "Antecipa ruptura de suprimentos e atraso de mobilização.",
         "recomendacao": "Antecipar solicitação, cotação e contratação das frentes proximas.",
         "tipo_parametro": "dias",
@@ -105,9 +105,9 @@ CATALOGO_REGRAS_OPERACIONAIS = [
         "codigo": CODIGO_ALERTA_CONTRATO_SEM_MEDICAO,
         "titulo": TITULO_ALERTA_CONTRATO_SEM_MEDICAO,
         "frente": "Governanca contratual",
-        "gatilho": "Contrato ativo sem medicao apos a tolerancia definida.",
-        "impacto": "Mostra perda de ritmo contratual e falta de lastro de execucao.",
-        "recomendacao": "Cobrar medicao, status fisico e evidencia de execucao do contrato.",
+        "gatilho": "Contrato ativo sem medição após a tolerância definida.",
+        "impacto": "Mostra perda de ritmo contratual e falta de lastro de execução.",
+        "recomendacao": "Cobrar medição, status físico e evidência de execução do contrato.",
         "tipo_parametro": "dias",
         "resolver_valor": lambda parametros: parametros.contrato_sem_medicao_dias,
     },
@@ -115,8 +115,8 @@ CATALOGO_REGRAS_OPERACIONAIS = [
         "codigo": CODIGO_ALERTA_MEDICAO_SEM_NOTA,
         "titulo": TITULO_ALERTA_MEDICAO_SEM_NOTA,
         "frente": "Faturamento e documentos",
-        "gatilho": "Medicao aprovada sem nota fiscal dentro do prazo operacional.",
-        "impacto": "Expõe gargalo entre execucao, faturamento e documentacao fiscal.",
+        "gatilho": "Medição aprovada sem nota fiscal dentro do prazo operacional.",
+        "impacto": "Expõe gargalo entre execução, faturamento e documentacao fiscal.",
         "recomendacao": "Cobrar emissao da nota e amarrar o faturamento ao fluxo documental.",
         "tipo_parametro": "dias",
         "resolver_valor": lambda parametros: parametros.medicao_sem_nota_dias,
@@ -125,7 +125,7 @@ CATALOGO_REGRAS_OPERACIONAIS = [
         "codigo": CODIGO_ALERTA_NOTA_SEM_RATEIO,
         "titulo": TITULO_ALERTA_NOTA_SEM_RATEIO,
         "frente": "Custos e apropriacao",
-        "gatilho": "Percentual pendente de rateio acima do minimo definido.",
+        "gatilho": "Percentual pendente de rateio acima do mínimo definido.",
         "impacto": "Evita custo financeiro sem apropriacao completa na obra.",
         "recomendacao": "Completar rateio e conferir centro de custo antes do fechamento.",
         "tipo_parametro": "percentual",
@@ -135,9 +135,9 @@ CATALOGO_REGRAS_OPERACIONAIS = [
         "codigo": CODIGO_ALERTA_RISCO_VENCIDO,
         "titulo": TITULO_ALERTA_RISCO_VENCIDO,
         "frente": "Riscos",
-        "gatilho": "Prazo de tratamento vencido acima da tolerancia.",
-        "impacto": "Destaca riscos sem acao efetiva antes que virem problema real.",
-        "recomendacao": "Atualizar plano de resposta, responsavel e nova data-meta.",
+        "gatilho": "Prazo de tratamento vencido acima da tolerância.",
+        "impacto": "Destaca riscos sem ação efetiva antes que virem problema real.",
+        "recomendacao": "Atualizar plano de resposta, responsável e nova data-meta.",
         "tipo_parametro": "dias",
         "resolver_valor": lambda parametros: parametros.risco_vencido_tolerancia_dias,
     },
@@ -145,9 +145,9 @@ CATALOGO_REGRAS_OPERACIONAIS = [
         "codigo": CODIGO_ALERTA_NC_SEM_EVOLUCAO,
         "titulo": TITULO_ALERTA_NC_SEM_EVOLUCAO,
         "frente": "Qualidade",
-        "gatilho": "Nao conformidade aberta sem nova movimentacao.",
-        "impacto": "Reforca governanca de qualidade e encerramento com evidencia.",
-        "recomendacao": "Atualizar tratativa, evidencias e responsavel de encerramento.",
+        "gatilho": "Não conformidade aberta sem nova movimentação.",
+        "impacto": "Reforca governanca de qualidade e encerramento com evidência.",
+        "recomendacao": "Atualizar tratativa, evidências e responsável de encerramento.",
         "tipo_parametro": "dias",
         "resolver_valor": lambda parametros: parametros.nao_conformidade_sem_evolucao_dias,
     },
@@ -155,9 +155,9 @@ CATALOGO_REGRAS_OPERACIONAIS = [
         "codigo": CODIGO_ALERTA_ATIVIDADE_SEM_AVANCO,
         "titulo": TITULO_ALERTA_ATIVIDADE_SEM_AVANCO,
         "frente": "Prazo",
-        "gatilho": "Atividade com inicio atingido sem progresso acima da tolerancia.",
+        "gatilho": "Atividade com inicio atingido sem progresso acima da tolerância.",
         "impacto": "Aponta atraso imediato no cronograma e ajuda a agir cedo.",
-        "recomendacao": "Reprogramar frente, reforcar recursos e validar apontamento fisico.",
+        "recomendacao": "Reprogramar frente, reforcar recursos e validar apontamento físico.",
         "tipo_parametro": "dias",
         "resolver_valor": lambda parametros: parametros.atividade_sem_avanco_tolerancia_dias,
     },
@@ -165,22 +165,22 @@ CATALOGO_REGRAS_OPERACIONAIS = [
         "codigo": CODIGO_ALERTA_DESVIO_PRAZO,
         "titulo": TITULO_ALERTA_DESVIO_PRAZO,
         "frente": "Prazo",
-        "gatilho": "Desvio percentual de prazo apos percentual minimo previsto.",
+        "gatilho": "Desvio percentual de prazo após percentual mínimo previsto.",
         "impacto": "Mostra perda de ritmo antes do atraso definitivo da obra.",
-        "recomendacao": "Ativar plano de recuperacao do cronograma da atividade.",
+        "recomendacao": "Ativar plano de recuperação do cronograma da atividade.",
         "tipo_parametro": "texto",
         "resolver_valor": lambda parametros: (
-            f"Minimo {parametros.desvio_prazo_percentual_minimo_previsto}% / "
-            f"tolerancia {parametros.desvio_prazo_tolerancia_percentual}%"
+            f"Mínimo {parametros.desvio_prazo_percentual_minimo_previsto}% / "
+            f"tolerância {parametros.desvio_prazo_tolerancia_percentual}%"
         ),
     },
     {
         "codigo": CODIGO_ALERTA_ESTOURO_PRAZO,
         "titulo": TITULO_ALERTA_ESTOURO_PRAZO,
         "frente": "Prazo",
-        "gatilho": "Data estimada de termino excede a folga de prazo definida.",
+        "gatilho": "Data estimada de término excede a folga de prazo definida.",
         "impacto": "Mostra risco de estouro global de prazo com base no ritmo atual.",
-        "recomendacao": "Aprovar plano de recuperacao e rever sequenciamento da obra.",
+        "recomendacao": "Aprovar plano de recuperação e rever sequenciamento da obra.",
         "tipo_parametro": "dias",
         "resolver_valor": lambda parametros: parametros.estouro_prazo_tolerancia_dias,
     },
@@ -188,29 +188,29 @@ CATALOGO_REGRAS_OPERACIONAIS = [
         "codigo": CODIGO_ALERTA_DESVIO_CUSTO,
         "titulo": TITULO_ALERTA_DESVIO_CUSTO,
         "frente": "Custo",
-        "gatilho": "Custo acima da tolerancia percentual definida.",
+        "gatilho": "Custo acima da tolerância percentual definida.",
         "impacto": "Ajuda a detectar estouro de custo antes de contaminar a obra inteira.",
-        "recomendacao": "Revisar produtividade, contratacoes e apropriacoes do item.",
+        "recomendacao": "Revisar produtividade, contratações e apropriacoes do item.",
         "tipo_parametro": "percentual",
         "resolver_valor": lambda parametros: parametros.desvio_custo_tolerancia_percentual,
     },
     {
         "codigo": CODIGO_ALERTA_CUSTO_SEM_AVANCO,
         "titulo": TITULO_ALERTA_CUSTO_SEM_AVANCO,
-        "frente": "Custo x execucao",
-        "gatilho": "Valor realizado sem avanço fisico acima do minimo definido.",
-        "impacto": "Identifica custo sem lastro fisico e possivel retrabalho.",
-        "recomendacao": "Conferir apontamento fisico, competencia e documentacao da despesa.",
+        "frente": "Custo x execução",
+        "gatilho": "Valor realizado sem avanço físico acima do mínimo definido.",
+        "impacto": "Identifica custo sem lastro físico e possível retrabalho.",
+        "recomendacao": "Conferir apontamento físico, competencia e documentacao da despesa.",
         "tipo_parametro": "moeda",
         "resolver_valor": lambda parametros: parametros.custo_sem_avanco_valor_minimo,
     },
     {
         "codigo": CODIGO_ALERTA_COMPROMISSO_ACIMA_ORCADO,
         "titulo": TITULO_ALERTA_COMPROMISSO_ACIMA_ORCADO,
-        "frente": "Orcamento e compras",
-        "gatilho": "Compromisso acima do orcado somando a tolerancia percentual.",
-        "impacto": "Protege o orcamento contra contratacao ou compra acima do previsto.",
-        "recomendacao": "Rever alcada, baseline e justificativa de contratacao.",
+        "frente": "Orçamento e compras",
+        "gatilho": "Compromisso acima do orçado somando a tolerância percentual.",
+        "impacto": "Protege o orçamento contra contratação ou compra acima do previsto.",
+        "recomendacao": "Rever alcada, baseline e justificativa de contratação.",
         "tipo_parametro": "percentual",
         "resolver_valor": lambda parametros: parametros.compromisso_acima_orcado_tolerancia_percentual,
     },
@@ -218,13 +218,13 @@ CATALOGO_REGRAS_OPERACIONAIS = [
         "codigo": CODIGO_ALERTA_MULTIPLOS_RISCOS,
         "titulo": TITULO_ALERTA_MULTIPLOS_RISCOS,
         "frente": "Riscos",
-        "gatilho": "Quantidade de riscos ativos acima do limite e do nivel critico.",
-        "impacto": "Evidencia perda sistêmica de controle na obra.",
-        "recomendacao": "Executar revisao extraordinaria da matriz de riscos e dos responsaveis.",
+        "gatilho": "Quantidade de riscos ativos acima do limite e do nível crítico.",
+        "impacto": "Evidência perda sistêmica de controle na obra.",
+        "recomendacao": "Executar revisão extraordinaria da matriz de riscos e dos responsaveis.",
         "tipo_parametro": "texto",
         "resolver_valor": lambda parametros: (
-            f"Minimo {parametros.acumulo_riscos_quantidade_minima} / "
-            f"critico {parametros.acumulo_riscos_quantidade_critica}"
+            f"Mínimo {parametros.acumulo_riscos_quantidade_minima} / "
+            f"crítico {parametros.acumulo_riscos_quantidade_critica}"
         ),
     },
     {
@@ -232,10 +232,10 @@ CATALOGO_REGRAS_OPERACIONAIS = [
         "titulo": TITULO_ALERTA_DESVIO_COMBINADO,
         "frente": "Prazo x custo",
         "gatilho": "Atividade com desvio simultaneo de prazo e custo.",
-        "impacto": "Mostra perda conjunta de desempenho fisico-financeiro.",
-        "recomendacao": "Executar plano integrado de recuperacao, suprimento e produtividade.",
+        "impacto": "Mostra perda conjunta de desempenho físico-financeiro.",
+        "recomendacao": "Executar plano integrado de recuperação, suprimento e produtividade.",
         "tipo_parametro": "texto",
-        "resolver_valor": lambda parametros: "Correlacao automatica entre regras de prazo e custo",
+        "resolver_valor": lambda parametros: "Correlacao automática entre regras de prazo e custo",
     },
 ]
 
@@ -271,18 +271,18 @@ def catalogo_alertas_empresa(empresa=None, *, incluir_score=True):
                     "codigo": "ALERT-SLA-001",
                     "titulo": "Alerta sem workflow recente",
                     "frente": "Governanca do tratamento",
-                    "gatilho": "Alerta sem nova movimentacao acima da tolerancia operacional.",
+                    "gatilho": "Alerta sem nova movimentação acima da tolerância operacional.",
                     "impacto": "Diferencia alerta ativo de alerta negligenciado.",
-                    "acao_recomendada": "Cobrar responsavel e registrar avancos de tratamento.",
+                    "acao_recomendada": "Cobrar responsável e registrar avancos de tratamento.",
                     "valor_atual": _formatar_parametro_alerta(parametros.alerta_sem_workflow_dias, "dias"),
                 },
                 {
                     "codigo": "ALERT-SLA-002",
-                    "titulo": "Prazo de solucao do alerta estourado",
+                    "titulo": "Prazo de solução do alerta estourado",
                     "frente": "Governanca do tratamento",
-                    "gatilho": "Alerta aberto alem do prazo padrao de solucao da empresa.",
+                    "gatilho": "Alerta aberto além do prazo padrão de solução da empresa.",
                     "impacto": "Leva envelhecimento do alerta para a leitura executiva da obra.",
-                    "acao_recomendada": "Escalar alerta em atraso e revisar prazo de solucao.",
+                    "acao_recomendada": "Escalar alerta em atraso e revisar prazo de solução.",
                     "valor_atual": _formatar_parametro_alerta(parametros.alerta_prazo_solucao_dias, "dias"),
                 },
             ]
@@ -536,7 +536,7 @@ def _itens_folha_plano_referencia(obra):
 def sincronizar_alertas_planejamento_suprimentos(obra):
     """
     Regra PLAN-SUP-001:
-    atividade dos proximos 60 dias sem solicitacao de compra compativel.
+    atividade dos proximos 60 dias sem solicitação de compra compatível.
     """
     plano = _plano_referencia_obra(obra)
     parametros = _parametros_alerta(obra)
@@ -608,11 +608,11 @@ def sincronizar_alertas_planejamento_suprimentos(obra):
                 "centro_custo_codigo": centro.codigo,
                 "centro_custo_descricao": centro.descricao,
                 "origem_vinculo": centro_info["origem"],
-                "mensagem": "Nenhuma solicitacao de compra compativel encontrada para o centro de custo vinculado.",
+                "mensagem": "Nenhuma solicitação de compra compatível encontrada para o centro de custo vinculado.",
             }
             registros[referencia] = {
                 "titulo": TITULO_ALERTA_PLANEJAMENTO_SUPRIMENTOS,
-                "descricao": f"A atividade {item.codigo_atividade} - {item.atividade} inicia em {dias_para_inicio} dia(s) e nao possui solicitacao de compra compativel para o centro de custo {centro.codigo} - {centro.descricao}.",
+                "descricao": f"A atividade {item.codigo_atividade} - {item.atividade} inicia em {dias_para_inicio} dia(s) e não possui solicitação de compra compatível para o centro de custo {centro.codigo} - {centro.descricao}.",
                 "severidade": _severidade_por_proximidade(dias_para_inicio),
                 "status": "ABERTO",
                 "entidade_tipo": "PlanoFisicoItem",
@@ -658,7 +658,7 @@ def sincronizar_alertas_contrato_sem_medicao(obra):
         referencia = str(contrato.pk)
         registros[referencia] = {
             "titulo": TITULO_ALERTA_CONTRATO_SEM_MEDICAO,
-            "descricao": f"O contrato {contrato.numero} esta ativo ha {dias_sem_medicao} dia(s) sem medicao registrada.",
+            "descricao": f"O contrato {contrato.numero} está ativo ha {dias_sem_medicao} dia(s) sem medição registrada.",
             "severidade": _severidade_por_idade(dias_sem_medicao),
             "status": "ABERTO",
             "entidade_tipo": "Compromisso",
@@ -701,10 +701,10 @@ def sincronizar_alertas_medicao_sem_nota(obra):
         referencia = str(medicao.pk)
         registros[referencia] = {
             "titulo": TITULO_ALERTA_MEDICAO_SEM_NOTA,
-            "descricao": f"A medicao {medicao.numero_da_medicao} esta em {medicao.get_status_display()} ha {dias_sem_nota} dia(s) sem nota fiscal vinculada.",
+            "descricao": f"A medição {medicao.numero_da_medicao} está em {medicao.get_status_display()} ha {dias_sem_nota} dia(s) sem nota fiscal vinculada.",
             "severidade": _severidade_por_idade(dias_sem_nota),
             "status": "ABERTO",
-            "entidade_tipo": "Medicao",
+            "entidade_tipo": "Medição",
             "entidade_id": medicao.pk,
             "evidencias": {
                 "medicao_numero": medicao.numero_da_medicao,
@@ -783,7 +783,7 @@ def sincronizar_alertas_risco_vencido(obra):
         referencia = str(risco.pk)
         registros[referencia] = {
             "titulo": TITULO_ALERTA_RISCO_VENCIDO,
-            "descricao": f"O risco {risco.codigo} - {risco.titulo} esta com prazo vencido ha {dias_vencido} dia(s) e segue em {risco.get_status_display()}.",
+            "descricao": f"O risco {risco.codigo} - {risco.titulo} está com prazo vencido ha {dias_vencido} dia(s) e segue em {risco.get_status_display()}.",
             "severidade": "CRITICA" if risco.nivel > 15 else _severidade_por_idade(dias_vencido),
             "status": "ABERTO",
             "entidade_tipo": "Risco",
@@ -825,7 +825,7 @@ def sincronizar_alertas_nc_sem_evolucao(obra):
         referencia = str(nc.pk)
         registros[referencia] = {
             "titulo": TITULO_ALERTA_NC_SEM_EVOLUCAO,
-            "descricao": f"A nao conformidade {nc.numero} esta sem evolucao registrada ha {dias_sem_evolucao} dia(s).",
+            "descricao": f"A não conformidade {nc.numero} está sem evolução registrada ha {dias_sem_evolucao} dia(s).",
             "severidade": _severidade_por_idade(dias_sem_evolucao),
             "status": "ABERTO",
             "entidade_tipo": "NaoConformidade",
@@ -906,7 +906,7 @@ def sincronizar_alertas_cronograma_desempenho(obra):
             dias_sem_avanco = max((hoje - item.data_inicio_prevista).days, 0)
             registros[(CODIGO_ALERTA_ATIVIDADE_SEM_AVANCO, referencia)] = {
                 "titulo": TITULO_ALERTA_ATIVIDADE_SEM_AVANCO,
-                "descricao": f"A atividade {item.codigo_atividade} - {item.atividade} deveria ter iniciado e segue sem avanço fisico registrado.",
+                "descricao": f"A atividade {item.codigo_atividade} - {item.atividade} deveria ter iniciado e segue sem avanço físico registrado.",
                 "severidade": _severidade_por_idade(dias_sem_avanco),
                 "status": "ABERTO",
                 "entidade_tipo": "PlanoFisicoItem",
@@ -928,7 +928,7 @@ def sincronizar_alertas_cronograma_desempenho(obra):
             diferenca = progresso_previsto - progresso_real
             registros[(CODIGO_ALERTA_DESVIO_PRAZO, referencia)] = {
                 "titulo": TITULO_ALERTA_DESVIO_PRAZO,
-                "descricao": f"A atividade {item.codigo_atividade} - {item.atividade} apresenta avanço fisico abaixo do tempo decorrido.",
+                "descricao": f"A atividade {item.codigo_atividade} - {item.atividade} apresenta avanço físico abaixo do tempo decorrido.",
                 "severidade": "CRITICA" if diferenca >= Decimal("30.00") else "ALTA",
                 "status": "ABERTO",
                 "entidade_tipo": "PlanoFisicoItem",
@@ -954,7 +954,7 @@ def sincronizar_alertas_cronograma_desempenho(obra):
                 referencia = str(item.pk)
                 registros[(CODIGO_ALERTA_ESTOURO_PRAZO, referencia)] = {
                     "titulo": TITULO_ALERTA_ESTOURO_PRAZO,
-                    "descricao": f"A atividade {item.codigo_atividade} - {item.atividade} projeta termino alem do prazo contratual da obra.",
+                    "descricao": f"A atividade {item.codigo_atividade} - {item.atividade} projeta término além do prazo contratual da obra.",
                     "severidade": "CRITICA" if atraso_estimado >= 15 else "ALTA",
                     "status": "ABERTO",
                     "entidade_tipo": "PlanoFisicoItem",
@@ -997,7 +997,7 @@ def sincronizar_alertas_cronograma_desempenho(obra):
             referencia = str(item.pk)
             registros[(CODIGO_ALERTA_CUSTO_SEM_AVANCO, referencia)] = {
                 "titulo": TITULO_ALERTA_CUSTO_SEM_AVANCO,
-                "descricao": f"A atividade {item.codigo_atividade} - {item.atividade} possui custo lancado sem lastro fisico registrado.",
+                "descricao": f"A atividade {item.codigo_atividade} - {item.atividade} possui custo lancado sem lastro físico registrado.",
                 "severidade": "CRITICA" if custo_realizado >= Decimal("5000.00") else "ALTA",
                 "status": "ABERTO",
                 "entidade_tipo": "PlanoFisicoItem",
@@ -1069,7 +1069,7 @@ def sincronizar_alertas_compromissos_acima_orcado(obra):
                     referencia = f"{compromisso.pk}:{item.pk}"
                     registros[referencia] = {
                         "titulo": TITULO_ALERTA_COMPROMISSO_ACIMA_ORCADO,
-                        "descricao": f"O item {item.centro_custo.codigo} do compromisso {compromisso.numero} supera o valor orcado da EAP vinculada.",
+                        "descricao": f"O item {item.centro_custo.codigo} do compromisso {compromisso.numero} supera o valor orçado da EAP vinculada.",
                         "severidade": "CRITICA",
                         "status": "ABERTO",
                         "entidade_tipo": "CompromissoItem",
@@ -1090,7 +1090,7 @@ def sincronizar_alertas_compromissos_acima_orcado(obra):
                 referencia = str(compromisso.pk)
                 registros[referencia] = {
                     "titulo": TITULO_ALERTA_COMPROMISSO_ACIMA_ORCADO,
-                    "descricao": f"O compromisso {compromisso.numero} supera o valor orcado do centro de custo vinculado.",
+                    "descricao": f"O compromisso {compromisso.numero} supera o valor orçado do centro de custo vinculado.",
                     "severidade": "CRITICA",
                     "status": "ABERTO",
                     "entidade_tipo": "Compromisso",
@@ -1116,7 +1116,7 @@ def sincronizar_alertas_acumulo_riscos(obra):
     if riscos_ativos >= parametros.acumulo_riscos_quantidade_minima:
         registros["obra"] = {
             "titulo": TITULO_ALERTA_MULTIPLOS_RISCOS,
-            "descricao": f"A obra possui {riscos_ativos} riscos ativos sem tratamento concluido, indicando perda de controle operacional.",
+            "descricao": f"A obra possui {riscos_ativos} riscos ativos sem tratamento concluído, indicando perda de controle operacional.",
             "severidade": "CRITICA" if riscos_ativos >= parametros.acumulo_riscos_quantidade_critica else "ALTA",
             "status": "ABERTO",
             "entidade_tipo": "Obra",
@@ -1187,7 +1187,7 @@ def resumo_executivo_alertas_operacionais(obra):
             "frente": "Prazo e custo combinados",
             "total": resumo_alertas["desvio_combinado"],
             "nivel": "critico" if resumo_alertas["desvio_combinado"] else "baixo",
-            "acao": "Priorizar plano de recuperacao fisico-financeiro da atividade impactada.",
+            "acao": "Priorizar plano de recuperação físico-financeiro da atividade impactada.",
         },
         {
             "frente": "Suprimentos e mobilizacao",
@@ -1202,7 +1202,7 @@ def resumo_executivo_alertas_operacionais(obra):
             "acao": "Antecipar compras, contratos e frentes criticas dos proximos ciclos.",
         },
         {
-            "frente": "Financeiro sem lastro fisico",
+            "frente": "Financeiro sem lastro físico",
             "total": resumo_alertas["custo_sem_avanco"] + resumo_alertas["medicao_sem_nota"] + resumo_alertas["nota_sem_rateio"],
             "nivel": "critico"
             if (resumo_alertas["custo_sem_avanco"] + resumo_alertas["medicao_sem_nota"] + resumo_alertas["nota_sem_rateio"]) >= 8
@@ -1211,7 +1211,7 @@ def resumo_executivo_alertas_operacionais(obra):
             else "medio"
             if (resumo_alertas["custo_sem_avanco"] + resumo_alertas["medicao_sem_nota"] + resumo_alertas["nota_sem_rateio"]) >= 1
             else "baixo",
-            "acao": "Revisar medicao, nota e apropriacao para garantir evidencias de execucao.",
+            "acao": "Revisar medição, nota e apropriacao para garantir evidências de execução.",
         },
         {
             "frente": "Riscos e qualidade",
@@ -1223,7 +1223,7 @@ def resumo_executivo_alertas_operacionais(obra):
             else "medio"
             if (resumo_alertas["risco_vencido"] + resumo_alertas["acumulo_riscos"] + resumo_alertas["nc_sem_evolucao"]) >= 1
             else "baixo",
-            "acao": "Atacar riscos vencidos e nao conformidades paradas antes de ampliar impacto sistemico.",
+            "acao": "Atacar riscos vencidos e não conformidades paradas antes de ampliar impacto sistemico.",
         },
     ]
     correlacoes = [
@@ -1237,10 +1237,10 @@ def resumo_executivo_alertas_operacionais(obra):
             else "medio"
             if (resumo_alertas["desvio_prazo"] + resumo_alertas["estouro_prazo"] + resumo_alertas["desvio_custo"] + resumo_alertas["desvio_combinado"]) >= 1
             else "baixo",
-            "descricao": "Atividades com perda simultanea de desempenho fisico e financeiro.",
+            "descricao": "Atividades com perda simultanea de desempenho físico e financeiro.",
         },
         {
-            "titulo": "Suprimentos x Execucao",
+            "titulo": "Suprimentos x Execução",
             "quantidade": resumo_alertas["planejamento_suprimentos"] + resumo_alertas["contrato_sem_medicao"] + resumo_alertas["medicao_sem_nota"],
             "nivel": "critico"
             if (resumo_alertas["planejamento_suprimentos"] + resumo_alertas["contrato_sem_medicao"] + resumo_alertas["medicao_sem_nota"]) >= 8
@@ -1249,7 +1249,7 @@ def resumo_executivo_alertas_operacionais(obra):
             else "medio"
             if (resumo_alertas["planejamento_suprimentos"] + resumo_alertas["contrato_sem_medicao"] + resumo_alertas["medicao_sem_nota"]) >= 1
             else "baixo",
-            "descricao": "Frentes futuras, contratos e medicoes com risco de ruptura operacional.",
+            "descricao": "Frentes futuras, contratos e medições com risco de ruptura operacional.",
         },
         {
             "titulo": "Riscos x Qualidade",

@@ -108,7 +108,7 @@ class PlanoEmpresa(models.Model):
         ).count()
 
     def obras_ativas(self):
-        """Conta apenas obras aptas para operacao ativa do plano."""
+        """Conta apenas obras aptas para operação ativa do plano."""
         return self.empresa.obras.exclude(status__in=["PARALISADA", "CONCLUIDA"]).count()
 
     def pode_criar_usuario(self):
@@ -138,8 +138,8 @@ class PlanoEmpresa(models.Model):
 
 class Empresa(models.Model):
     """
-    Modelo Tenant para suportar mÃºltiplas empresas (Multi-tenant).
-    Cada empresa pode ter suas prÃ³prias obras e usuÃ¡rios.
+    Modelo Tenant para suportar múltiplas empresas (Multi-tenant).
+    Cada empresa pode ter suas próprias obras e usuários.
     """
     class Meta:
         verbose_name = "Empresa"
@@ -162,7 +162,7 @@ class Empresa(models.Model):
 class ParametroAlertaEmpresa(models.Model):
     class Meta:
         verbose_name = "Parametro de Alerta da Empresa"
-        verbose_name_plural = "Parametros de Alertas da Empresa"
+        verbose_name_plural = "Parâmetros de Alertas da Empresa"
 
     empresa = models.OneToOneField(Empresa, on_delete=models.CASCADE, related_name="parametros_alerta")
     planejamento_suprimentos_janela_dias = models.PositiveIntegerField(default=60)
@@ -185,7 +185,7 @@ class ParametroAlertaEmpresa(models.Model):
     atualizado_em = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"Parametros de alerta - {self.empresa.nome}"
+        return f"Parâmetros de alerta - {self.empresa.nome}"
 
     @classmethod
     def obter_ou_criar(cls, empresa):
@@ -215,11 +215,11 @@ class ParametroAlertaEmpresa(models.Model):
 
 class UserProfile(models.Model):
     """
-    Perfil estendido do usuÃ¡rio com empresa (tenant) e papel.
+    Perfil estendido do usuário com empresa (tenant) e papel.
     """
     class Meta:
-        verbose_name = "Perfil de UsuÃ¡rio"
-        verbose_name_plural = "Perfis de UsuÃ¡rio"
+        verbose_name = "Perfil de Usuário"
+        verbose_name_plural = "Perfis de Usuário"
 
     usuario = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="perfil")
     empresa = models.ForeignKey(Empresa, on_delete=models.PROTECT, null=True, blank=True, related_name="usuarios")
@@ -234,12 +234,12 @@ class UserProfile(models.Model):
 
 class UsuarioEmpresa(models.Model):
     """
-    Modelo para vincular usuÃ¡rios a empresas com permissÃµes especÃ­ficas.
-    Cada usuÃ¡rio pertence a uma empresa e pode ser admin dessa empresa.
+    Modelo para vincular usuários a empresas com permissões específicas.
+    Cada usuário pertence a uma empresa e pode ser admin dessa empresa.
     """
     class Meta:
-        verbose_name = "UsuÃ¡rio de Empresa"
-        verbose_name_plural = "UsuÃ¡rios de Empresa"
+        verbose_name = "Usuário de Empresa"
+        verbose_name_plural = "Usuários de Empresa"
         unique_together = ("usuario", "empresa")
         indexes = [
             models.Index(fields=["empresa", "is_admin_empresa"]),
@@ -250,26 +250,26 @@ class UsuarioEmpresa(models.Model):
         ("GERENTE_OBRAS", "Gerente de Obras"),
         ("COORDENADOR_OBRAS", "Coordenador de Obras"),
         ("ENGENHEIRO_OBRAS", "Engenheiro de Obras"),
-        ("TECNICO_OBRAS", "Tecnico de Obras"),
+        ("TECNICO_OBRAS", "Técnico de Obras"),
     )
 
     usuario = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="usuario_empresa")
     empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="usuarios_empresa")
     is_admin_empresa = models.BooleanField(
         default=False,
-        help_text="Se marcado, este usuÃ¡rio pode gerenciar usuÃ¡rios e liberar obras da empresa."
+        help_text="Se marcado, este usuário pode gerenciar usuários e liberar obras da empresa."
     )
     papel_aprovacao = models.CharField(
         max_length=30,
         choices=PAPEL_APROVACAO_CHOICES,
         default="TECNICO_OBRAS",
-        help_text="Define a alcada de aprovacao operacional do usuario.",
+        help_text="Define a alçada de aprovação operacional do usuário.",
     )
     obras_permitidas = models.ManyToManyField(
         "Obra",
         related_name="usuarios_permitidos",
         blank=True,
-        help_text="Obras que este usuÃ¡rio pode acessar. Se vazio e nÃ£o for admin, nÃ£o terÃ¡ acesso a nenhuma obra."
+        help_text="Obras que este usuário pode acessar. Se vazio e não for admin, não terá acesso a nenhuma obra."
     )
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)
@@ -288,8 +288,8 @@ class UsuarioEmpresa(models.Model):
 
 class PermissaoModuloAcao(models.Model):
     class Meta:
-        verbose_name = "Permissao por Modulo"
-        verbose_name_plural = "Permissoes por Modulo"
+        verbose_name = "Permissão por Módulo"
+        verbose_name_plural = "Permissões por Módulo"
         unique_together = ("usuario_empresa", "modulo", "acao")
         ordering = ["modulo", "acao"]
 
@@ -318,7 +318,7 @@ class PermissaoModuloAcao(models.Model):
 class AuditEvent(models.Model):
     """
     Modelo de auditoria para conformidade ISO 9.2.
-    Registra todas as operaÃ§Ãµes Create/Update/Delete com diff.
+    Registra todas as operações Create/Update/Delete com diff.
     """
     class Meta:
         verbose_name = "Evento de Auditoria"
@@ -369,12 +369,12 @@ class JobAssincrono(models.Model):
     TIPO_CHOICES = (
         ("SINCRONIZAR_ALERTAS_OBRA", "Sincronizar alertas da obra"),
         ("IMPORTAR_PLANO_CONTAS", "Importar plano de contas"),
-        ("GERAR_RELATORIO_FINANCEIRO", "Gerar relatorio financeiro"),
+        ("GERAR_RELATORIO_FINANCEIRO", "Gerar relatório financeiro"),
     )
     STATUS_CHOICES = (
         ("PENDENTE", "Pendente"),
-        ("EM_EXECUCAO", "Em execucao"),
-        ("CONCLUIDO", "Concluido"),
+        ("EM_EXECUCAO", "Em execução"),
+        ("CONCLUIDO", "Concluído"),
         ("FALHOU", "Falhou"),
     )
 
@@ -408,7 +408,7 @@ class JobAssincrono(models.Model):
 
 class OperacaoBackupSaaS(models.Model):
     class Meta:
-        verbose_name = "Operacao de Backup SaaS"
+        verbose_name = "Operação de Backup SaaS"
         verbose_name_plural = "Operacoes de Backup SaaS"
         ordering = ["-executado_em"]
         indexes = [
@@ -419,7 +419,7 @@ class OperacaoBackupSaaS(models.Model):
 
     TIPO_CHOICES = (
         ("BACKUP", "Backup"),
-        ("TESTE_RESTAURACAO", "Teste de recuperacao"),
+        ("TESTE_RESTAURACAO", "Teste de recuperação"),
     )
     STATUS_CHOICES = (
         ("SUCESSO", "Sucesso"),
@@ -460,8 +460,8 @@ class OperacaoBackupSaaS(models.Model):
 
 class MetricaRequisicao(models.Model):
     class Meta:
-        verbose_name = "Metrica de Requisicao"
-        verbose_name_plural = "Metricas de Requisicao"
+        verbose_name = "Métrica de Requisição"
+        verbose_name_plural = "Métricas de Requisição"
         ordering = ["-criado_em"]
         indexes = [
             models.Index(fields=["metodo", "status_code", "criado_em"]),
@@ -531,7 +531,7 @@ class RastroErroAplicacao(models.Model):
 
 class RegistroAcessoDadoPessoal(models.Model):
     """
-    Registro minimo de acesso administrativo a dados pessoais para governanca LGPD.
+    Registro mínimo de acesso administrativo a dados pessoais para governanca LGPD.
     """
     class Meta:
         verbose_name = "Registro de Acesso a Dado Pessoal"
@@ -544,7 +544,7 @@ class RegistroAcessoDadoPessoal(models.Model):
         ]
 
     CATEGORIA_TITULAR_CHOICES = (
-        ("USUARIO", "Usuario"),
+        ("USUARIO", "Usuário"),
         ("COLABORADOR", "Colaborador"),
         ("FORNECEDOR", "Fornecedor"),
         ("CLIENTE", "Cliente"),
@@ -594,8 +594,8 @@ class RegistroTratamentoDadoPessoal(models.Model):
 
     ACAO_CHOICES = (
         ("CONSULTA", "Consulta"),
-        ("ANONIMIZACAO", "Anonimizacao"),
-        ("EXCLUSAO_LOGICA", "Exclusao logica"),
+        ("ANONIMIZACAO", "Anonimização"),
+        ("EXCLUSAO_LOGICA", "Exclusão logica"),
         ("DESCARTE", "Descarte"),
         ("CONSENTIMENTO", "Consentimento"),
         ("REVOGACAO_CONSENTIMENTO", "Revogacao de consentimento"),
@@ -728,7 +728,7 @@ class AlertaOperacional(models.Model):
 
 class AlertaOperacionalHistorico(models.Model):
     class Meta:
-        verbose_name = "Historico de Alerta Operacional"
+        verbose_name = "Histórico de Alerta Operacional"
         verbose_name_plural = "Historicos de Alertas Operacionais"
         ordering = ["-criado_em"]
         indexes = [
@@ -737,7 +737,7 @@ class AlertaOperacionalHistorico(models.Model):
         ]
 
     ACAO_CHOICES = (
-        ("CRIACAO", "Criacao"),
+        ("CRIACAO", "Criação"),
         ("TRATAMENTO", "Em Tratamento"),
         ("JUSTIFICATIVA", "Justificativa"),
         ("ENCERRAMENTO", "Encerramento"),
@@ -768,7 +768,7 @@ class AlertaOperacionalHistorico(models.Model):
 
 class ExecucaoRegraOperacional(models.Model):
     class Meta:
-        verbose_name = "Execucao de Regra Operacional"
+        verbose_name = "Execução de Regra Operacional"
         verbose_name_plural = "Execucoes de Regras Operacionais"
         ordering = ["-executado_em"]
         indexes = [
@@ -857,7 +857,7 @@ class PlanoContas(MPTTModel):
             raise ValidationError("O centro de custo filho deve pertencer a mesma obra do pai.")
         nivel = self.level if self.pk else (self.parent.level + 1 if self.parent else 0)
         if nivel < 5 and (self.unidade or self.quantidade or self.valor_unitario):
-            raise ValidationError("Unidade, quantidade e valor unitÃ¡rio sÃ³ podem existir no nÃ­vel 6.")
+            raise ValidationError("Unidade, quantidade e valor unitário só podem existir no nível 6.")
 
     def save(self, *args, **kwargs):
         if self.parent and not self.obra_id:
@@ -898,13 +898,13 @@ class PlanoContas(MPTTModel):
 class OrcamentoBaseline(models.Model):
     STATUS_CHOICES = (
         ("RASCUNHO", "Rascunho"),
-        ("EM_APROVACAO", "Em Aprovacao"),
+        ("EM_APROVACAO", "Em Aprovação"),
         ("APROVADA", "Aprovada"),
     )
 
     class Meta:
-        verbose_name = "Baseline de Orcamento"
-        verbose_name_plural = "Baselines de Orcamento"
+        verbose_name = "Baseline de Orçamento"
+        verbose_name_plural = "Baselines de Orçamento"
         ordering = ["-criado_em"]
 
     obra = models.ForeignKey("Obra", on_delete=models.CASCADE, related_name="baselines_orcamento")
@@ -947,8 +947,8 @@ class OrcamentoBaseline(models.Model):
 
 class OrcamentoBaselineItem(models.Model):
     class Meta:
-        verbose_name = "Item da Baseline de Orcamento"
-        verbose_name_plural = "Itens da Baseline de Orcamento"
+        verbose_name = "Item da Baseline de Orçamento"
+        verbose_name_plural = "Itens da Baseline de Orçamento"
         ordering = ["codigo"]
 
     baseline = models.ForeignKey(OrcamentoBaseline, on_delete=models.CASCADE, related_name="itens")
@@ -976,17 +976,17 @@ STATUS_OBRA_CHOICES = (
 
 STATUS_COMPROMISSO_CHOICES = (
     ("RASCUNHO", "Rascunho"),
-    ("EM_APROVACAO", "Em Aprovacao"),
+    ("EM_APROVACAO", "Em Aprovação"),
     ("APROVADO", "Aprovado"),
-    ("EM_EXECUCAO", "Em Execucao"),
+    ("EM_EXECUCAO", "Em Execução"),
     ("ENCERRADO", "Encerrado"),
     ("CANCELADO", "Cancelado"),
 )
 
 
 STATUS_MEDICAO_CHOICES = (
-    ("EM_ELABORACAO", "Em Elaboracao"),
-    ("EM_APROVACAO", "Em Aprovacao"),
+    ("EM_ELABORACAO", "Em Elaboração"),
+    ("EM_APROVACAO", "Em Aprovação"),
     ("CONFERIDA", "Conferida"),
     ("APROVADA", "Aprovada"),
     ("FATURADA", "Faturada"),
@@ -995,7 +995,7 @@ STATUS_MEDICAO_CHOICES = (
 
 STATUS_ADITIVO_CHOICES = (
     ("RASCUNHO", "Rascunho"),
-    ("EM_APROVACAO", "Em Aprovacao"),
+    ("EM_APROVACAO", "Em Aprovação"),
     ("APROVADO", "Aprovado"),
 )
 
@@ -1034,8 +1034,8 @@ class Obra(models.Model):
 
 class Compromisso(models.Model):
     class Meta:
-        verbose_name = "Compras e ContrataÃ§Ãµes"
-        verbose_name_plural = "Compras e ContrataÃ§Ãµes"
+        verbose_name = "Compras e Contratações"
+        verbose_name_plural = "Compras e Contratações"
         indexes = [
             models.Index(fields=["obra", "tipo", "status"]),
             models.Index(fields=["obra", "data_assinatura"]),
@@ -1230,7 +1230,7 @@ class AditivoContratoItem(models.Model):
 
     def clean(self):
         if self.aditivo_id and self.aditivo.tipo == "PRAZO":
-            raise ValidationError("Aditivo de prazo nao possui itens de valor.")
+            raise ValidationError("Aditivo de prazo não possui itens de valor.")
 
         if not self.centro_custo_id:
             return
@@ -1269,8 +1269,8 @@ class CompromissoItem(models.Model):
     valor_total = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal("0.00"))
 
     class Meta:
-        verbose_name = "Item da Compra/ContrataÃ§Ã£o"
-        verbose_name_plural = "Itens da Compra/ContrataÃ§Ã£o"
+        verbose_name = "Item da Compra/Contratação"
+        verbose_name_plural = "Itens da Compra/Contratação"
 
     def __str__(self):
         return f"{self.compromisso.numero} - {self.centro_custo.codigo}"
@@ -1288,7 +1288,7 @@ class CompromissoItem(models.Model):
         if quantidade <= 0:
             raise ValidationError("A quantidade do item deve ser maior que zero.")
         if valor_unitario < 0:
-            raise ValidationError("O valor unitÃ¡rio do item nÃ£o pode ser negativo.")
+            raise ValidationError("O valor unitário do item não pode ser negativo.")
         self.quantidade = quantidade
         self.valor_unitario = valor_unitario
 
@@ -1422,13 +1422,13 @@ class MedicaoItem(models.Model):
             return
         if self.medicao_id and self.medicao.obra_id and self.centro_custo_id:
             if self.centro_custo.obra_id != self.medicao.obra_id:
-                raise ValidationError("Centro de custo do item deve pertencer a mesma obra da medicao.")
+                raise ValidationError("Centro de custo do item deve pertencer a mesma obra da medição.")
         quantidade = self.quantidade if self.quantidade is not None else Decimal("0.00")
         valor_unitario = self.valor_unitario if self.valor_unitario is not None else Decimal("0.00")
         if quantidade <= 0:
             raise ValidationError("A quantidade do item medido deve ser maior que zero.")
         if valor_unitario < 0:
-            raise ValidationError("O valor unitÃ¡rio do item medido nÃ£o pode ser negativo.")
+            raise ValidationError("O valor unitário do item medido não pode ser negativo.")
         self.quantidade = quantidade
         self.valor_unitario = valor_unitario
         if self.medicao_id and self.medicao.contrato_id:
@@ -1470,7 +1470,7 @@ class NotaFiscal(models.Model):
         ]
 
     TIPO_CHOICES = (
-        ("SERVICO", "Nota de ServiÃ§o"),
+        ("SERVICO", "Nota de Serviço"),
         ("MATERIAL", "Nota de Material"),
     )
 
@@ -1549,7 +1549,7 @@ class NotaFiscalCentroCusto(models.Model):
                 permitidos_ids = {self.nota_fiscal.medicao.centro_custo_id}
 
         if permitidos_ids is not None and self.centro_custo_id not in permitidos_ids:
-            raise ValidationError("Centro de custo nÃ£o pertence Ã  origem desta nota fiscal.")
+            raise ValidationError("Centro de custo não pertence Ã  origem desta nota fiscal.")
 
         if self.valor:
             total_rateado = (
@@ -1583,7 +1583,7 @@ class AnexoOperacional(models.Model):
 
 class HistoricoOperacional(models.Model):
     class Meta:
-        verbose_name = "Historico Operacional"
+        verbose_name = "Histórico Operacional"
         verbose_name_plural = "Historicos Operacionais"
         ordering = ["-criado_em"]
 
@@ -1626,7 +1626,7 @@ class FechamentoMensal(models.Model):
 class Documento(models.Model):
     """
     Modelo para controle documental ISO 7.5.
-    Documentos controlados com workflow de aprovaÃ§Ã£o e versionamento.
+    Documentos controlados com workflow de aprovação e versionamento.
     """
     class Meta:
         verbose_name = "Documento Controlado"
@@ -1639,7 +1639,7 @@ class Documento(models.Model):
 
     STATUS_CHOICES = (
         ("RASCUNHO", "Rascunho"),
-        ("EM_REVISAO", "Em RevisÃ£o"),
+        ("EM_REVISAO", "Em Revisão"),
         ("APROVADO", "Aprovado"),
         ("OBSOLETO", "Obsoleto"),
     )
@@ -1671,11 +1671,11 @@ class Documento(models.Model):
         null=True,
         blank=True,
         related_name="documentos",
-        help_text="Vincular Ã  EAP nÃ­vel 5"
+        help_text="Vincular Ã  EAP nível 5"
     )
     
     tipo_documento = models.CharField(max_length=20, choices=TIPO_CHOICES)
-    codigo_documento = models.CharField(max_length=30, help_text="CÃ³digo Ãºnico do documento")
+    codigo_documento = models.CharField(max_length=30, help_text="Código único do documento")
     titulo = models.CharField(max_length=255)
     
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="RASCUNHO")
@@ -1760,12 +1760,12 @@ class Documento(models.Model):
 
 class DocumentoRevisao(models.Model):
     """
-    Modelo para revisÃµes de documentos (imutÃ¡veis apÃ³s aprovaÃ§Ã£o).
-    ISO 7.5 - Controle de versÃµes de documentos.
+    Modelo para revisões de documentos (imutáveis após aprovação).
+    ISO 7.5 - Controle de versões de documentos.
     """
     class Meta:
-        verbose_name = "RevisÃ£o de Documento"
-        verbose_name_plural = "RevisÃµes de Documentos"
+        verbose_name = "Revisão de Documento"
+        verbose_name_plural = "Revisões de Documentos"
         ordering = ["-versao"]
         unique_together = ("documento", "versao")
         indexes = [
@@ -1773,14 +1773,14 @@ class DocumentoRevisao(models.Model):
         ]
 
     STATUS_CHOICES = (
-        ("ELABORACAO", "Em ElaboraÃ§Ã£o"),
-        ("REVISAO", "Em RevisÃ£o"),
+        ("ELABORACAO", "Em Elaboração"),
+        ("REVISAO", "Em Revisão"),
         ("APROVADO", "Aprovado"),
     )
 
     STATUS_SEMANTICO = {
-        "ELABORACAO": ("EM_ELABORACAO", "Em elaboraÃ§Ã£o", "secondary"),
-        "REVISAO": ("SUBMETIDO_VALIDACAO", "Submetido para validaÃ§Ã£o", "warning"),
+        "ELABORACAO": ("EM_ELABORACAO", "Em elaboração", "secondary"),
+        "REVISAO": ("SUBMETIDO_VALIDACAO", "Submetido para validação", "warning"),
         "APROVADO": ("VALIDADO", "Validado", "success"),
     }
 
@@ -1813,11 +1813,11 @@ class DocumentoRevisao(models.Model):
     )
     data_aprovacao = models.DateTimeField(null=True, blank=True)
     
-    parecer = models.TextField(blank=True, help_text="Parecer sobre a revisÃ£o")
+    parecer = models.TextField(blank=True, help_text="Parecer sobre a revisão")
     arquivo_aprovado = models.FileField(
         upload_to=upload_documento_aprovado,
         blank=True,
-        help_text="CÃ³pia imutÃ¡vel do arquivo aprovado"
+        help_text="Cópia imutável do arquivo aprovado"
     )
 
     def __str__(self):

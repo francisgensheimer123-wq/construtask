@@ -14,9 +14,9 @@ SECOES_PAUTA = (
     ("CRONOGRAMA", "Cronograma"),
     ("ALERTA", "Alertas"),
     ("RISCO", "Riscos"),
-    ("NAO_CONFORMIDADE", "Nao Conformidades"),
+    ("NAO_CONFORMIDADE", "Não Conformidades"),
     ("CONTRATO", "Contratos"),
-    ("MEDICAO", "Medicoes"),
+    ("MEDICAO", "Medições"),
     ("OUTRO", "Outros Itens"),
 )
 
@@ -40,9 +40,9 @@ def periodicidade_reuniao_empresa(empresa, tipo_reuniao):
 
 def titulo_padrao_reuniao(obra, tipo_reuniao):
     titulos = {
-        "CURTO_PRAZO": "Reuniao de Curto Prazo",
-        "MEDIO_PRAZO": "Reuniao de Medio Prazo",
-        "LONGO_PRAZO": "Reuniao de Longo Prazo",
+        "CURTO_PRAZO": "Reunião de Curto Prazo",
+        "MEDIO_PRAZO": "Reunião de Médio Prazo",
+        "LONGO_PRAZO": "Reunião de Longo Prazo",
     }
     return f"{titulos.get(tipo_reuniao, 'Reuniao de Comunicacao')} - {obra.codigo}"
 
@@ -100,7 +100,7 @@ def construir_itens_automaticos_pauta(obra, *, data_reuniao=None, janela_dias=No
                 "categoria": "RISCO",
                 "referencia_modelo": "Risco",
                 "referencia_id": risco.pk,
-                "titulo": f"[Nivel {risco.nivel}] {risco.titulo}",
+                "titulo": f"[Nível {risco.nivel}] {risco.titulo}",
                 "descricao": risco.descricao,
                 "contexto": {
                     "status": risco.status,
@@ -152,7 +152,7 @@ def construir_itens_automaticos_pauta(obra, *, data_reuniao=None, janela_dias=No
                     "referencia_modelo": "PlanoFisicoItem",
                     "referencia_id": atividade.pk,
                     "titulo": f"{atividade.codigo_atividade} - {_rotulo_penultimo_ultimo(atividade)}",
-                    "descricao": f"Previsto para {atividade.data_fim_prevista.strftime('%d/%m/%Y') if atividade.data_fim_prevista else '-'} | Concluido: {atividade.percentual_concluido}%",
+                    "descricao": f"Previsto para {atividade.data_fim_prevista.strftime('%d/%m/%Y') if atividade.data_fim_prevista else '-'} | Concluído: {atividade.percentual_concluido}%",
                     "contexto": {
                         "dias_desvio": atividade.dias_desvio,
                         "percentual_concluido": atividade.percentual_concluido,
@@ -201,7 +201,7 @@ def construir_itens_automaticos_pauta(obra, *, data_reuniao=None, janela_dias=No
         itens.append(
             {
                 "categoria": "MEDICAO",
-                "referencia_modelo": "Medicao",
+                "referencia_modelo": "Medição",
                 "referencia_id": medicao.pk,
                 "titulo": f"{medicao.numero_da_medicao} - {medicao.contrato.numero}",
                 "descricao": f"Status: {medicao.get_status_display()} | Valor medido: {medicao.valor_medido}",
@@ -240,14 +240,14 @@ def criar_reuniao_com_pauta_automatica(obra, tipo_reuniao, usuario, *, data_prev
             descricao=item.get("descricao", ""),
             contexto=item.get("contexto", {}),
         )
-    registrar_historico_reuniao(reuniao, usuario, "CRIACAO", "Reuniao criada com pauta automatica inicial.")
+    registrar_historico_reuniao(reuniao, usuario, "CRIACAO", "Reunião criada com pauta automática inicial.")
     return reuniao
 
 
 def compilar_ata_reuniao(reuniao):
     linhas = [
         f"Ata da {reuniao.get_tipo_reuniao_display()}",
-        f"Reuniao: {reuniao.numero} - {reuniao.titulo}",
+        f"Reunião: {reuniao.numero} - {reuniao.titulo}",
         f"Obra: {reuniao.obra.codigo} - {reuniao.obra.nome}",
         f"Data prevista: {reuniao.data_prevista.strftime('%d/%m/%Y') if reuniao.data_prevista else '-'}",
         "",

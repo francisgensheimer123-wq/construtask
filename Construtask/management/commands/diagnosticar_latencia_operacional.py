@@ -20,7 +20,7 @@ class Command(BaseCommand):
         if obra_id:
             obra = Obra.objects.filter(pk=obra_id).first()
             if obra is None:
-                self.stderr.write(self.style.ERROR("Obra informada nao encontrada."))
+                self.stderr.write(self.style.ERROR("Obra informada não encontrada."))
                 return
 
         resultado = diagnostico_latencia_operacional(obra=obra, limite=options["limite"])

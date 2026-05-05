@@ -76,7 +76,7 @@ PERMISSOES_PADRAO_POR_PAPEL = {
 
 
 def is_admin_sistema(user):
-    """Somente o superuser tecnico 'Construtask' pode atuar na administracao sistêmica."""
+    """Somente o superuser técnico 'Construtask' pode atuar na administracao sistêmica."""
     return bool(
         getattr(user, "is_authenticated", False)
         and getattr(user, "is_superuser", False)
@@ -225,7 +225,7 @@ def descricao_restricao_obra(obra):
     if not obra:
         return "Selecione uma obra no menu antes de continuar."
     return (
-        f"A obra {obra.codigo} - {obra.nome} esta com status "
+        f"A obra {obra.codigo} - {obra.nome} está com status "
         f"{obra.get_status_display().lower()} e permite apenas visualizacao."
     )
 
@@ -319,7 +319,7 @@ def usuario_tem_permissao_modulo(user, modulo, acao):
 
 def exigir_permissao_modulo(user, modulo, acao):
     if not usuario_tem_permissao_modulo(user, modulo, acao):
-        raise PermissionDenied(f"Usuario sem permissao para {modulo}:{acao}.")
+        raise PermissionDenied(f"Usuário sem permissão para {modulo}:{acao}.")
 
 
 def atualizar_permissoes_usuario_empresa(usuario_empresa, permissoes, *, concedido_por=None):

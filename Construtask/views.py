@@ -261,7 +261,7 @@ def _png_scanline_unfilter(filtro, linha_filtrada, anterior, bpp):
             diagonal = anterior[indice - bpp] if anterior and indice >= bpp else 0
             resultado[indice] = (valor + _paeth(esquerda, acima, diagonal)) & 0xFF
         return resultado
-    raise ValueError("Filtro PNG nao suportado.")
+    raise ValueError("Filtro PNG não suportado.")
 
 
 def _carregar_png_para_pdf(caminho_logo):
@@ -419,10 +419,10 @@ def _criar_baseline_orcamento(obra, *, descricao, usuario):
 
 def _enviar_baseline_para_aprovacao(request, baseline):
     if not can_submit_for_approval(request.user):
-        messages.error(request, "Seu usuario nao possui funcao operacional para enviar a baseline para aprovacao.")
+        messages.error(request, "Seu usuário não possui função operacional para enviar a baseline para aprovação.")
         return False
     if baseline.status == "EM_APROVACAO":
-        messages.info(request, "Esta baseline ja esta em aprovacao.")
+        messages.info(request, "Está baseline ja está em aprovação.")
         return False
     parecer = (request.POST.get("parecer_aprovacao") or "").strip()
     baseline.status = "EM_APROVACAO"
@@ -436,17 +436,17 @@ def _enviar_baseline_para_aprovacao(request, baseline):
     _registrar_historico(
         "BASELINE_ORCAMENTO",
         baseline.obra,
-        f"Baseline de orcamento enviada para aprovacao: {baseline.descricao}" + (f" Parecer: {parecer}" if parecer else ""),
+        f"Baseline de orçamento enviada para aprovação: {baseline.descricao}" + (f" Parecer: {parecer}" if parecer else ""),
         request.user,
     )
-    messages.success(request, "Baseline enviada para aprovacao.")
+    messages.success(request, "Baseline enviada para aprovação.")
     return True
 
 
 def _aprovar_baseline(request, baseline):
     valor = baseline.valor_total
     if not can_approve_value(request.user, valor):
-        messages.error(request, "Sua funcao nao possui alcada suficiente para aprovar esta baseline.")
+        messages.error(request, "Sua função não possui alçada suficiente para aprovar está baseline.")
         return False
     parecer = (request.POST.get("parecer_aprovacao") or "").strip()
     before = AuditService.instance_to_dict(baseline)
@@ -466,7 +466,7 @@ def _aprovar_baseline(request, baseline):
     _registrar_historico(
         "BASELINE_ORCAMENTO",
         baseline.obra,
-        f"Baseline de orcamento aprovada: {baseline.descricao}" + (f" Parecer: {parecer}" if parecer else ""),
+        f"Baseline de orçamento aprovada: {baseline.descricao}" + (f" Parecer: {parecer}" if parecer else ""),
         request.user,
     )
     messages.success(request, "Baseline aprovada com sucesso.")
@@ -476,7 +476,7 @@ def _aprovar_baseline(request, baseline):
 def _retornar_baseline_para_ajuste(request, baseline):
     valor = baseline.valor_total
     if not can_approve_value(request.user, valor):
-        messages.error(request, "Sua funcao nao possui alcada suficiente para devolver esta baseline para ajuste.")
+        messages.error(request, "Sua função não possui alçada suficiente para devolver está baseline para ajuste.")
         return False
     parecer = (request.POST.get("parecer_aprovacao") or "").strip()
     if not parecer:
@@ -494,7 +494,7 @@ def _retornar_baseline_para_ajuste(request, baseline):
     _registrar_historico(
         "BASELINE_ORCAMENTO",
         baseline.obra,
-        f"Baseline de orcamento devolvida para ajuste: {baseline.descricao}. Parecer: {parecer}",
+        f"Baseline de orçamento devolvida para ajuste: {baseline.descricao}. Parecer: {parecer}",
         request.user,
     )
     messages.success(request, "Baseline devolvida para ajuste.")
@@ -596,10 +596,10 @@ def _retornar_aditivo_contrato_para_ajuste(request, aditivo):
 
 def _enviar_aditivo_contrato_para_aprovacao(request, aditivo):
     if not can_submit_for_approval(request.user):
-        messages.error(request, "Seu usuario nao possui funcao operacional para enviar este aditivo para aprovacao.")
+        messages.error(request, "Seu usuário não possui função operacional para enviar este aditivo para aprovação.")
         return False
     if aditivo.status == "EM_APROVACAO":
-        messages.info(request, "Este aditivo ja esta em aprovacao.")
+        messages.info(request, "Este aditivo ja está em aprovação.")
         return False
     before = AuditService.instance_to_dict(aditivo)
     aditivo.status = "EM_APROVACAO"
@@ -613,10 +613,10 @@ def _enviar_aditivo_contrato_para_aprovacao(request, aditivo):
     _registrar_historico(
         "ADITIVO_ENVIO",
         aditivo.contrato,
-        f"Aditivo {aditivo.get_tipo_display()} do contrato {aditivo.contrato.numero} enviado para aprovacao.",
+        f"Aditivo {aditivo.get_tipo_display()} do contrato {aditivo.contrato.numero} enviado para aprovação.",
         request.user,
     )
-    messages.success(request, "Aditivo enviado para aprovacao.")
+    messages.success(request, "Aditivo enviado para aprovação.")
     return True
 
 
@@ -940,9 +940,9 @@ def _historico_probatorio(historicos_queryset):
         linhas.append(
             {
                 "Data": data_local.strftime("%d/%m/%Y %H:%M") if data_local else "-",
-                "Acao": item.acao,
-                "Usuario": getattr(item.usuario, "username", "-") or "-",
-                "Descricao": item.descricao,
+                "Ação": item.acao,
+                "Usuário": getattr(item.usuario, "username", "-") or "-",
+                "Descrição": item.descricao,
             }
         )
     return linhas
@@ -993,7 +993,7 @@ def _historico_aditivos_compromisso(compromisso):
                 acao_label = "Devolvido para Ajuste"
             elif "aprovad" in descricao_normalizada.lower():
                 acao_label = "Aprovado"
-            elif "enviado para aprovacao" in descricao_normalizada.lower():
+            elif "enviado para aprovação" in descricao_normalizada.lower():
                 acao_label = "Enviado para Aprova\u00e7\u00e3o"
             else:
                 acao_label = _sanear_texto_exportacao_seguro(item.acao or "N\u00e3o informado")
@@ -1109,9 +1109,9 @@ def _dados_relatorio_aprovacao_medicao(medicao):
         medicao.aprovado_em or medicao.enviado_para_aprovacao_em or medicao.criado_em,
     )
     resumo = {
-        "Identificador da Evidencia": evidencia_id,
+        "Identificador da Evidência": evidencia_id,
         "Emitido em": _datahora_local(timezone.now()).strftime("%d/%m/%Y %H:%M"),
-        "Numero": medicao.numero_da_medicao,
+        "Número": medicao.numero_da_medicao,
         "Contrato": medicao.contrato.numero,
         "Obra": f"{medicao.obra.codigo if medicao.obra else '-'} - {medicao.obra.nome if medicao.obra else '-'}",
         "Status atual": medicao.get_status_display(),
@@ -1147,10 +1147,10 @@ def _dados_relatorio_aprovacao_baseline(baseline):
     resumo = {
         "Identificador da Evidência": evidencia_id,
         "Emitido em": _datahora_local(timezone.now()).strftime("%d/%m/%Y %H:%M"),
-        "Descricao": baseline.descricao,
+        "Descrição": baseline.descricao,
         "Obra": f"{baseline.obra.codigo if baseline.obra else '-'} - {baseline.obra.nome if baseline.obra else '-'}",
         "Status atual": baseline.get_status_display(),
-        "Versao ativa da obra": "Sim" if baseline.is_ativa else "Nao",
+        "Versao ativa da obra": "Sim" if baseline.is_ativa else "Não",
         "Valor baseline": money_br(baseline.valor_total),
         "Criado por": _formatar_usuario_data(baseline.criado_por, baseline.criado_em),
         "Enviado para aprovação por": _formatar_usuario_data(baseline.enviado_para_aprovacao_por, baseline.enviado_para_aprovacao_em),
@@ -1160,9 +1160,9 @@ def _dados_relatorio_aprovacao_baseline(baseline):
     historico = []
     extras = [
         {
-            "Codigo": item.codigo,
-            "Descricao": item.descricao,
-            "Nivel": item.level,
+            "Código": item.codigo,
+            "Descrição": item.descricao,
+            "Nível": item.level,
             "Valor Consolidado": money_br(item.valor_total_consolidado),
         }
         for item in baseline.itens.filter(level__lte=2)[:200]
@@ -1360,8 +1360,8 @@ def dossie_obra_pdf_view(request):
     resumo = {
         "Cliente": dados["dados_cabecalho"]["cliente"],
         "Obra": dados["dados_cabecalho"]["obra"],
-        "Responsavel": dados["dados_cabecalho"]["responsavel"],
-        "Valor Total Orcado": money_br(dados["relatorio_gerencial"]["valor_orcado"]),
+        "Responsável": dados["dados_cabecalho"]["responsavel"],
+        "Valor Total Orçado": money_br(dados["relatorio_gerencial"]["valor_orcado"]),
         "Valor Total Comprometido": money_br(dados["relatorio_gerencial"]["valor_comprometido"]),
         "Valor Total Medido": money_br(dados["relatorio_gerencial"]["valor_medido"]),
         "Valor Total Executado": money_br(dados["relatorio_gerencial"]["valor_executado"]),
@@ -1370,52 +1370,52 @@ def dossie_obra_pdf_view(request):
     }
     secoes = [
         {
-            "titulo": "Analise de Plano de Contas",
+            "titulo": "Análise de Plano de Contas",
             "colunas": [
-                ("Indice", 40),
-                ("Codigo", 65),
-                ("Descricao", 170),
-                ("Valor Orcado", 70),
+                ("Índice", 40),
+                ("Código", 65),
+                ("Descrição", 170),
+                ("Valor Orçado", 70),
                 ("Valor Contratado", 80),
                 ("Valor Pago", 70),
             ],
             "linhas": [
                 {
-                    "Indice": item["indice"],
-                    "Codigo": item["codigo"],
-                    "Descricao": item["descricao"],
-                    "Valor Orcado": money_br(item["valor_orcado"]),
+                    "Índice": item["indice"],
+                    "Código": item["codigo"],
+                    "Descrição": item["descricao"],
+                    "Valor Orçado": money_br(item["valor_orcado"]),
                     "Valor Contratado": money_br(item["valor_contratado"]),
                     "Valor Pago": money_br(item["valor_pago"]),
                 }
                 for item in dados["analise_plano"]
-            ] or [{"Indice": "-", "Codigo": "-", "Descricao": "-", "Valor Orcado": "-", "Valor Contratado": "-", "Valor Pago": "-"}],
+            ] or [{"Índice": "-", "Código": "-", "Descrição": "-", "Valor Orçado": "-", "Valor Contratado": "-", "Valor Pago": "-"}],
         },
         {
-            "titulo": "Evidencias de Aprovacao",
+            "titulo": "Evidências de Aprovação",
             "colunas": [
                 ("Tipo", 60),
                 ("Identificador", 110),
-                ("Referencia", 120),
+                ("Referência", 120),
                 ("Status", 70),
                 ("Valor", 60),
-                ("Responsavel", 75),
+                ("Responsável", 75),
             ],
             "linhas": [
                 {
                     "Tipo": evidencia["tipo"],
                     "Identificador": evidencia["identificador"],
-                    "Referencia": evidencia["referencia"],
+                    "Referência": evidencia["referencia"],
                     "Status": evidencia["status"],
                     "Valor": evidencia["valor"] or "-",
-                    "Responsavel": evidencia["responsavel"] or "-",
+                    "Responsável": evidencia["responsavel"] or "-",
                 }
                 for evidencia in dados["evidencias"]
-            ] or [{"Tipo": "-", "Identificador": "-", "Referencia": "-", "Status": "-", "Valor": "-", "Responsavel": "-"}],
+            ] or [{"Tipo": "-", "Identificador": "-", "Referência": "-", "Status": "-", "Valor": "-", "Responsável": "-"}],
         },
     ]
     nome_arquivo = f"dossie_obra_{obra_contexto.codigo if obra_contexto else 'sem_obra'}.pdf"
-    titulo = f"Dossie da Obra - {obra_contexto.codigo if obra_contexto else 'Sem Obra'}"
+    titulo = f"Dossiê da Obra - {obra_contexto.codigo if obra_contexto else 'Sem Obra'}"
     return _pdf_relatorio_tabelas_response(nome_arquivo, titulo, resumo, secoes)
 
 
@@ -1424,14 +1424,14 @@ def _apagar_objeto(request, queryset, success_url):
         raise Http404()
     objeto_id = _coletar_post_int(request, "id")
     if not objeto_id:
-        messages.error(request, "Nao foi possivel identificar o registro para exclusao.")
+        messages.error(request, "Não foi possível identificar o registro para exclusão.")
         return redirect(success_url)
     objeto = queryset.filter(pk=objeto_id).first()
     if not objeto:
-        messages.error(request, "Nao foi possivel identificar o registro para exclusao.")
+        messages.error(request, "Não foi possível identificar o registro para exclusão.")
         return redirect(success_url)
     try:
-        historico = _registrar_historico("EXCLUSAO", objeto, f"Exclusao de {objeto}", getattr(request, "user", None))
+        historico = _registrar_historico("EXCLUSAO", objeto, f"Exclusão de {objeto}", getattr(request, "user", None))
         objeto.delete()
         messages.success(request, "Registro excluido com sucesso.")
     except ProtectedError:
@@ -1443,7 +1443,7 @@ def _apagar_objeto(request, queryset, success_url):
             pass
         messages.error(
             request,
-            "Este registro nao pode ser excluido porque possui vinculos em outras operacoes do sistema.",
+            "Este registro não pode ser excluido porque possui vínculos em outras operacoes do sistema.",
         )
     return redirect(success_url)
 
@@ -1473,7 +1473,7 @@ def selecionar_obra_contexto_view(request):
         if obra:
             request.session["obra_contexto_id"] = obra.pk
         else:
-            messages.error(request, "Voce nao tem acesso a obra selecionada.")
+            messages.error(request, "Você não tem acesso a obra selecionada.")
     else:
         request.session.pop("obra_contexto_id", None)
     return redirect(proxima_url)
@@ -1712,9 +1712,9 @@ class HomeView(TemplateView):
         
         # Substituir pendÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªncias por resumo de riscos
         context["pendencias"] = [
-            {"label": "Riscos CrÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­ticos", "valor": resumo_riscos["criticos"], "cor": "red"},
+            {"label": "Riscos CrÃÆ’Ã†â€™Ãâ€šÂÂ­ticos", "valor": resumo_riscos["criticos"], "cor": "red"},
             {"label": "Riscos Altos", "valor": resumo_riscos["altos"], "cor": "orange"},
-            {"label": "Riscos MÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©dios", "valor": resumo_riscos["medios"], "cor": "yellow"},
+            {"label": "Riscos MÃÆ’Ã†â€™Ãâ€šÂÂ©dios", "valor": resumo_riscos["medios"], "cor": "yellow"},
             {"label": "Em Tratamento", "valor": resumo_riscos["em_tratamento"], "cor": "blue"},
             {"label": "Fechados", "valor": resumo_riscos["fechados"], "cor": "green"},
         ]
@@ -1753,12 +1753,12 @@ class HomeView(TemplateView):
         )
         context["alertas_operacionais"] = [
             {
-                "label": "Contratos sem medicao",
+                "label": "Contratos sem medição",
                 "valor": resumo_alertas["contrato_sem_medicao"],
                 "nivel": "alto" if resumo_alertas["contrato_sem_medicao"] else "medio",
             },
             {
-                "label": "Medicoes sem nota",
+                "label": "Medições sem nota",
                 "valor": resumo_alertas["medicao_sem_nota"],
                 "nivel": "alto",
             },
@@ -1773,12 +1773,12 @@ class HomeView(TemplateView):
                 "nivel": "critico",
             },
             {
-                "label": "Atividades futuras sem solicitacao",
+                "label": "Atividades futuras sem solicitação",
                 "valor": resumo_alertas["planejamento_suprimentos"],
                 "nivel": "critico" if any(alerta.severidade == "CRITICA" for alerta in alertas_planejamento_suprimentos) else "alto",
             },
             {
-                "label": "Atividades sem avanco",
+                "label": "Atividades sem avanço",
                 "valor": resumo_alertas["atividade_sem_avanco"],
                 "nivel": "alto",
             },
@@ -1803,7 +1803,7 @@ class HomeView(TemplateView):
                 "nivel": "critico" if resumo_alertas["risco_vencido"] else "alto",
             },
             {
-                "label": "NCs sem evolucao",
+                "label": "NCs sem evolução",
                 "valor": resumo_alertas["nc_sem_evolucao"],
                 "nivel": "alto",
             },
@@ -1817,8 +1817,8 @@ class HomeView(TemplateView):
             NaoConformidade.objects.filter(obra=obra_contexto).exclude(status__in=["ENCERRADA", "CANCELADA"]).select_related("responsavel").order_by("-criado_em")[:5]
         )
         context["pipeline_aquisicoes"] = [
-            {"label": "Solicitacoes abertas", "valor": SolicitacaoCompra.objects.filter(obra=obra_contexto).exclude(status__in=["ENCERRADA", "CANCELADA"]).count()},
-            {"label": "Cotacoes aprovadas", "valor": Cotacao.objects.filter(obra=obra_contexto, status="APROVADA").count()},
+            {"label": "Solicitações abertas", "valor": SolicitacaoCompra.objects.filter(obra=obra_contexto).exclude(status__in=["ENCERRADA", "CANCELADA"]).count()},
+            {"label": "Cotações aprovadas", "valor": Cotacao.objects.filter(obra=obra_contexto, status="APROVADA").count()},
             {"label": "Ordens emitidas", "valor": OrdemCompra.objects.filter(obra=obra_contexto).count()},
         ]
         context["ultimas_ordens_compra"] = list(
@@ -1884,9 +1884,9 @@ class HomeView(TemplateView):
                 saldo_executar = arredondar_moeda(valor_orcado_centro - valor_pago_centro)
 
                 if saldo_executar <= Decimal("0.00"):
-                    situacao = "Concluido"
+                    situacao = "Concluído"
                 elif valor_comprometido_centro > Decimal("0.00") and saldo_medir > Decimal("0.00"):
-                    situacao = "Em Medicao"
+                    situacao = "Em Medição"
                 elif valor_comprometido_centro > Decimal("0.00"):
                     situacao = "Apropriacao em andamento"
                 else:
@@ -1978,7 +1978,7 @@ def alerta_operacional_workflow_view(request, pk):
     alerta = get_object_or_404(AlertaOperacional.objects.select_related("obra"), pk=pk)
     obra_contexto = _obter_obra_contexto(request)
     if not obra_contexto or alerta.obra_id != obra_contexto.id:
-        raise Http404("Alerta operacional nao encontrado para a obra selecionada.")
+        raise Http404("Alerta operacional não encontrado para a obra selecionada.")
     if request.method != "POST":
         return redirect("alerta_operacional_detail", pk=alerta.pk)
 
@@ -1993,18 +1993,18 @@ def alerta_operacional_workflow_view(request, pk):
 
     if acao == "assumir":
         if not can_assume_alert(request.user):
-            messages.error(request, "Seu perfil nao pode assumir alertas para tratamento.")
+            messages.error(request, "Seu perfil não pode assumir alertas para tratamento.")
             return redirect(next_url)
         if not prazo_solucao:
-            messages.error(request, "Informe o prazo para solucao ao assumir o alerta.")
+            messages.error(request, "Informe o prazo para solução ao assumir o alerta.")
             return redirect(next_url)
         try:
             prazo_solucao_em = date.fromisoformat(prazo_solucao)
         except ValueError:
-            messages.error(request, "Informe um prazo de solucao valido.")
+            messages.error(request, "Informe um prazo de solução valido.")
             return redirect(next_url)
         if prazo_solucao_em < timezone.localdate():
-            messages.error(request, "O prazo para solucao nao pode estar no passado.")
+            messages.error(request, "O prazo para solução não pode estar no passado.")
             return redirect(next_url)
         atualizar_status_alerta(
             alerta,
@@ -2018,7 +2018,7 @@ def alerta_operacional_workflow_view(request, pk):
         messages.success(request, "Alerta colocado em tratamento.")
     elif acao == "justificar":
         if not can_justify_alert(request.user):
-            messages.error(request, "Seu perfil nao pode justificar alertas operacionais.")
+            messages.error(request, "Seu perfil não pode justificar alertas operacionais.")
             return redirect(next_url)
         if not observacao:
             messages.error(request, "Informe a justificativa para registrar o alerta.")
@@ -2034,10 +2034,10 @@ def alerta_operacional_workflow_view(request, pk):
         messages.success(request, "Justificativa registrada com sucesso.")
     elif acao == "encerrar":
         if not can_close_alert(request.user):
-            messages.error(request, "Seu perfil nao pode encerrar alertas operacionais.")
+            messages.error(request, "Seu perfil não pode encerrar alertas operacionais.")
             return redirect(next_url)
         if not observacao:
-            messages.error(request, "Informe a evidencia ou comentario de encerramento.")
+            messages.error(request, "Informe a evidência ou comentario de encerramento.")
             return redirect(next_url)
         atualizar_status_alerta(
             alerta,
@@ -2050,7 +2050,7 @@ def alerta_operacional_workflow_view(request, pk):
         messages.success(request, "Alerta encerrado com sucesso.")
     elif acao == "reabrir":
         if not can_close_alert(request.user):
-            messages.error(request, "Seu perfil nao pode reabrir alertas operacionais.")
+            messages.error(request, "Seu perfil não pode reabrir alertas operacionais.")
             return redirect(next_url)
         atualizar_status_alerta(
             alerta,
@@ -2062,7 +2062,7 @@ def alerta_operacional_workflow_view(request, pk):
         )
         messages.success(request, "Alerta reaberto.")
     else:
-        messages.error(request, "Acao do alerta nao reconhecida.")
+        messages.error(request, "Ação do alerta não reconhecida.")
 
     return redirect(next_url)
 
@@ -2080,7 +2080,7 @@ def alerta_operacional_dashboard_export_view(request):
             {
                 "Secao": "Prioridades Executivas",
                 "Item": item["frente"],
-                "Nivel": item["nivel"].upper(),
+                "Nível": item["nivel"].upper(),
                 "Quantidade": item["total"],
                 "Detalhe": item["acao"],
             }
@@ -2090,7 +2090,7 @@ def alerta_operacional_dashboard_export_view(request):
             {
                 "Secao": "Correlacoes Operacionais",
                 "Item": item["titulo"],
-                "Nivel": item["nivel"].upper(),
+                "Nível": item["nivel"].upper(),
                 "Quantidade": item["quantidade"],
                 "Detalhe": item["descricao"],
             }
@@ -2100,13 +2100,13 @@ def alerta_operacional_dashboard_export_view(request):
             {
                 "Secao": "Alertas em Atraso",
                 "Item": alerta.codigo_regra,
-                "Nivel": alerta.severidade,
+                "Nível": alerta.severidade,
                 "Quantidade": 1,
-                "Detalhe": f"{alerta.titulo} | Responsavel: {getattr(alerta.responsavel, 'username', '-') or '-'} | Prazo: {alerta.prazo_solucao_em.strftime('%d/%m/%Y') if alerta.prazo_solucao_em else '-'}",
+                "Detalhe": f"{alerta.titulo} | Responsável: {getattr(alerta.responsavel, 'username', '-') or '-'} | Prazo: {alerta.prazo_solucao_em.strftime('%d/%m/%Y') if alerta.prazo_solucao_em else '-'}",
             }
         )
     if not linhas:
-        linhas.append({"Secao": "Resumo", "Item": "Sem dados", "Nivel": "-", "Quantidade": 0, "Detalhe": "Nenhum alerta executivo consolidado."})
+        linhas.append({"Secao": "Resumo", "Item": "Sem dados", "Nível": "-", "Quantidade": 0, "Detalhe": "Nenhum alerta executivo consolidado."})
     return _exportar_excel_response("painel_alertas_operacionais.xlsx", "Painel Alertas Operacionais", linhas)
 
 
@@ -2123,7 +2123,7 @@ def alerta_operacional_dashboard_pdf_view(request):
         "Obra": str(obra),
         "Score Operacional": f"{score.get('pontuacao', Decimal('0.00'))}",
         "Faixa": score.get("faixa", "-"),
-        "Alertas criticos": len(dados["alertas_criticos"]),
+        "Alertas críticos": len(dados["alertas_criticos"]),
         "Alertas em atraso": len(dados["alertas_em_atraso"]),
         "Execucoes recentes": len(dados["execucoes_recentes"]),
     }
@@ -2132,16 +2132,16 @@ def alerta_operacional_dashboard_pdf_view(request):
             "titulo": "Prioridades Executivas",
             "colunas": [
                 {"chave": "Frente", "titulo": "Frente"},
-                {"chave": "Nivel", "titulo": "Nivel"},
+                {"chave": "Nível", "titulo": "Nível"},
                 {"chave": "Total", "titulo": "Total"},
-                {"chave": "Acao", "titulo": "Acao"},
+                {"chave": "Ação", "titulo": "Ação"},
             ],
             "linhas": [
                 {
                     "Frente": item["frente"],
-                    "Nivel": item["nivel"].upper(),
+                    "Nível": item["nivel"].upper(),
                     "Total": item["total"],
-                    "Acao": item["acao"],
+                    "Ação": item["acao"],
                 }
                 for item in dados["prioridades_executivas"]
             ],
@@ -2150,14 +2150,14 @@ def alerta_operacional_dashboard_pdf_view(request):
             "titulo": "Correlacoes Operacionais",
             "colunas": [
                 {"chave": "Correlacao", "titulo": "Correlacao"},
-                {"chave": "Nivel", "titulo": "Nivel"},
+                {"chave": "Nível", "titulo": "Nível"},
                 {"chave": "Ocorrencias", "titulo": "Ocorrencias"},
                 {"chave": "Leitura", "titulo": "Leitura"},
             ],
             "linhas": [
                 {
                     "Correlacao": item["titulo"],
-                    "Nivel": item["nivel"].upper(),
+                    "Nível": item["nivel"].upper(),
                     "Ocorrencias": item["quantidade"],
                     "Leitura": item["descricao"],
                 }
@@ -2165,20 +2165,20 @@ def alerta_operacional_dashboard_pdf_view(request):
             ],
         },
         {
-            "titulo": "Alertas Criticos",
+            "titulo": "Alertas Críticos",
             "colunas": [
                 {"chave": "Regra", "titulo": "Regra"},
-                {"chave": "Titulo", "titulo": "Titulo"},
+                {"chave": "Título", "titulo": "Título"},
                 {"chave": "Status", "titulo": "Status"},
-                {"chave": "Responsavel", "titulo": "Responsavel"},
+                {"chave": "Responsável", "titulo": "Responsável"},
                 {"chave": "Prazo", "titulo": "Prazo"},
             ],
             "linhas": [
                 {
                     "Regra": alerta.codigo_regra,
-                    "Titulo": alerta.titulo,
+                    "Título": alerta.titulo,
                     "Status": alerta.get_status_display(),
-                    "Responsavel": getattr(alerta.responsavel, "username", "-") or "-",
+                    "Responsável": getattr(alerta.responsavel, "username", "-") or "-",
                     "Prazo": alerta.prazo_solucao_em.strftime("%d/%m/%Y") if alerta.prazo_solucao_em else "-",
                 }
                 for alerta in dados["alertas_criticos"]
@@ -2188,18 +2188,18 @@ def alerta_operacional_dashboard_pdf_view(request):
             "titulo": "Alertas em Atraso",
             "colunas": [
                 {"chave": "Regra", "titulo": "Regra"},
-                {"chave": "Titulo", "titulo": "Titulo"},
+                {"chave": "Título", "titulo": "Título"},
                 {"chave": "Prazo vencido", "titulo": "Prazo vencido"},
                 {"chave": "SLA", "titulo": "SLA"},
-                {"chave": "Responsavel", "titulo": "Responsavel"},
+                {"chave": "Responsável", "titulo": "Responsável"},
             ],
             "linhas": [
                 {
                     "Regra": alerta.codigo_regra,
-                    "Titulo": alerta.titulo,
+                    "Título": alerta.titulo,
                     "Prazo vencido": "SIM" if alerta.em_atraso_prazo else "NAO",
                     "SLA": "SIM" if alerta.em_atraso_sla else "NAO",
-                    "Responsavel": getattr(alerta.responsavel, "username", "-") or "-",
+                    "Responsável": getattr(alerta.responsavel, "username", "-") or "-",
                 }
                 for alerta in dados["alertas_em_atraso"]
             ],
@@ -2210,14 +2210,14 @@ def alerta_operacional_dashboard_pdf_view(request):
                 {"chave": "Data", "titulo": "Data"},
                 {"chave": "Regra", "titulo": "Regra"},
                 {"chave": "Resultado", "titulo": "Resultado"},
-                {"chave": "Referencia", "titulo": "Referencia"},
+                {"chave": "Referência", "titulo": "Referência"},
             ],
             "linhas": [
                 {
                     "Data": _datahora_local(execucao.executado_em).strftime("%d/%m/%Y %H:%M") if _datahora_local(execucao.executado_em) else "-",
                     "Regra": execucao.codigo_regra,
                     "Resultado": execucao.get_resultado_display(),
-                    "Referencia": execucao.referencia or "-",
+                    "Referência": execucao.referencia or "-",
                 }
                 for execucao in dados["execucoes_recentes"]
             ],
@@ -2239,7 +2239,7 @@ class ModuloGrupoView(LoginRequiredMixin, TemplateView):
         grupos = _obter_grupos_navegacao()
         grupo = grupos.get(self.kwargs["slug"])
         if not grupo:
-            raise Http404("Grupo de navegacao nao encontrado.")
+            raise Http404("Grupo de navegacao não encontrado.")
         context["grupo"] = grupo
         context["grupos_navegacao"] = list(grupos.values())
         return context
@@ -2357,8 +2357,8 @@ def curva_abc_export_view(request):
     )
     linhas = [
         {
-            "Codigo": item["codigo"],
-            "Descricao": item["descricao"],
+            "Código": item["codigo"],
+            "Descrição": item["descricao"],
             "Valor Total": item["valor_total"],
             "Percentual": f'{item["percentual"]}%',
             "Percentual Acumulado": f'{item["acumulado"]}%',
@@ -2379,8 +2379,8 @@ def curva_abc_pdf_view(request):
     }
     extras = [
         {
-            "Codigo": item["codigo"],
-            "Descricao": item["descricao"],
+            "Código": item["codigo"],
+            "Descrição": item["descricao"],
             "Valor Total": money_br(item["valor_total"]),
             "%": f'{item["percentual"]}%',
             "% Acum.": f'{item["acumulado"]}%',
@@ -2395,7 +2395,7 @@ def curva_abc_pdf_view(request):
         [],
         extras,
         extras_titulo="Classificacao ABC",
-        extras_colunas=[("Codigo", 55), ("Descricao", 180), ("Valor Total", 90), ("%", 45), ("% Acum.", 55), ("Classe", 70)],
+        extras_colunas=[("Código", 55), ("Descrição", 180), ("Valor Total", 90), ("%", 45), ("% Acum.", 55), ("Classe", 70)],
         incluir_historico=False,
     )
 
@@ -2438,7 +2438,7 @@ class ObraCreateView(CreateView):
     def form_valid(self, form):
         empresa = _get_empresa_operacional(self.request)
         if not empresa:
-            form.add_error(None, "Nao foi possivel identificar a empresa da obra.")
+            form.add_error(None, "Não foi possível identificar a empresa da obra.")
             return self.form_invalid(form)
         self.object = form.save(commit=False)
         self.object.empresa = empresa
@@ -2555,8 +2555,8 @@ def plano_contas_export_view(request):
     planos = _consolidar_plano_contas(queryset)
     linhas = [
         {
-            "Codigo": plano.codigo,
-            "Descricao": plano.descricao,
+            "Código": plano.codigo,
+            "Descrição": plano.descricao,
             "Unidade": plano.unidade or "",
             "Quantidade": plano.quantidade,
             "Valor Unitario": plano.valor_unitario,
@@ -2579,24 +2579,24 @@ def plano_contas_criar_baseline_view(request):
     if request.method != "POST":
         return redirect("plano_contas_list")
     if not obra_contexto:
-        messages.error(request, "Selecione uma obra antes de criar uma baseline do orcamento.")
+        messages.error(request, "Selecione uma obra antes de criar uma baseline do orçamento.")
         return redirect("plano_contas_list")
     if not PlanoContas.objects.filter(obra=obra_contexto).exists():
-        messages.error(request, "Nao ha plano de contas para gerar baseline nesta obra.")
+        messages.error(request, "Não há plano de contas para gerar baseline nesta obra.")
         return redirect("plano_contas_list")
 
     descricao = (request.POST.get("descricao_baseline") or "").strip()
     if not descricao:
-        descricao = f"Baseline de orcamento {timezone.now():%d/%m/%Y %H:%M}"
+        descricao = f"Baseline de orçamento {timezone.now():%d/%m/%Y %H:%M}"
 
     baseline = _criar_baseline_orcamento(obra_contexto, descricao=descricao, usuario=request.user)
     _registrar_historico(
         "BASELINE_ORCAMENTO",
         obra_contexto,
-        f"Baseline de orcamento criada: {baseline.descricao}",
+        f"Baseline de orçamento criada: {baseline.descricao}",
         request.user,
     )
-    messages.success(request, "Baseline de orcamento criada com sucesso.")
+    messages.success(request, "Baseline de orçamento criada com sucesso.")
     return redirect("plano_contas_list")
 
 
@@ -2645,9 +2645,9 @@ def plano_contas_baseline_aprovacao_pdf_view(request, pk):
         extras,
         extras_titulo="Snapshot da Baseline",
         extras_colunas=[
-            ("Codigo", 70),
-            ("Descricao", 245),
-            ("Nivel", 45),
+            ("Código", 70),
+            ("Descrição", 245),
+            ("Nível", 45),
             ("Valor Consolidado", 135),
         ],
     )
@@ -2719,7 +2719,7 @@ class CompromissoListView(DefaultPaginationMixin, ListView):
     context_object_name = "compromissos"
 
     def dispatch(self, request, *args, **kwargs):
-        if not _exigir_obra_contexto_view(request, mensagem="Selecione uma obra no menu antes de acessar compras e contratacoes."):
+        if not _exigir_obra_contexto_view(request, mensagem="Selecione uma obra no menu antes de acessar compras e contratações."):
             return redirect("home")
         return super().dispatch(request, *args, **kwargs)
 
@@ -2758,7 +2758,7 @@ class CompromissoCreateView(CreateView):
     success_url = reverse_lazy("compromisso_list")
 
     def dispatch(self, request, *args, **kwargs):
-        obra = _exigir_obra_contexto_view(request, mensagem="Selecione uma obra no menu antes de criar compras ou contratacoes.")
+        obra = _exigir_obra_contexto_view(request, mensagem="Selecione uma obra no menu antes de criar compras ou contratações.")
         if not obra:
             return redirect("home")
         motivo = _bloqueio_lancamento_obra(obra)
@@ -2783,7 +2783,7 @@ class CompromissoCreateView(CreateView):
     def form_valid(self, form):
         obra_contexto = _obter_obra_contexto(self.request)
         if not obra_contexto:
-            form.add_error("obra", "Selecione uma obra no menu antes de criar compras ou contratacoes.")
+            form.add_error("obra", "Selecione uma obra no menu antes de criar compras ou contratações.")
             return self.form_invalid(form)
         item_formset = CompromissoItemFormSet(self.request.POST, prefix="itens", form_kwargs={"obra_contexto": obra_contexto})
         if not item_formset.is_valid():
@@ -2927,7 +2927,7 @@ class ContratoDetailView(DetailView):
                 request,
                 self.object,
                 status_em_aprovacao="EM_APROVACAO",
-                descricao=f"{self.object.numero} enviado para aprovacao.",
+                descricao=f"{self.object.numero} enviado para aprovação.",
             )
             return redirect("contrato_detail", pk=self.object.pk)
         if acao == "aprovar":
@@ -3072,18 +3072,18 @@ def compromisso_export_view(request):
         request,
         categoria_titular="FORNECEDOR",
         entidade="Compromisso",
-        identificador="Compras e Contratacoes",
+        identificador="Compras e Contratações",
         acao="EXPORT",
         finalidade="Exportacao de dados contratuais e cadastrais de fornecedores",
-        detalhes="Exportacao Excel da lista de compras e contratacoes.",
+        detalhes="Exportacao Excel da lista de compras e contratações.",
     )
     linhas = [
         {
-            "Numero": compromisso.numero,
+            "Número": compromisso.numero,
             "Tipo": compromisso.get_tipo_display(),
             "CNPJ": compromisso.cnpj,
             "Fornecedor": compromisso.fornecedor,
-            "Descricao": compromisso.descricao,
+            "Descrição": compromisso.descricao,
             "Itens do Pedido/Contrato": " | ".join(
                 f"{item.centro_custo.codigo} - {item.centro_custo.descricao}" for item in compromisso.itens.all()
             ),
@@ -3092,7 +3092,7 @@ def compromisso_export_view(request):
             "Valor Total": compromisso.valor_contratado,
             "Valor Executado": compromisso.valor_executado,
             "Saldo": compromisso.saldo,
-            "Responsavel": compromisso.responsavel,
+            "Responsável": compromisso.responsavel,
             "Data": compromisso.data_assinatura.strftime("%d/%m/%Y"),
         }
         for compromisso in queryset
@@ -3112,7 +3112,7 @@ def compromisso_lista_pdf_view(request):
     resumo = {"Quantidade de Registros": queryset.count(), "Emitido em": _datahora_local(timezone.now()).strftime("%d/%m/%Y %H:%M")}
     extras = [
         {
-            "Numero": compromisso.numero,
+            "Número": compromisso.numero,
             "Tipo": compromisso.get_tipo_display(),
             "Fornecedor": compromisso.fornecedor,
             "Status": compromisso.get_status_display(),
@@ -3127,7 +3127,7 @@ def compromisso_lista_pdf_view(request):
         [],
         extras,
         extras_titulo="Lista de Pedidos e Contratos",
-        extras_colunas=[("Numero", 80), ("Tipo", 85), ("Fornecedor", 180), ("Status", 70), ("Valor Total", 80)],
+        extras_colunas=[("Número", 80), ("Tipo", 85), ("Fornecedor", 180), ("Status", 70), ("Valor Total", 80)],
         incluir_historico=False,
     )
 
@@ -3142,7 +3142,7 @@ def compromisso_pdf_view(request, pk):
     )
     compromisso = get_object_or_404(_filtrar_por_obra_contexto(request, queryset), pk=pk)
     resumo = {
-        "Numero": compromisso.numero,
+        "Número": compromisso.numero,
         "Tipo": compromisso.get_tipo_display(),
         "Obra": f"{compromisso.obra.codigo if compromisso.obra else '-'} - {compromisso.obra.nome if compromisso.obra else '-'}",
         "Fornecedor": compromisso.fornecedor,
@@ -3150,7 +3150,7 @@ def compromisso_pdf_view(request, pk):
         "Responsável operacional": compromisso.responsavel,
         "Status": compromisso.get_status_display(),
         "Data": compromisso.data_assinatura.strftime("%d/%m/%Y") if compromisso.data_assinatura else "-",
-        "Descricao": compromisso.descricao,
+        "Descrição": compromisso.descricao,
         "Valor total": money_br(compromisso.valor_contratado),
     }
     extras = [
@@ -3265,7 +3265,7 @@ class MedicaoListView(DefaultPaginationMixin, ListView):
     context_object_name = "medicoes"
 
     def dispatch(self, request, *args, **kwargs):
-        if not _exigir_obra_contexto_view(request, mensagem="Selecione uma obra no menu antes de acessar medicoes."):
+        if not _exigir_obra_contexto_view(request, mensagem="Selecione uma obra no menu antes de acessar medições."):
             return redirect("home")
         return super().dispatch(request, *args, **kwargs)
 
@@ -3300,7 +3300,7 @@ class MedicaoListView(DefaultPaginationMixin, ListView):
 
 class MedicaoCreateView(CreateView):
     def dispatch(self, request, *args, **kwargs):
-        obra = _exigir_obra_contexto_view(request, mensagem="Selecione uma obra no menu antes de criar medicoes.")
+        obra = _exigir_obra_contexto_view(request, mensagem="Selecione uma obra no menu antes de criar medições.")
         if not obra:
             return redirect("home")
         motivo = _bloqueio_lancamento_obra(obra)
@@ -3331,7 +3331,7 @@ class MedicaoCreateView(CreateView):
         contrato = form.cleaned_data.get("contrato")
         obra_contexto = _obter_obra_contexto(self.request)
         if not obra_contexto:
-            form.add_error("contrato", "Selecione uma obra no menu antes de criar medicoes.")
+            form.add_error("contrato", "Selecione uma obra no menu antes de criar medições.")
             return self.form_invalid(form)
         if contrato and contrato.status != "APROVADO":
             form.add_error("contrato", "Só é possível emitir medição para contratos aprovados.")
@@ -3347,7 +3347,7 @@ class MedicaoCreateView(CreateView):
         item_formset.instance = self.object
         item_formset.save()
         self.object.recalcular_totais_por_itens()
-        _registrar_historico("CRIACAO", self.object, f"Medicao criada: {self.object.numero_da_medicao}", self.request.user)
+        _registrar_historico("CRIACAO", self.object, f"Medição criada: {self.object.numero_da_medicao}", self.request.user)
         return HttpResponseRedirect(self.get_success_url())
 
 
@@ -3377,7 +3377,7 @@ class MedicaoUpdateView(UpdateView):
             messages.error(request, motivo)
             return redirect("medicao_detail", pk=self.object.pk)
         if self.object.status != "EM_ELABORACAO":
-            messages.error(request, "Somente medicoes em elaboracao podem ser editadas.")
+            messages.error(request, "Somente medições em elaboração podem ser editadas.")
             return redirect("medicao_detail", pk=self.object.pk)
         return super().dispatch(request, *args, **kwargs)
 
@@ -3395,7 +3395,7 @@ class MedicaoUpdateView(UpdateView):
         item_formset.instance = self.object
         item_formset.save()
         self.object.recalcular_totais_por_itens()
-        _registrar_historico("ATUALIZACAO", self.object, f"Medicao atualizada: {self.object.numero_da_medicao}", self.request.user)
+        _registrar_historico("ATUALIZACAO", self.object, f"Medição atualizada: {self.object.numero_da_medicao}", self.request.user)
         return HttpResponseRedirect(self.get_success_url())
 
 
@@ -3437,7 +3437,7 @@ class MedicaoDetailView(DetailView):
                 request,
                 self.object,
                 status_em_aprovacao="EM_APROVACAO",
-                descricao=f"{self.object.numero_da_medicao} enviada para aprovacao.",
+                descricao=f"{self.object.numero_da_medicao} enviada para aprovação.",
             )
             return redirect("medicao_detail", pk=self.object.pk)
         if acao == "aprovar":
@@ -3464,7 +3464,7 @@ class MedicaoDetailView(DetailView):
             anexo.medicao = self.object
             anexo.obra = self.object.obra
             anexo.save()
-            _registrar_historico("ANEXO", self.object, f"Anexo incluido na medicao {self.object.numero_da_medicao}", self.request.user)
+            _registrar_historico("ANEXO", self.object, f"Anexo incluido na medição {self.object.numero_da_medicao}", self.request.user)
             messages.success(request, "Anexo incluido com sucesso.")
             return redirect("medicao_detail", pk=self.object.pk)
         return self.render_to_response(self.get_context_data(anexo_form=form))
@@ -3489,7 +3489,7 @@ def medicao_aprovacao_pdf_view(request, pk):
         resumo,
         historico,
         extras,
-        extras_titulo="Itens da Medicao",
+        extras_titulo="Itens da Medição",
         extras_colunas=[
             ("Centro de Custo", 245),
             ("Quantidade", 70),
@@ -3528,31 +3528,31 @@ def medicao_export_view(request):
     registrar_acesso_dado_pessoal(
         request,
         categoria_titular="FORNECEDOR",
-        entidade="Medicao",
-        identificador="Medicoes",
+        entidade="Medição",
+        identificador="Medições",
         acao="EXPORT",
         finalidade="Exportacao de dados financeiros e cadastrais vinculados a contratos",
-        detalhes="Exportacao Excel da lista de medicoes.",
+        detalhes="Exportacao Excel da lista de medições.",
     )
     linhas = [
         {
-            "Numero": medicao.numero_da_medicao,
+            "Número": medicao.numero_da_medicao,
             "Contrato": medicao.contrato.numero,
             "CNPJ": medicao.cnpj,
             "Fornecedor": medicao.fornecedor,
-            "Descricao": medicao.descricao,
+            "Descrição": medicao.descricao,
             "Itens Medidos": " | ".join(
                 f"{item.centro_custo.codigo} - {item.centro_custo.descricao}" for item in medicao.itens.all()
             ),
             "Quantidade": medicao.quantidade_total,
             "Valor Unitario": medicao.valor_unitario_medio,
             "Valor Total": medicao.valor_medido,
-            "Responsavel": medicao.responsavel,
+            "Responsável": medicao.responsavel,
             "Data": medicao.data_medicao.strftime("%d/%m/%Y"),
         }
         for medicao in queryset
     ]
-    return _exportar_excel_response("medicoes.xlsx", "Medicoes", linhas)
+    return _exportar_excel_response("medicoes.xlsx", "Medições", linhas)
 
 
 @login_required
@@ -3567,7 +3567,7 @@ def medicao_lista_pdf_view(request):
     resumo = {"Quantidade de Registros": queryset.count(), "Emitido em": _datahora_local(timezone.now()).strftime("%d/%m/%Y %H:%M")}
     extras = [
         {
-            "Numero": medicao.numero_da_medicao,
+            "Número": medicao.numero_da_medicao,
             "Contrato": medicao.contrato.numero,
             "Fornecedor": medicao.fornecedor,
             "Status": medicao.get_status_display(),
@@ -3577,12 +3577,12 @@ def medicao_lista_pdf_view(request):
     ]
     return _pdf_relatorio_probatorio_response(
         "medicoes_lista.pdf",
-        "Lista de Medicoes",
+        "Lista de Medições",
         resumo,
         [],
         extras,
-        extras_titulo="Lista de Medicoes",
-        extras_colunas=[("Numero", 85), ("Contrato", 85), ("Fornecedor", 180), ("Status", 70), ("Valor Total", 75)],
+        extras_titulo="Lista de Medições",
+        extras_colunas=[("Número", 85), ("Contrato", 85), ("Fornecedor", 180), ("Status", 70), ("Valor Total", 75)],
         incluir_historico=False,
     )
 
@@ -3886,7 +3886,7 @@ class FechamentoMensalView(TemplateView):
 
         obra = resolver_obra_financeira(request=request, obra_id=request.POST.get("obra"))
         if not obra:
-            messages.error(request, "Voce nao tem acesso a obra selecionada para fechamento.")
+            messages.error(request, "Você não tem acesso a obra selecionada para fechamento.")
             return redirect(reverse_lazy("fechamento_mensal"))
         ano = _parse_int_br(request.POST.get("ano"))
         mes = _parse_int_br(request.POST.get("mes"))
@@ -4147,7 +4147,7 @@ class FechamentoMensalView(TemplateView):
 
         obra = resolver_obra_financeira(request=request, obra_id=request.POST.get("obra"))
         if not obra:
-            messages.error(request, "Voce nao tem acesso a obra selecionada para fechamento.")
+            messages.error(request, "Você não tem acesso a obra selecionada para fechamento.")
             return redirect(reverse_lazy("fechamento_mensal"))
         ano = _parse_int_br(request.POST.get("ano"))
         mes = _parse_int_br(request.POST.get("mes"))
@@ -4188,7 +4188,7 @@ def fechamento_mensal_pdf_view(request):
     dados = dados_fechamento_mensal_request(request)
     resumo = {
         "Obra": f'{dados["obra_atual"].codigo} - {dados["obra_atual"].nome}' if dados["obra_atual"] else "-",
-        "Periodo": f'{dados["mes"]:02d}/{dados["ano"]}',
+        "Período": f'{dados["mes"]:02d}/{dados["ano"]}',
         "Comprometido": money_br(dados["resumo"]["valor_comprometido"]),
         "Medido": money_br(dados["resumo"]["valor_medido"]),
         "Notas": money_br(dados["resumo"]["valor_notas"]),
@@ -4295,20 +4295,20 @@ def projecao_financeira_export_view(request):
         identificador="Horizonte financeiro",
         acao="EXPORT",
         finalidade="Exportacao de previsao financeira da obra",
-        detalhes="Exportacao Excel da projecao financeira.",
+        detalhes="Exportacao Excel da projeção financeira.",
     )
     linhas = [
         {"Mes": item["label"], "Entradas": item["entrada"], "Saidas": item["saida"], "Saldo": item["saldo"]}
         for item in dados["series"]
     ]
-    return _exportar_excel_response("projecao_financeira.xlsx", "Projecao Financeira", linhas)
+    return _exportar_excel_response("projecao_financeira.xlsx", "Projeção Financeira", linhas)
 
 
 @login_required
 def projecao_financeira_pdf_view(request):
     dados = dados_projecao_financeira_request(request)
     resumo = {
-        "Total Orcado": money_br(dados["total_orcado"]),
+        "Total Orçado": money_br(dados["total_orcado"]),
         "Total Entradas": money_br(dados["total_entradas"]),
         "Total Saidas": money_br(dados["total_saidas"]),
         "Saldo no Horizonte": money_br(dados["total_saldo"]),
@@ -4319,11 +4319,11 @@ def projecao_financeira_pdf_view(request):
     ]
     return _pdf_relatorio_probatorio_response(
         "projecao_financeira.pdf",
-        "Projecao Financeira",
+        "Projeção Financeira",
         resumo,
         [],
         extras,
-        extras_titulo="Visao Mensal",
+        extras_titulo="Visão Mensal",
         extras_colunas=[("Mes", 80), ("Entradas", 135), ("Saidas", 135), ("Saldo", 145)],
         incluir_historico=False,
     )
@@ -4354,11 +4354,11 @@ def nota_fiscal_export_view(request):
     linhas = [
         {
             "ID": nota.id,
-            "Numero da Nota": nota.numero,
+            "Número da Nota": nota.numero,
             "Origem": str(nota.medicao or nota.pedido_compra or ""),
             "CNPJ": nota.cnpj,
             "Fornecedor": nota.fornecedor,
-            "Descricao": nota.descricao,
+            "Descrição": nota.descricao,
             "Centro de Custo": " | ".join(
                 f"{item.centro_custo.codigo} - {item.centro_custo.descricao}" for item in nota.centros_custo.all()
             ),
@@ -4384,7 +4384,7 @@ def nota_fiscal_lista_pdf_view(request):
     resumo = {"Quantidade de Registros": queryset.count(), "Emitido em": _datahora_local(timezone.now()).strftime("%d/%m/%Y %H:%M")}
     extras = [
         {
-            "Numero": nota.numero,
+            "Número": nota.numero,
             "Fornecedor": nota.fornecedor,
             "Valor": money_br(nota.valor_total),
             "Emissao": nota.data_emissao.strftime("%d/%m/%Y"),
@@ -4399,7 +4399,7 @@ def nota_fiscal_lista_pdf_view(request):
         [],
         extras,
         extras_titulo="Lista de Notas Fiscais",
-        extras_colunas=[("Numero", 85), ("Fornecedor", 190), ("Valor", 70), ("Emissao", 75), ("Vencimento", 75)],
+        extras_colunas=[("Número", 85), ("Fornecedor", 190), ("Valor", 70), ("Emissao", 75), ("Vencimento", 75)],
         incluir_historico=False,
     )
 
@@ -4420,7 +4420,7 @@ def nota_fiscal_dados_view(request, pk):
         objeto=nota,
         identificador=nota.numero,
         acao="VIEW",
-        finalidade="Consulta detalhada de dados fiscais e rateios para operacao autorizada",
+        finalidade="Consulta detalhada de dados fiscais e rateios para operação autorizada",
         detalhes="Consulta detalhada via endpoint JSON de nota fiscal.",
     )
     return JsonResponse(
@@ -4460,7 +4460,7 @@ def contrato_dados_view(request, pk):
         objeto=contrato,
         identificador=contrato.numero,
         acao="VIEW",
-        finalidade="Consulta detalhada de contrato ou pedido para operacao autorizada",
+        finalidade="Consulta detalhada de contrato ou pedido para operação autorizada",
         detalhes="Consulta detalhada via endpoint JSON de contrato.",
     )
     return JsonResponse(obter_dados_contrato(contrato))
@@ -4477,12 +4477,12 @@ def medicao_dados_view(request, pk):
     registrar_acesso_dado_pessoal(
         request,
         categoria_titular="FORNECEDOR",
-        entidade="Medicao",
+        entidade="Medição",
         objeto=medicao,
         identificador=medicao.numero_da_medicao,
         acao="VIEW",
-        finalidade="Consulta detalhada de medicao para conferencias e operacao autorizada",
-        detalhes="Consulta detalhada via endpoint JSON de medicao.",
+        finalidade="Consulta detalhada de medição para conferencias e operação autorizada",
+        detalhes="Consulta detalhada via endpoint JSON de medição.",
     )
     return JsonResponse(obter_dados_medicao(medicao))
 

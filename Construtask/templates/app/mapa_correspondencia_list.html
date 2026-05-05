@@ -164,7 +164,7 @@
 <section class="panel">
     <strong>Obra:</strong> {{ obra.codigo }} - {{ obra.nome }}
     {% if plano_referencia %}
-    <div class="map-help"><strong>Cronograma de referencia:</strong> {% if plano_referencia.numero %}{{ plano_referencia.numero }} - {% endif %}{{ plano_referencia.titulo }}</div>
+    <div class="map-help"><strong>Cronograma de referência:</strong> {% if plano_referencia.numero %}{{ plano_referencia.numero }} - {% endif %}{{ plano_referencia.titulo }}</div>
     {% endif %}
     <div class="map-help">A leitura abaixo segue a estrutura do diagrama: do lado esquerdo, a EAP aponta para as atividades; do lado direito, cada atividade mostra suas EAPs vinculadas.</div>
 </section>
@@ -202,7 +202,7 @@
                 {% endfor %}
             {% else %}
                 <div class="map-row">
-                    <div class="map-key">Sem vinculos</div>
+                    <div class="map-key">Sem vínculos</div>
                     <div>Nenhum relacionamento EAP x cronograma foi definido ainda.</div>
                 </div>
             {% endif %}
@@ -212,7 +212,7 @@
     <div class="map-box">
         <div class="map-box-header">
             <h3>Cronograma -> EAP</h3>
-            <p class="map-help">Cada atividade folha mostra as EAPs ativas. O sistema nao aceita uma malha N EAP -> N atividades.</p>
+            <p class="map-help">Cada atividade folha mostra as EAPs ativas. O sistema não aceita uma malha N EAP -> N atividades.</p>
         </div>
         <div class="map-box-body">
             {% if grupos_atividade %}
@@ -239,7 +239,7 @@
             {% else %}
                 <div class="map-row">
                     <div class="map-key">Sem atividades</div>
-                    <div>Nao ha atividades folha disponiveis para mapeamento.</div>
+                    <div>Não há atividades folha disponíveis para mapeamento.</div>
                 </div>
             {% endif %}
         </div>
@@ -247,7 +247,7 @@
 </section>
 
 <section class="panel">
-    <h3>Edicao dos Vinculos</h3>
+    <h3>Edicao dos Vínculos</h3>
     {% if linhas_mapeamento %}
     <div style="overflow-x:auto;">
         <table class="compact-table mapa-table">
@@ -259,7 +259,7 @@
                     <th class="nowrap">EAP Importada</th>
                     <th>EAP Ativa</th>
                     <th>Status</th>
-                    <th class="nowrap">Acoes</th>
+                    <th class="nowrap">Ações</th>
                 </tr>
             </thead>
             <tbody>
@@ -267,13 +267,13 @@
                 <tr>
                     <td class="nowrap">{{ linha.item.codigo_atividade }}</td>
                     <td class="wrap-text">{{ linha.item.atividade }}</td>
-                    <td class="nowrap">{% if linha.item.data_inicio_prevista %}{{ linha.item.data_inicio_prevista|date:"d/m/Y" }}{% else %}Nao informado{% endif %}</td>
+                    <td class="nowrap">{% if linha.item.data_inicio_prevista %}{{ linha.item.data_inicio_prevista|date:"d/m/Y" }}{% else %}Não informado{% endif %}</td>
                     <td class="nowrap">{{ linha.codigo_eap_importado }}</td>
                     <td class="wrap-text">
                         {% if linha.codigos_eap %}
                             {{ linha.codigos_eap|join:", " }}
                         {% else %}
-                            Nao informado
+                            Não informado
                         {% endif %}
                     </td>
                     <td>
@@ -293,7 +293,7 @@
                             data-item-codigo="{{ linha.item.codigo_atividade|unlocalize }}"
                             data-item-atividade="{{ linha.item.atividade|escape }}"
                         >
-                            Editar Vinculos
+                            Editar Vínculos
                         </button>
                     </td>
                 </tr>
@@ -302,14 +302,14 @@
         </table>
     </div>
     {% else %}
-    <p class="empty">Nao ha atividades folha disponiveis para edicao.</p>
+    <p class="empty">Não há atividades folha disponíveis para edicao.</p>
     {% endif %}
 </section>
 
 <div id="selector-panel" class="selector-panel" aria-hidden="true">
     <div class="selector-card">
         <header>
-            <h3 id="selector-title">Editar vinculos</h3>
+            <h3 id="selector-title">Editar vínculos</h3>
             <div class="map-help" id="selector-subtitle"></div>
         </header>
         <div class="selector-body">
@@ -318,7 +318,7 @@
         </div>
         <footer>
             <button type="button" class="btn secondary" id="selector-cancelar">Cancelar</button>
-            <button type="button" class="btn" id="selector-salvar">Salvar Vinculos</button>
+            <button type="button" class="btn" id="selector-salvar">Salvar Vínculos</button>
         </footer>
     </div>
 </div>
@@ -392,7 +392,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 const response = await fetch("{% url 'mapa_correspondencia_sugerir' %}?item_id=" + encodeURIComponent(currentItemId));
                 const payload = await response.json();
                 if (!response.ok || !payload.success) {
-                    throw new Error(payload.error || "Nao foi possivel carregar as opcoes.");
+                    throw new Error(payload.error || "Não foi possível carregar as opções.");
                 }
                 renderizarOpcoes(payload);
                 abrirPainel();
@@ -430,7 +430,7 @@ document.addEventListener("DOMContentLoaded", function () {
             });
             const payload = await response.json();
             if (!response.ok || !payload.success) {
-                throw new Error(payload.error || "Nao foi possivel salvar os vinculos.");
+                throw new Error(payload.error || "Não foi possível salvar os vínculos.");
             }
             window.location.reload();
         } catch (error) {

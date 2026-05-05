@@ -24,7 +24,7 @@
             <p><strong>Baseline ativa:</strong> {{ baseline_ativa.descricao }}</p>
             <p class="muted">Criada por {{ baseline_ativa.criado_por.username|default:"-" }} em {{ baseline_ativa.criado_em|date:"d/m/Y H:i" }} | Valor congelado: {{ baseline_ativa.valor_total|money_br }}</p>
             {% else %}
-            <p class="empty">Nenhuma baseline de orçamento criada para esta obra.</p>
+            <p class="empty">Nenhuma baseline de orçamento criada para está obra.</p>
             {% endif %}
             <form method="post" action="{% url 'plano_contas_criar_baseline' %}">
                 {% csrf_token %}

@@ -1,5 +1,5 @@
 """
-Servicos de governanca LGPD, inventario minimo de tratamento e trilha de acesso.
+Serviços de governanca LGPD, inventario mínimo de tratamento e trilha de acesso.
 """
 
 from django.apps import apps
@@ -15,57 +15,57 @@ FIELD_METADATA_DEFAULT = {
     "email": {
         "categoria_titular": "USUARIO",
         "finalidade": "Comunicacao operacional, autenticacao e rastreabilidade",
-        "base_legal": "Execucao de contrato e legitimo interesse",
+        "base_legal": "Execução de contrato e legitimo interesse",
         "retencao": "Enquanto durar o vinculo e pelo prazo prescricional aplicavel",
         "responsavel": "Administracao da empresa",
     },
     "telefone": {
         "categoria_titular": "COLABORADOR",
         "finalidade": "Contato operacional e coordenacao de obra",
-        "base_legal": "Execucao de contrato e legitimo interesse",
+        "base_legal": "Execução de contrato e legitimo interesse",
         "retencao": "Enquanto durar a relacao operacional",
         "responsavel": "Administracao da empresa",
     },
     "cnpj": {
         "categoria_titular": "FORNECEDOR",
-        "finalidade": "Contratacao, faturamento e prova fiscal",
-        "base_legal": "Execucao de contrato e obrigacao legal",
+        "finalidade": "Contratação, faturamento e prova fiscal",
+        "base_legal": "Execução de contrato e obrigacao legal",
         "retencao": "Prazo fiscal, contabil e contratual aplicavel",
         "responsavel": "Financeiro e suprimentos",
     },
     "cliente": {
         "categoria_titular": "CLIENTE",
         "finalidade": "Identificacao do empreendimento e relacao contratual",
-        "base_legal": "Execucao de contrato",
-        "retencao": "Prazo de vida util da obra e periodo prescricional",
-        "responsavel": "Operacao da obra",
+        "base_legal": "Execução de contrato",
+        "retencao": "Prazo de vida util da obra e período prescricional",
+        "responsavel": "Operação da obra",
     },
     "responsavel": {
         "categoria_titular": "COLABORADOR",
         "finalidade": "Responsabilizacao operacional e trilha de decisao",
-        "base_legal": "Execucao de contrato e legitimo interesse",
+        "base_legal": "Execução de contrato e legitimo interesse",
         "retencao": "Enquanto durar o contexto operacional",
-        "responsavel": "Operacao da obra",
+        "responsavel": "Operação da obra",
     },
     "contato": {
         "categoria_titular": "FORNECEDOR",
         "finalidade": "Contato comercial e operacional",
-        "base_legal": "Execucao de contrato e exercicio regular de direitos",
+        "base_legal": "Execução de contrato e exercicio regular de direitos",
         "retencao": "Durante a relacao comercial",
         "responsavel": "Suprimentos",
     },
     "user_agent": {
         "categoria_titular": "TERCEIRO",
-        "finalidade": "Seguranca da informacao e auditoria",
+        "finalidade": "Segurança da informacao e auditoria",
         "base_legal": "Legitimo interesse",
-        "retencao": "Conforme politica de seguranca",
+        "retencao": "Conforme política de segurança",
         "responsavel": "Administracao da empresa",
     },
     "ip_address": {
         "categoria_titular": "TERCEIRO",
-        "finalidade": "Seguranca da informacao e auditoria",
+        "finalidade": "Segurança da informacao e auditoria",
         "base_legal": "Legitimo interesse",
-        "retencao": "Conforme politica de seguranca",
+        "retencao": "Conforme política de segurança",
         "responsavel": "Administracao da empresa",
     },
 }
@@ -91,19 +91,19 @@ PERSONAL_FIELD_KEYWORDS = {
 
 INVENTARIO_DADOS_PESSOAIS = [
     {
-        "categoria_titular": "Usuario",
+        "categoria_titular": "Usuário",
         "entidade": "auth.User / UsuarioEmpresa / UserProfile",
         "dados_tratados": "Username, email, papel operacional, telefone, cargo, obras permitidas",
-        "finalidade": "Controle de acesso, segregacao por empresa/obra, aprovacao operacional e rastreabilidade",
-        "base_legal": "Execucao de contrato e legitimo interesse",
+        "finalidade": "Controle de acesso, segregacao por empresa/obra, aprovação operacional e rastreabilidade",
+        "base_legal": "Execução de contrato e legitimo interesse",
         "retencao": "Enquanto durar o vinculo operacional e pelo prazo prescricional aplicavel",
     },
     {
         "categoria_titular": "Fornecedor",
-        "entidade": "Fornecedor / Compromisso / Cotacao / OrdemCompra / NotaFiscal",
-        "dados_tratados": "Razao social, nome fantasia, CNPJ, contato, telefone, email e historico comercial",
-        "finalidade": "Aquisicoes, contratacoes, pagamentos, medicao de desempenho e prova operacional",
-        "base_legal": "Execucao de contrato e exercicio regular de direitos",
+        "entidade": "Fornecedor / Compromisso / Cotação / OrdemCompra / NotaFiscal",
+        "dados_tratados": "Razao social, nome fantasia, CNPJ, contato, telefone, email e histórico comercial",
+        "finalidade": "Aquisições, contratações, pagamentos, medição de desempenho e prova operacional",
+        "base_legal": "Execução de contrato e exercicio regular de direitos",
         "retencao": "Durante a relacao comercial e pelo prazo legal, contabil e contratual aplicavel",
     },
     {
@@ -111,24 +111,24 @@ INVENTARIO_DADOS_PESSOAIS = [
         "entidade": "Obra",
         "dados_tratados": "Nome do cliente e referencias operacionais da obra",
         "finalidade": "Identificacao do empreendimento e gestao contratual da obra",
-        "base_legal": "Execucao de contrato e legitimo interesse",
-        "retencao": "Enquanto a obra permanecer ativa e pelo prazo de guarda do historico contratual",
+        "base_legal": "Execução de contrato e legitimo interesse",
+        "retencao": "Enquanto a obra permanecer ativa e pelo prazo de guarda do histórico contratual",
     },
     {
         "categoria_titular": "Colaborador",
         "entidade": "Obra / Compromisso / NaoConformidade",
-        "dados_tratados": "Nome do responsavel, telefone, cargo funcional e historico de acoes",
-        "finalidade": "Responsabilizacao operacional, fluxo de aprovacao e rastreabilidade",
-        "base_legal": "Execucao de contrato e cumprimento de obrigacao legal/regulatoria",
+        "dados_tratados": "Nome do responsável, telefone, cargo funcional e histórico de ações",
+        "finalidade": "Responsabilizacao operacional, fluxo de aprovação e rastreabilidade",
+        "base_legal": "Execução de contrato e cumprimento de obrigacao legal/regulatoria",
         "retencao": "Enquanto durar a relacao operacional e pelo prazo prescricional aplicavel",
     },
     {
         "categoria_titular": "Terceiro",
         "entidade": "Documento / AuditEvent / RegistroAcessoDadoPessoal",
-        "dados_tratados": "Nome de usuario, endereco IP, user agent e identificadores de acesso",
-        "finalidade": "Seguranca da informacao, auditoria, investigacao e defesa juridica",
+        "dados_tratados": "Nome de usuário, endereco IP, user agent e identificadores de acesso",
+        "finalidade": "Segurança da informacao, auditoria, investigacao e defesa juridica",
         "base_legal": "Legitimo interesse e exercicio regular de direitos",
-        "retencao": "Conforme politica de seguranca e prazo de guarda de trilhas de auditoria",
+        "retencao": "Conforme política de segurança e prazo de guarda de trilhas de auditoria",
     },
 ]
 
@@ -136,7 +136,7 @@ INVENTARIO_DADOS_PESSOAIS = [
 POLITICA_RETENCAO_PADRAO = [
     {
         "registro": "Usuarios e perfis de acesso",
-        "regra": "Manter enquanto o usuario possuir vinculo operacional ativo e, apos desligamento, preservar trilhas essenciais para auditoria.",
+        "regra": "Manter enquanto o usuário possuir vinculo operacional ativo e, após desligamento, preservar trilhas essenciais para auditoria.",
     },
     {
         "registro": "Fornecedores e cadastros comerciais",
@@ -144,10 +144,10 @@ POLITICA_RETENCAO_PADRAO = [
     },
     {
         "registro": "Auditoria e acesso a dados pessoais",
-        "regra": "Manter para seguranca, rastreabilidade, auditoria interna e defesa juridica, observando necessidade e proporcionalidade.",
+        "regra": "Manter para segurança, rastreabilidade, auditoria interna e defesa juridica, observando necessidade e proporcionalidade.",
     },
     {
-        "registro": "Documentos, contratos, medicoes e evidencias operacionais",
+        "registro": "Documentos, contratos, medições e evidências operacionais",
         "regra": "Manter pelo prazo de vida util da obra e pelos prazos prescricionais e contratuais aplicaveis.",
     },
 ]
@@ -157,17 +157,17 @@ POLITICA_DESCARTE_ANONIMIZACAO = [
     {
         "entidade": "Fornecedor",
         "criterio": "Cadastro inativo e sem necessidade operacional de manter dados de contato identificaveis.",
-        "acao_recomendada": "Anonimizar contato, telefone, email e nome fantasia, preservando historico contratual e fiscal.",
+        "acao_recomendada": "Anonimizar contato, telefone, email e nome fantasia, preservando histórico contratual e fiscal.",
     },
     {
-        "entidade": "Usuario operacional",
-        "criterio": "Usuario inativo ou desligado, mantendo necessidade de trilha historica.",
-        "acao_recomendada": "Anonimizar email e dados complementares do perfil, preservando identificador historico minimo.",
+        "entidade": "Usuário operacional",
+        "criterio": "Usuário inativo ou desligado, mantendo necessidade de trilha historica.",
+        "acao_recomendada": "Anonimizar email e dados complementares do perfil, preservando identificador histórico mínimo.",
     },
     {
         "entidade": "Logs e auditoria",
-        "criterio": "Decurso do prazo de retencao definido em politica interna e ausencia de litigo ou auditoria pendente.",
-        "acao_recomendada": "Descarte controlado ou arquivamento conforme politica institucional.",
+        "criterio": "Decurso do prazo de retenção definido em política interna e ausencia de litigo ou auditoria pendente.",
+        "acao_recomendada": "Descarte controlado ou arquivamento conforme política institucional.",
     },
 ]
 
@@ -192,7 +192,7 @@ def obter_inventario_modelos_dados_pessoais():
                         "categoria_titular": metadata.get("categoria_titular", "TERCEIRO"),
                         "finalidade": metadata.get("finalidade", "Controle operacional e rastreabilidade"),
                         "base_legal": metadata.get("base_legal", "Legitimo interesse"),
-                        "retencao": metadata.get("retencao", "Conforme politica de retencao da empresa"),
+                        "retencao": metadata.get("retencao", "Conforme política de retenção da empresa"),
                         "responsavel": metadata.get("responsavel", "Administracao da empresa"),
                     }
                 )
@@ -375,17 +375,17 @@ def anonimizar_fornecedor_inativo(fornecedor):
             objeto=fornecedor,
             identificador=fornecedor.razao_social,
             acao="ANONIMIZACAO",
-            finalidade="Reducao de dados apos inatividade",
+            finalidade="Reducao de dados após inatividade",
             base_legal="Legitimo interesse e exercicio regular de direitos",
-            detalhes="Anonimizacao segura de dados de contato do fornecedor inativo",
+            detalhes="Anonimização segura de dados de contato do fornecedor inativo",
         )
     return atualizado
 
 
 def anonimizar_usuario_inativo(usuario):
     """
-    Anonimiza dados complementares de usuario inativo, preservando o identificador
-    historico minimo necessario para auditoria.
+    Anonimiza dados complementares de usuário inativo, preservando o identificador
+    histórico mínimo necessário para auditoria.
     """
     if usuario.is_active or usuario.is_superuser:
         return False
@@ -435,9 +435,9 @@ def anonimizar_usuario_inativo(usuario):
             objeto=usuario,
             identificador=usuario.username,
             acao="ANONIMIZACAO",
-            finalidade="Reducao de dados de usuario inativo",
+            finalidade="Reducao de dados de usuário inativo",
             base_legal="Legitimo interesse e exercicio regular de direitos",
-            detalhes="Anonimizacao de dados complementares do usuario inativo",
+            detalhes="Anonimização de dados complementares do usuário inativo",
         )
 
     return atualizado
@@ -457,9 +457,9 @@ def excluir_logicamente_fornecedor(fornecedor, *, usuario=None, justificativa=""
         objeto=fornecedor,
         identificador=fornecedor.razao_social,
         acao="EXCLUSAO_LOGICA",
-        finalidade="Atender solicitacao de restricao de uso do cadastro",
+        finalidade="Atender solicitação de restricao de uso do cadastro",
         base_legal="Exercicio regular de direitos",
-        detalhes=justificativa or "Exclusao logica do cadastro",
+        detalhes=justificativa or "Exclusão logica do cadastro",
     )
     return True
 
@@ -477,9 +477,9 @@ def descartar_fornecedor_anonimizado(fornecedor, *, usuario=None, justificativa=
         objeto=fornecedor,
         identificador=fornecedor.razao_social,
         acao="DESCARTE",
-        finalidade="Encerramento definitivo do ciclo de retencao",
+        finalidade="Encerramento definitivo do ciclo de retenção",
         base_legal="Exercicio regular de direitos",
-        detalhes=justificativa or "Registro marcado como descartado apos anonimização",
+        detalhes=justificativa or "Registro marcado como descartado após anonimização",
     )
     return True
 

@@ -11,16 +11,16 @@ class AquisicoesService:
     @transaction.atomic
     def emitir_ordem_compra(cls, cotacao, usuario, descricao="", tipo_resultado="PEDIDO_COMPRA"):
         if cotacao.status != "APROVADA":
-            raise ValueError("A cotacao precisa estar aprovada para gerar compras e contratacoes.")
+            raise ValueError("A cotação precisa estar aprovada para gerar compras e contratações.")
 
         fornecedores_comparados = (
             cotacao.solicitacao.cotacoes.values_list("fornecedor_id", flat=True).distinct().count()
         )
         if fornecedores_comparados < 2:
-            raise ValueError("A cotacao precisa comparar pelo menos 2 fornecedores antes de gerar compras e contratacoes.")
+            raise ValueError("A cotação precisa comparar pelo menos 2 fornecedores antes de gerar compras e contratações.")
 
         if tipo_resultado not in {"PEDIDO_COMPRA", "CONTRATO"}:
-            raise ValueError("Tipo de resultado invalido para a cotacao.")
+            raise ValueError("Tipo de resultado invalido para a cotação.")
 
         ordem = OrdemCompra.objects.create(
             empresa=cotacao.empresa,

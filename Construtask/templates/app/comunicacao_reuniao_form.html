@@ -1,12 +1,12 @@
 {% extends "app/base.html" %}
 
-{% block title %}Nova Reuniao | Construtask{% endblock %}
+{% block title %}Nova Reunião | Construtask{% endblock %}
 
 {% block content %}
 <div class="form-page-shell">
 <div class="toolbar">
     <div>
-        <h2>Nova Reuniao de Comunicacao</h2>
+        <h2>Nova Reunião de Comunicacao</h2>
         <p class="muted">A pauta inicial sera gerada automaticamente com base no contexto atual da obra.</p>
     </div>
     <a class="btn secondary" href="{% url 'reuniao_comunicacao_list' %}">Voltar</a>
@@ -30,7 +30,7 @@
         </div>
         {% for error in form.non_field_errors %}<small style="color:#7f1d1d;">{{ error }}</small>{% endfor %}
         <div class="actions">
-            <button type="submit" class="btn">Criar reuniao</button>
+            <button type="submit" class="btn">Criar reunião</button>
         </div>
     </form>
 </section>

@@ -1,39 +1,39 @@
 {% extends "app/base.html" %}
 {% load formatters %}
 
-{% block title %}Comunicacoes | Construtask{% endblock %}
+{% block title %}Comunicações | Construtask{% endblock %}
 
 {% block content %}
 <div class="toolbar">
     <div>
-        <h2>Comunicacoes da Obra</h2>
-        <p class="muted">Organize reunioes de curto, medio e longo prazo com pauta semi automatica e ata rastreavel.</p>
+        <h2>Comunicações da Obra</h2>
+        <p class="muted">Organize reunioes de curto, médio e longo prazo com pauta semi automática e ata rastreavel.</p>
     </div>
     <div style="display:flex; gap:10px;">
         {% if pode_criar and obra_contexto %}
-        <a class="btn" href="{% url 'reuniao_comunicacao_create' %}">Nova Reuniao</a>
+        <a class="btn" href="{% url 'reuniao_comunicacao_create' %}">Nova Reunião</a>
         {% endif %}
-        <a class="btn secondary" href="{% url 'modulo_grupo' 'comunicacoes' %}">Voltar ao Modulo</a>
+        <a class="btn secondary" href="{% url 'modulo_grupo' 'comunicacoes' %}">Voltar ao Módulo</a>
     </div>
 </div>
 
 {% if not obra_contexto %}
 <section class="panel">
-    <p class="empty">Selecione uma obra para acessar o modulo de comunicacoes.</p>
+    <p class="empty">Selecione uma obra para acessar o módulo de comunicacoes.</p>
 </section>
 {% else %}
 <section class="grid-3" style="margin-bottom:20px;">
     <div class="panel"><span class="muted">Total de reunioes</span><h3>{{ resumo_reunioes.total }}</h3></div>
-    <div class="panel"><span class="muted">Em aprovacao</span><h3>{{ resumo_reunioes.em_aprovacao }}</h3></div>
+    <div class="panel"><span class="muted">Em aprovação</span><h3>{{ resumo_reunioes.em_aprovacao }}</h3></div>
     <div class="panel"><span class="muted">Aprovadas</span><h3>{{ resumo_reunioes.aprovadas }}</h3></div>
 </section>
 
 <section class="panel" style="margin-bottom:20px;">
-    <h3>Frequencias padrao da empresa</h3>
+    <h3>Frequencias padrão da empresa</h3>
     <table class="compact-table">
         <tbody>
             <tr><th>Curto prazo</th><td>{{ parametros_comunicacao.frequencia_curto_prazo_dias }} dia(s)</td></tr>
-            <tr><th>Medio prazo</th><td>{{ parametros_comunicacao.frequencia_medio_prazo_dias }} dia(s)</td></tr>
+            <tr><th>Médio prazo</th><td>{{ parametros_comunicacao.frequencia_medio_prazo_dias }} dia(s)</td></tr>
             <tr><th>Longo prazo</th><td>{{ parametros_comunicacao.frequencia_longo_prazo_dias }} dia(s)</td></tr>
         </tbody>
     </table>
@@ -44,7 +44,7 @@
         <h3>Reunioes</h3>
         <div style="display:flex; gap:10px;">
             <a class="btn secondary" href="{% url 'reuniao_comunicacao_create' %}?tipo_reuniao=CURTO_PRAZO">Curto Prazo</a>
-            <a class="btn secondary" href="{% url 'reuniao_comunicacao_create' %}?tipo_reuniao=MEDIO_PRAZO">Medio Prazo</a>
+            <a class="btn secondary" href="{% url 'reuniao_comunicacao_create' %}?tipo_reuniao=MEDIO_PRAZO">Médio Prazo</a>
             <a class="btn secondary" href="{% url 'reuniao_comunicacao_create' %}?tipo_reuniao=LONGO_PRAZO">Longo Prazo</a>
         </div>
     </div>
@@ -52,9 +52,9 @@
     <table class="compact-table">
         <thead>
             <tr>
-                <th>Numero</th>
+                <th>Número</th>
                 <th>Tipo</th>
-                <th>Titulo</th>
+                <th>Título</th>
                 <th>Status</th>
                 <th>Data Prevista</th>
                 <th>Itens Ativos</th>
@@ -76,7 +76,7 @@
         </tbody>
     </table>
     {% else %}
-    <p class="empty">Ainda nao ha reunioes cadastradas para esta obra.</p>
+    <p class="empty">Ainda não há reunioes cadastradas para está obra.</p>
     {% endif %}
     {% include "app/includes/pagination_controls.html" %}
 </section>

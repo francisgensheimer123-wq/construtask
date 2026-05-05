@@ -9,7 +9,7 @@ from .tenant_querysets import TenantScopedManager
 class ParametroComunicacaoEmpresa(models.Model):
     class Meta:
         verbose_name = "Parametro de Comunicacao da Empresa"
-        verbose_name_plural = "Parametros de Comunicacao da Empresa"
+        verbose_name_plural = "Parâmetros de Comunicacao da Empresa"
 
     empresa = models.OneToOneField(
         "Empresa",
@@ -22,7 +22,7 @@ class ParametroComunicacaoEmpresa(models.Model):
     atualizado_em = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"Parametros de comunicacao - {self.empresa.nome}"
+        return f"Parâmetros de comunicacao - {self.empresa.nome}"
 
     @classmethod
     def obter_ou_criar(cls, empresa):
@@ -38,7 +38,7 @@ class ParametroComunicacaoEmpresa(models.Model):
 
 class ReuniaoComunicacao(models.Model):
     class Meta:
-        verbose_name = "Reuniao de Comunicacao"
+        verbose_name = "Reunião de Comunicacao"
         verbose_name_plural = "Reunioes de Comunicacao"
         ordering = ["-data_prevista", "-criado_em"]
         indexes = [
@@ -48,13 +48,13 @@ class ReuniaoComunicacao(models.Model):
 
     TIPO_REUNIAO_CHOICES = (
         ("CURTO_PRAZO", "Curto Prazo"),
-        ("MEDIO_PRAZO", "Medio Prazo"),
+        ("MEDIO_PRAZO", "Médio Prazo"),
         ("LONGO_PRAZO", "Longo Prazo"),
     )
     STATUS_CHOICES = (
         ("RASCUNHO", "Rascunho"),
         ("PAUTA_VALIDADA", "Pauta Validada"),
-        ("EM_APROVACAO", "Em Aprovacao"),
+        ("EM_APROVACAO", "Em Aprovação"),
         ("APROVADA", "Aprovada"),
     )
 
@@ -131,16 +131,16 @@ class ItemPautaReuniao(models.Model):
         ]
 
     ORIGEM_CHOICES = (
-        ("AUTOMATICA", "Automatica"),
+        ("AUTOMATICA", "Automática"),
         ("MANUAL", "Manual"),
     )
     CATEGORIA_CHOICES = (
         ("ALERTA", "Alerta"),
         ("RISCO", "Risco"),
-        ("NAO_CONFORMIDADE", "Nao Conformidade"),
+        ("NAO_CONFORMIDADE", "Não Conformidade"),
         ("CRONOGRAMA", "Cronograma"),
         ("CONTRATO", "Contrato"),
-        ("MEDICAO", "Medicao"),
+        ("MEDICAO", "Medição"),
         ("OUTRO", "Outro"),
     )
 
@@ -166,7 +166,7 @@ class ItemPautaReuniao(models.Model):
 
 class HistoricoReuniaoComunicacao(models.Model):
     class Meta:
-        verbose_name = "Historico de Reuniao de Comunicacao"
+        verbose_name = "Histórico de Reunião de Comunicacao"
         verbose_name_plural = "Historicos de Reunioes de Comunicacao"
         ordering = ["-criado_em"]
         indexes = [
@@ -175,11 +175,11 @@ class HistoricoReuniaoComunicacao(models.Model):
         ]
 
     ACAO_CHOICES = (
-        ("CRIACAO", "Criacao"),
+        ("CRIACAO", "Criação"),
         ("PAUTA_VALIDADA", "Pauta Validada"),
         ("PAUTA_ATUALIZADA", "Pauta Atualizada"),
-        ("ENVIO_APROVACAO", "Envio para Aprovacao"),
-        ("APROVACAO", "Aprovacao"),
+        ("ENVIO_APROVACAO", "Envio para Aprovação"),
+        ("APROVACAO", "Aprovação"),
         ("AJUSTE", "Retorno para Ajuste"),
     )
 

@@ -1,12 +1,12 @@
 {% extends "app/base.html" %}
 
-{% block title %}Central de Evidencias | Construtask{% endblock %}
+{% block title %}Central de Evidências | Construtask{% endblock %}
 
 {% block content %}
 <div class="toolbar">
     <div>
-        <h2>Central de Evidencias</h2>
-        <p>Dossie consolidado de evidencias exportaveis da obra selecionada.</p>
+        <h2>Central de Evidências</h2>
+        <p>Dossiê consolidado de evidências exportaveis da obra selecionada.</p>
     </div>
 </div>
 
@@ -15,7 +15,7 @@
         <select name="tipo">
             <option value=""{% if not tipo_filtro %} selected{% endif %}>Todos</option>
             <option value="contrato"{% if tipo_filtro == "contrato" %} selected{% endif %}>Contratos</option>
-            <option value="medicao"{% if tipo_filtro == "medicao" %} selected{% endif %}>Medicoes</option>
+            <option value="medicao"{% if tipo_filtro == "medicao" %} selected{% endif %}>Medições</option>
             <option value="baseline"{% if tipo_filtro == "baseline" %} selected{% endif %}>Baselines</option>
         </select>
         <button class="btn" type="submit">Filtrar</button>
@@ -30,10 +30,10 @@
                 <tr>
                     <th>Tipo</th>
                     <th>Identificador</th>
-                    <th>Referencia</th>
+                    <th>Referência</th>
                     <th>Status</th>
                     <th>Valor</th>
-                    <th>Aprovacao</th>
+                    <th>Aprovação</th>
                     <th>Parecer</th>
                     <th>Exportar</th>
                 </tr>
@@ -59,10 +59,10 @@
             </tbody>
         </table>
         {% else %}
-        <p class="empty">Nenhuma evidencia encontrada para o filtro selecionado.</p>
+        <p class="empty">Nenhuma evidência encontrada para o filtro selecionado.</p>
         {% endif %}
     {% else %}
-    <p class="empty">Selecione uma obra para acessar o dossie de evidencias.</p>
+    <p class="empty">Selecione uma obra para acessar o dossiê de evidências.</p>
     {% endif %}
 </section>
 {% endblock %}

@@ -32,7 +32,7 @@
         <strong style="text-align:left;">{{ documento.get_tipo_documento_display }}</strong>
     </div>
     <div class="card">
-        <span>Ultima Revisao</span>
+        <span>Última Revisão</span>
         <strong>{% if ultima_revisao %}v{{ ultima_revisao.versao|stringformat:"03d" }}{% else %}-{% endif %}</strong>
     </div>
 </section>
@@ -51,13 +51,13 @@
                 <tr><td>EAP (N5)</td><td>{{ documento.plano_contas.codigo|default:"-" }} {{ documento.plano_contas.descricao|default:"-" }}</td></tr>
                 <tr><td>Criado por</td><td>{{ documento.criado_por }}</td></tr>
                 <tr><td>Criado em</td><td>{{ documento.criado_em|date:"d/m/Y H:i" }}</td></tr>
-                <tr><td>Ultima revisao</td><td>{% if ultima_revisao %}v{{ ultima_revisao.versao|stringformat:"03d" }}{% else %}-{% endif %}</td></tr>
+                <tr><td>Última revisão</td><td>{% if ultima_revisao %}v{{ ultima_revisao.versao|stringformat:"03d" }}{% else %}-{% endif %}</td></tr>
             </tbody>
         </table>
     </div>
 
     <div class="panel">
-        <h3>Acoes</h3>
+        <h3>Ações</h3>
         {% if pode_enviar_revisao %}
         <form method="post" action=".">
             {% csrf_token %}
@@ -68,7 +68,7 @@
                 <textarea id="id_parecer_envio" name="parecer" rows="3" placeholder="Opcional"></textarea>
             </div>
             <div class="actions">
-                <button type="submit" class="btn" data-loading-text="Enviando...">Enviar para Validacao</button>
+                <button type="submit" class="btn" data-loading-text="Enviando...">Enviar para Validação</button>
             </div>
         </form>
         {% endif %}
@@ -79,7 +79,7 @@
             <input type="hidden" name="acao" value="APROVAR">
             <input type="hidden" name="workflow_action" value="1">
             <div class="field">
-                <label for="id_parecer_aprovacao">Parecer da aprovacao</label>
+                <label for="id_parecer_aprovacao">Parecer da aprovação</label>
                 <textarea id="id_parecer_aprovacao" name="parecer" rows="3" placeholder="Opcional"></textarea>
             </div>
             <div class="actions">
@@ -123,7 +123,7 @@
         {% endif %}
 
         {% if not pode_enviar_revisao and not pode_aprovar and not pode_tornar_obsoleto and not versao_aprovada %}
-        <p class="empty">Nenhuma acao disponivel para o status atual.</p>
+        <p class="empty">Nenhuma ação disponível para o status atual.</p>
         {% endif %}
     </div>
 </section>
@@ -132,22 +132,22 @@
     <div class="panel">
         <h3>Semantica do Fluxo</h3>
         <ul>
-            <li><strong style="display:inline; font-size:inherit; margin:0; text-align:left;">Rascunho</strong>: elaboracao e ajustes.</li>
-            <li><strong style="display:inline; font-size:inherit; margin:0; text-align:left;">Em Revisao</strong>: submetido para validacao.</li>
+            <li><strong style="display:inline; font-size:inherit; margin:0; text-align:left;">Rascunho</strong>: elaboração e ajustes.</li>
+            <li><strong style="display:inline; font-size:inherit; margin:0; text-align:left;">Em Revisão</strong>: submetido para validação.</li>
             <li><strong style="display:inline; font-size:inherit; margin:0; text-align:left;">Aprovado</strong>: documento validado para uso.</li>
-            <li><strong style="display:inline; font-size:inherit; margin:0; text-align:left;">Obsoleto</strong>: documento encerrado para operacao.</li>
+            <li><strong style="display:inline; font-size:inherit; margin:0; text-align:left;">Obsoleto</strong>: documento encerrado para operação.</li>
         </ul>
     </div>
 
     {% if pode_revisar %}
     <div class="panel">
-        <h3>Upload de Nova Revisao</h3>
+        <h3>Upload de Nova Revisão</h3>
         <form method="post" enctype="multipart/form-data" action=".">
             {% csrf_token %}
             <input type="hidden" name="upload_revisao" value="1">
             <div class="grid-2" style="margin:0 0 18px;">
                 <div class="field">
-                    <label for="{{ revisao_form.versao.id_for_label }}">Versao</label>
+                    <label for="{{ revisao_form.versao.id_for_label }}">Versão</label>
                     {{ revisao_form.versao }}
                     {% if revisao_form.versao.errors %}
                     <div style="color:#b91c1c; margin-top:6px;">{{ revisao_form.versao.errors }}</div>
@@ -162,11 +162,11 @@
                 </div>
             </div>
             <div class="field">
-                <label for="{{ revisao_form.parecer.id_for_label }}">Observacoes</label>
+                <label for="{{ revisao_form.parecer.id_for_label }}">Observações</label>
                 {{ revisao_form.parecer }}
             </div>
             <div class="actions">
-                <button type="submit" class="btn">Salvar Revisao</button>
+                <button type="submit" class="btn">Salvar Revisão</button>
             </div>
         </form>
     </div>
@@ -175,13 +175,13 @@
 
 <section class="grid-2">
     <div class="panel">
-        <h3>Historico de Workflow</h3>
+        <h3>Histórico de Workflow</h3>
         <table class="compact-table">
             <thead>
                 <tr>
                     <th>Data</th>
-                    <th>Acao</th>
-                    <th>Usuario</th>
+                    <th>Ação</th>
+                    <th>Usuário</th>
                     <th>Depois</th>
                 </tr>
             </thead>
@@ -209,7 +209,7 @@
     </div>
 
     <div class="panel">
-        <h3>Historico de Revisoes</h3>
+        <h3>Histórico de Revisoes</h3>
         <table class="compact-table">
             <thead>
                 <tr>
@@ -240,7 +240,7 @@
                     <td><small title="{{ revisao.checksum }}">{{ revisao.checksum|truncatechars:12|default:"-" }}</small></td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="7" class="text-center">Nenhuma revisao encontrada.</td></tr>
+                <tr><td colspan="7" class="text-center">Nenhuma revisão encontrada.</td></tr>
                 {% endfor %}
             </tbody>
         </table>

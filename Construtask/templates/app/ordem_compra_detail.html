@@ -19,14 +19,14 @@
     <div style="display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap;">
         <div>
             <strong>Workflow de Aprovação</strong>
-            <p class="muted" style="margin:6px 0 0 0;">Funcao atual: {{ papel_aprovacao|default:"Nao configurada" }} | Alcada: {{ limite_aprovacao_label }}</p>
+            <p class="muted" style="margin:6px 0 0 0;">Função atual: {{ papel_aprovacao|default:"Não configurada" }} | Alçada: {{ limite_aprovacao_label }}</p>
         </div>
         <div style="min-width:min(100%, 420px);">
             <form method="post">
                 {% csrf_token %}
                 <div class="field" style="margin-bottom:10px;">
                     <label for="id_parecer_aprovacao_ordem">Parecer</label>
-                    <textarea id="id_parecer_aprovacao_ordem" name="parecer_aprovacao" rows="3" placeholder="Opcional no envio/aprovacao e obrigatorio na devolucao para ajuste.">{{ ordem_compra.parecer_aprovacao }}</textarea>
+                    <textarea id="id_parecer_aprovacao_ordem" name="parecer_aprovacao" rows="3" placeholder="Opcional no envio/aprovação e obrigatorio na devolucao para ajuste.">{{ ordem_compra.parecer_aprovacao }}</textarea>
                 </div>
                 <div style="display:flex; gap:10px; flex-wrap:wrap;">
                     {% if pode_enviar_para_aprovacao and ordem_compra.status == "RASCUNHO" %}
@@ -47,15 +47,15 @@
         <h3>Resumo</h3>
         <table class="compact-table">
             <tbody>
-                <tr><th>Solicitacao</th><td>{{ ordem_compra.solicitacao.numero }}</td></tr>
-                <tr><th>Cotacao aprovada</th><td>{{ ordem_compra.cotacao_aprovada.numero }}</td></tr>
+                <tr><th>Solicitação</th><td>{{ ordem_compra.solicitacao.numero }}</td></tr>
+                <tr><th>Cotação aprovada</th><td>{{ ordem_compra.cotacao_aprovada.numero }}</td></tr>
                 <tr><th>Fornecedor</th><td>{{ ordem_compra.fornecedor }}</td></tr>
                 <tr><th>Data de emissao</th><td>{{ ordem_compra.data_emissao|date:"d/m/Y" }}</td></tr>
                 <tr><th>Compromisso integrado</th><td>{% if ordem_compra.compromisso_relacionado %}<a href="{% url 'contrato_detail' ordem_compra.compromisso_relacionado.pk %}">{{ ordem_compra.compromisso_relacionado.numero }}</a>{% else %}-{% endif %}</td></tr>
-                <tr><th>Enviado para aprovacao</th><td>{% if ordem_compra.enviado_para_aprovacao_por %}{{ ordem_compra.enviado_para_aprovacao_por.username }} em {{ ordem_compra.enviado_para_aprovacao_em|date:"d/m/Y H:i" }}{% else %}-{% endif %}</td></tr>
+                <tr><th>Enviado para aprovação</th><td>{% if ordem_compra.enviado_para_aprovacao_por %}{{ ordem_compra.enviado_para_aprovacao_por.username }} em {{ ordem_compra.enviado_para_aprovacao_em|date:"d/m/Y H:i" }}{% else %}-{% endif %}</td></tr>
                 <tr><th>Aprovado por</th><td>{% if ordem_compra.aprovado_por %}{{ ordem_compra.aprovado_por.username }} em {{ ordem_compra.aprovado_em|date:"d/m/Y H:i" }}{% else %}-{% endif %}</td></tr>
                 <tr><th>Ultimo parecer</th><td>{{ ordem_compra.parecer_aprovacao|default:"-" }}</td></tr>
-                <tr><th>Descricao</th><td class="wrap-text">{{ ordem_compra.descricao|default:"-" }}</td></tr>
+                <tr><th>Descrição</th><td class="wrap-text">{{ ordem_compra.descricao|default:"-" }}</td></tr>
             </tbody>
         </table>
     </div>
@@ -96,7 +96,7 @@
         </tbody>
     </table>
     {% else %}
-    <p class="empty">Nenhum item vinculado a esta ordem.</p>
+    <p class="empty">Nenhum item vinculado a está ordem.</p>
     {% endif %}
 </section>
 {% endblock %}

@@ -19,7 +19,7 @@ def _registrar_falha_sincronizacao_alertas(*, obra_id, observacao, motivo):
         obra=obra,
         tipo="SINCRONIZAR_ALERTAS_OBRA",
         status="FALHOU",
-        descricao="Falha operacional na sincronizacao assincrona de alertas.",
+        descricao="Falha operacional na sincronização assincrona de alertas.",
         parametros={"obra_id": obra_id, "origem": "celery-task", "motivo": motivo},
         erro=observacao[:2000],
         tentativas=1,
@@ -51,7 +51,7 @@ def task_sincronizar_alertas_obra(self, obra_id):
         obra = Obra.objects.get(pk=obra_id)
         sincronizar_alertas_operacionais_obra(obra)
     except SoftTimeLimitExceeded as exc:
-        observacao = f"Sincronizacao de alertas interrompida por limite de tempo. obra_id={obra_id}. erro={exc}"
+        observacao = f"Sincronização de alertas interrompida por limite de tempo. obra_id={obra_id}. erro={exc}"
         logger.exception(observacao)
         _registrar_falha_sincronizacao_alertas(
             obra_id=obra_id,
@@ -72,7 +72,7 @@ def task_sincronizar_alertas_obra(self, obra_id):
         try:
             raise self.retry(exc=exc)
         except MaxRetriesExceededError:
-            observacao = f"Sincronizacao de alertas falhou apos retries. obra_id={obra_id}. erro={exc}"
+            observacao = f"Sincronização de alertas falhou após retries. obra_id={obra_id}. erro={exc}"
             logger.exception(observacao)
             _registrar_falha_sincronizacao_alertas(
                 obra_id=obra_id,
@@ -92,7 +92,7 @@ def task_executar_backup_postgres(self):
         return "backup disabled"
 
     if not getattr(settings, "CONSTRUTASK_BACKUP_PROVIDER", ""):
-        logger.warning("Rotina de backup ignorada: provedor de backup nao configurado.")
+        logger.warning("Rotina de backup ignorada: provedor de backup não configurado.")
         return "backup provider not configured"
 
     out = StringIO()
@@ -111,7 +111,7 @@ def task_executar_backup_postgres(self):
         try:
             raise self.retry(exc=exc)
         except MaxRetriesExceededError:
-            observacao = f"Backup SaaS falhou apos retries. erro={exc}"
+            observacao = f"Backup SaaS falhou após retries. erro={exc}"
             logger.exception(observacao)
             _registrar_falha_backup(
                 observacao=observacao,

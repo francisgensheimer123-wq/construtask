@@ -6,7 +6,7 @@
 <div class="toolbar">
     <div>
         <h2>Importar Cronograma</h2>
-        <p>Fluxo operacional para carregar o cronograma da obra e preparar a vinculacao com o plano de contas.</p>
+        <p>Fluxo operacional para carregar o cronograma da obra e preparar a vinculação com o plano de contas.</p>
     </div>
     <a href="{% url 'plano_fisico_list' %}" class="btn secondary">Voltar</a>
 </div>
@@ -18,17 +18,17 @@
 </section>
 {% else %}
 <section class="panel" style="margin-bottom:18px;">
-    <p class="empty">Selecione uma obra no cabecalho antes de importar o cronograma.</p>
+    <p class="empty">Selecione uma obra no cabeçalho antes de importar o cronograma.</p>
 </section>
 {% endif %}
 
 <section class="grid-2">
     <div class="panel">
-        <h3 style="margin-top:0;">Importacao</h3>
+        <h3 style="margin-top:0;">Importação</h3>
         <form method="post" enctype="multipart/form-data">
             {% csrf_token %}
             <div class="field">
-                <label for="id_titulo">Titulo do cronograma</label>
+                <label for="id_titulo">Título do cronograma</label>
                 <input type="text" name="titulo" id="id_titulo" placeholder="Se vazio, o sistema usa o nome do arquivo">
             </div>
             <div class="field">
@@ -40,7 +40,7 @@
                     <input type="checkbox" name="criar_baseline" id="id_criar_baseline" style="width:auto; margin-top:4px;">
                     <span>
                         <strong>Criar como baseline</strong><br>
-                        <span class="muted">Use esta opcao quando este cronograma for a referencia oficial da obra.</span>
+                        <span class="muted">Use está opcao quando este cronograma for a referência oficial da obra.</span>
                     </span>
                 </label>
             </div>
@@ -74,8 +74,8 @@
                     <td>Se houver <code>CODIGO_EAP</code>, o sistema tenta reconhecer o centro de custo automaticamente.</td>
                 </tr>
                 <tr>
-                    <td>Pos-importacao</td>
-                    <td>Voce revisa pendencias de mapeamento e atividades proximas sem vinculo.</td>
+                    <td>Pos-importação</td>
+                    <td>Você revisa pendencias de mapeamento e atividades proximas sem vinculo.</td>
                 </tr>
             </tbody>
         </table>
@@ -109,12 +109,12 @@
             {% for coluna in colunas_opcionais %}
             <tr>
                 <td><code>{{ coluna }}</code></td>
-                <td>Nao</td>
+                <td>Não</td>
                 <td>
                     {% if coluna == "PREDECESSORA" %}Dependencia anterior{% endif %}
                     {% if coluna == "SUCESSORA" %}Dependencia posterior{% endif %}
                     {% if coluna == "MARCO" %}Identificacao de marco{% endif %}
-                    {% if coluna == "CODIGO_EAP" %}Tentativa de vinculo automatico com o plano de contas{% endif %}
+                    {% if coluna == "CODIGO_EAP" %}Tentativa de vinculo automático com o plano de contas{% endif %}
                     {% if coluna == "VALOR" %}Valor planejado da atividade{% endif %}
                 </td>
             </tr>

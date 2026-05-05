@@ -2,7 +2,7 @@
 {% load formatters %}
 
 {% block main_class %}main-full{% endblock %}
-{% block title %}Detalhe da Cotacao | Construtask{% endblock %}
+{% block title %}Detalhe da Cotação | Construtask{% endblock %}
 
 {% block content %}
 <div class="toolbar">
@@ -12,7 +12,7 @@
     </div>
     <div style="display:flex; gap:10px;">
         <a class="btn secondary" href="{% url 'cotacao_pdf' cotacao.pk %}">Gerar PDF</a>
-        <a class="btn secondary" href="{% url 'solicitacao_compra_detail' cotacao.solicitacao.pk %}">Solicitacao</a>
+        <a class="btn secondary" href="{% url 'solicitacao_compra_detail' cotacao.solicitacao.pk %}">Solicitação</a>
         <a class="btn secondary" href="{% url 'cotacao_list' %}">Voltar</a>
     </div>
 </div>
@@ -22,11 +22,11 @@
         <h3>Resumo</h3>
         <table class="compact-table">
             <tbody>
-                <tr><th>Solicitacao</th><td>{{ cotacao.solicitacao.numero }}</td></tr>
+                <tr><th>Solicitação</th><td>{{ cotacao.solicitacao.numero }}</td></tr>
                 <tr><th>Fornecedor</th><td>{{ cotacao.fornecedor }}</td></tr>
-                <tr><th>Data da cotacao</th><td>{{ cotacao.data_cotacao|date:"d/m/Y" }}</td></tr>
+                <tr><th>Data da cotação</th><td>{{ cotacao.data_cotacao|date:"d/m/Y" }}</td></tr>
                 <tr><th>Validade</th><td>{% if cotacao.validade_ate %}{{ cotacao.validade_ate|date:"d/m/Y" }}{% else %}-{% endif %}</td></tr>
-                <tr><th>Enviado para aprovacao</th><td>{% if cotacao.enviado_para_aprovacao_por %}{{ cotacao.enviado_para_aprovacao_por.username }} em {{ cotacao.enviado_para_aprovacao_em|date:"d/m/Y H:i" }}{% else %}-{% endif %}</td></tr>
+                <tr><th>Enviado para aprovação</th><td>{% if cotacao.enviado_para_aprovacao_por %}{{ cotacao.enviado_para_aprovacao_por.username }} em {{ cotacao.enviado_para_aprovacao_em|date:"d/m/Y H:i" }}{% else %}-{% endif %}</td></tr>
                 <tr><th>Aprovado por</th><td>{% if cotacao.aprovado_por %}{{ cotacao.aprovado_por.username }} em {{ cotacao.aprovado_em|date:"d/m/Y H:i" }}{% else %}-{% endif %}</td></tr>
                 <tr><th>Ultimo parecer</th><td class="wrap-text">{{ cotacao.parecer_aprovacao|default:"-" }}</td></tr>
                 <tr><th>Justificativa da escolha</th><td class="wrap-text">{{ cotacao.justificativa_escolha|default:"-" }}</td></tr>
@@ -52,8 +52,8 @@
     </div>
 
     <div class="panel">
-        <h3>Gerar Compras e Contratacoes</h3>
-        <p class="inline-note muted">Conforme o fluxo definido, a cotacao precisa comparar pelo menos 2 fornecedores antes de gerar contrato ou pedido de compra.</p>
+        <h3>Gerar Compras e Contratações</h3>
+        <p class="inline-note muted">Conforme o fluxo definido, a cotação precisa comparar pelo menos 2 fornecedores antes de gerar contrato ou pedido de compra.</p>
         <form method="post">
             {% csrf_token %}
             <input type="hidden" name="acao" value="emitir_oc">
@@ -62,11 +62,11 @@
                 {{ workflow_form.tipo_resultado }}
             </div>
             <div class="field">
-                <label for="{{ workflow_form.descricao.id_for_label }}">Descricao do resultado</label>
+                <label for="{{ workflow_form.descricao.id_for_label }}">Descrição do resultado</label>
                 {{ workflow_form.descricao }}
             </div>
             <div class="actions">
-                <button class="btn" type="submit">Gerar em Compras e Contratacoes</button>
+                <button class="btn" type="submit">Gerar em Compras e Contratações</button>
             </div>
         </form>
         {% if compromisso_resultante and compromisso_resultante.compromisso_relacionado %}
@@ -88,7 +88,7 @@
     <table class="compact-table">
         <thead>
             <tr>
-                <th>Numero</th>
+                <th>Número</th>
                 <th>Fornecedor</th>
                 <th>Status</th>
                 <th>Data</th>
@@ -129,7 +129,7 @@
         <thead>
                 <tr>
                     <th>Centro de Custo</th>
-                    <th>Descricao Tecnica</th>
+                    <th>Descrição Técnica</th>
                     <th>Unidade</th>
                     <th class="text-right">Quantidade</th>
                     <th class="text-right">Valor Unitario</th>
@@ -152,7 +152,7 @@
         </tbody>
     </table>
     {% else %}
-    <p class="empty">Ainda nao ha itens nesta cotacao.</p>
+    <p class="empty">Ainda não há itens nesta cotação.</p>
     {% endif %}
 </section>
 
@@ -162,7 +162,7 @@
     <table class="compact-table">
         <thead>
             <tr>
-                <th>Descricao</th>
+                <th>Descrição</th>
                 <th>Arquivo</th>
             </tr>
         </thead>
@@ -176,7 +176,7 @@
         </tbody>
     </table>
     {% else %}
-    <p class="empty">Nenhum anexo registrado para esta cotacao.</p>
+    <p class="empty">Nenhum anexo registrado para está cotação.</p>
     {% endif %}
 </section>
 
@@ -187,8 +187,8 @@
         <thead>
             <tr>
                 <th>Data/Hora</th>
-                <th>Acao</th>
-                <th>Usuario</th>
+                <th>Ação</th>
+                <th>Usuário</th>
                 <th>Resumo</th>
             </tr>
         </thead>
@@ -197,7 +197,7 @@
             <tr>
                 <td>{{ evento.timestamp|date:"d/m/Y H:i" }}</td>
                 <td>{{ evento.get_acao_display }}</td>
-                <td>{{ evento.usuario|default:"Nao informado" }}</td>
+                <td>{{ evento.usuario|default:"Não informado" }}</td>
                 <td>{{ evento.entidade_label }}</td>
             </tr>
             {% endfor %}

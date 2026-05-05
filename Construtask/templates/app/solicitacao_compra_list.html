@@ -2,18 +2,18 @@
 {% load formatters %}
 
 {% block main_class %}main-full{% endblock %}
-{% block title %}Solicitacoes de Compra | Construtask{% endblock %}
+{% block title %}Solicitações de Compra | Construtask{% endblock %}
 
 {% block content %}
 <div class="toolbar">
     <div>
-        <h2>Solicitacoes de Compra</h2>
-        <p>Primeira etapa do fluxo estruturado de aquisicoes.</p>
+        <h2>Solicitações de Compra</h2>
+        <p>Primeira etapa do fluxo estruturado de aquisições.</p>
     </div>
     <div style="display:flex; gap:8px;">
         <a class="btn secondary" href="{% url 'solicitacao_compra_export' %}">Exportar Excel</a>
         <a class="btn secondary" href="{% url 'solicitacao_compra_lista_pdf' %}">Exportar PDF</a>
-        <a class="btn" href="{% url 'solicitacao_compra_create' %}">Nova Solicitacao</a>
+        <a class="btn" href="{% url 'solicitacao_compra_create' %}">Nova Solicitação</a>
     </div>
   </div>
 
@@ -22,9 +22,9 @@
     <table class="compact-table">
         <thead>
             <tr>
-                <th>Numero</th>
+                <th>Número</th>
                 <th>Obra</th>
-                <th>Titulo</th>
+                <th>Título</th>
                 <th>Centro de Custo</th>
                 <th>Solicitante</th>
                 <th>Status</th>
@@ -48,7 +48,7 @@
         </tbody>
     </table>
     {% else %}
-    <p class="empty">Nenhuma solicitacao registrada.</p>
+    <p class="empty">Nenhuma solicitação registrada.</p>
     {% endif %}
     {% include "app/includes/pagination_controls.html" %}
 </div>

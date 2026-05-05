@@ -97,16 +97,16 @@ def _auditoria_fluxo(objeto):
 
 def _exigir_permissao_aquisicoes(request, acao):
     if not usuario_tem_permissao_modulo(request.user, "compras", acao):
-        raise PermissionDenied("Usuario sem permissao para a acao de compras solicitada.")
+        raise PermissionDenied("Usuário sem permissão para a ação de compras solicitada.")
 
 
 def _historico_pdf(objeto):
     return [
         {
             "Data": _datahora_local(evento.timestamp).strftime("%d/%m/%Y %H:%M"),
-            "Acao": evento.get_acao_display(),
-            "Usuario": str(evento.usuario) if evento.usuario else "Nao informado",
-            "Descricao": evento.entidade_label,
+            "Ação": evento.get_acao_display(),
+            "Usuário": str(evento.usuario) if evento.usuario else "Não informado",
+            "Descrição": evento.entidade_label,
         }
         for evento in _auditoria_fluxo(objeto)
     ]
@@ -246,7 +246,7 @@ class SolicitacaoCompraCreateView(LoginRequiredMixin, CreateView):
     def dispatch(self, request, *args, **kwargs):
         obra = _obra_contexto(request)
         if not obra:
-            messages.error(request, "Selecione uma obra no menu antes de criar solicitacoes de compra.")
+            messages.error(request, "Selecione uma obra no menu antes de criar solicitações de compra.")
             return redirect("home")
         if obra_em_somente_leitura(obra):
             messages.error(request, descricao_restricao_obra(obra))
@@ -273,9 +273,9 @@ class SolicitacaoCompraCreateView(LoginRequiredMixin, CreateView):
         obra_contexto = _obra_contexto(request)
         empresa_contexto = _empresa_contexto(request)
         if not obra_contexto:
-            form.add_error(None, "Selecione uma obra no filtro principal antes de registrar a solicitacao de compra.")
+            form.add_error(None, "Selecione uma obra no filtro principal antes de registrar a solicitação de compra.")
         if not empresa_contexto:
-            form.add_error(None, "Nao foi possivel identificar a empresa do contexto atual. Selecione novamente a obra e tente outra vez.")
+            form.add_error(None, "Não foi possível identificar a empresa do contexto atual. Selecione novamente a obra e tente outra vez.")
         if form.is_valid() and item_formset.is_valid() and obra_contexto and empresa_contexto:
             solicitacao = form.save(commit=False)
             solicitacao.empresa = empresa_contexto
@@ -288,7 +288,7 @@ class SolicitacaoCompraCreateView(LoginRequiredMixin, CreateView):
             if primeiro_item and solicitacao.plano_contas_id != primeiro_item.plano_contas_id:
                 solicitacao.plano_contas = primeiro_item.plano_contas
                 solicitacao.save(update_fields=["plano_contas"])
-            messages.success(request, "Solicitacao de compra registrada com sucesso.")
+            messages.success(request, "Solicitação de compra registrada com sucesso.")
             return redirect("solicitacao_compra_detail", pk=solicitacao.pk)
         return self.render_to_response(self.get_context_data(form=form, item_formset=item_formset))
 
@@ -332,7 +332,7 @@ class SolicitacaoCompraDetailView(LoginRequiredMixin, DetailView):
                 request,
                 self.object,
                 status_em_aprovacao="EM_APROVACAO",
-                descricao=f"{self.object.numero} enviada para aprovacao.",
+                descricao=f"{self.object.numero} enviada para aprovação.",
             )
         elif acao == "aprovar":
             _exigir_permissao_aquisicoes(request, "approve")
@@ -374,7 +374,7 @@ class CotacaoCreateView(LoginRequiredMixin, CreateView):
     def dispatch(self, request, *args, **kwargs):
         obra = _obra_contexto(request)
         if not obra:
-            messages.error(request, "Selecione uma obra no menu antes de criar cotacoes.")
+            messages.error(request, "Selecione uma obra no menu antes de criar cotações.")
             return redirect("home")
         if obra_em_somente_leitura(obra):
             messages.error(request, descricao_restricao_obra(obra))
@@ -440,7 +440,7 @@ class CotacaoCreateView(LoginRequiredMixin, CreateView):
         formset_valido = fornecedor_formset.is_valid()
         if form_valido and formset_valido:
             if not empresa_contexto:
-                form.add_error(None, "Nao foi possivel identificar a empresa do contexto atual. Selecione novamente a obra e tente outra vez.")
+                form.add_error(None, "Não foi possível identificar a empresa do contexto atual. Selecione novamente a obra e tente outra vez.")
             else:
                 cotacao_vencedora = None
                 with transaction.atomic():
@@ -473,7 +473,7 @@ class CotacaoCreateView(LoginRequiredMixin, CreateView):
                             cotacao.anexos.create(descricao=descricao, arquivo=arquivo)
                         if escolhido:
                             cotacao_vencedora = cotacao
-                messages.success(request, "Cotacoes registradas com sucesso para os fornecedores comparados.")
+                messages.success(request, "Cotações registradas com sucesso para os fornecedores comparados.")
                 if cotacao_vencedora:
                     return redirect("cotacao_detail", pk=cotacao_vencedora.pk)
                 return redirect("solicitacao_compra_detail", pk=solicitacao.pk)
@@ -533,7 +533,7 @@ class CotacaoDetailView(LoginRequiredMixin, DetailView):
                 request,
                 self.object,
                 status_em_aprovacao="EM_APROVACAO",
-                descricao=f"{self.object.numero} enviada para aprovacao.",
+                descricao=f"{self.object.numero} enviada para aprovação.",
             )
             return redirect("cotacao_detail", pk=self.object.pk)
         if acao == "aprovar":
@@ -570,7 +570,7 @@ class CotacaoDetailView(LoginRequiredMixin, DetailView):
                 except ValueError as exc:
                     messages.error(request, str(exc))
                     return redirect("cotacao_detail", pk=self.object.pk)
-                messages.success(request, "Ordem de compra gerada com sucesso a partir da cotacao.")
+                messages.success(request, "Ordem de compra gerada com sucesso a partir da cotação.")
                 return redirect("ordem_compra_detail", pk=ordem.pk)
         return redirect("cotacao_detail", pk=self.object.pk)
 
@@ -612,7 +612,7 @@ class OrdemCompraDetailView(LoginRequiredMixin, DetailView):
                 request,
                 self.object,
                 status_em_aprovacao="EM_APROVACAO",
-                descricao=f"{self.object.numero} enviada para aprovacao.",
+                descricao=f"{self.object.numero} enviada para aprovação.",
             )
             return redirect("ordem_compra_detail", pk=self.object.pk)
         if acao == "aprovar":
@@ -646,21 +646,21 @@ def solicitacao_compra_pdf_view(request, pk):
         pk=pk,
     )
     resumo = {
-        "Numero": solicitacao.numero,
+        "Número": solicitacao.numero,
         "Obra": f"{solicitacao.obra.codigo} - {solicitacao.obra.nome}",
         "Status": solicitacao.get_status_display(),
         "Solicitante": solicitacao.solicitante,
         "Data": solicitacao.data_solicitacao.strftime("%d/%m/%Y"),
-        "Titulo": solicitacao.titulo,
-        "Descricao": solicitacao.descricao or "-",
-        "Enviado para aprovacao": str(solicitacao.enviado_para_aprovacao_por) if solicitacao.enviado_para_aprovacao_por else "-",
+        "Título": solicitacao.titulo,
+        "Descrição": solicitacao.descricao or "-",
+        "Enviado para aprovação": str(solicitacao.enviado_para_aprovacao_por) if solicitacao.enviado_para_aprovacao_por else "-",
         "Aprovado por": str(solicitacao.aprovado_por) if solicitacao.aprovado_por else "-",
         "Parecer": solicitacao.parecer_aprovacao or "-",
     }
     extras = [
         {
             "Centro de Custo": f"{item.plano_contas.codigo} - {item.plano_contas.descricao}",
-            "Descricao Tecnica": item.descricao_tecnica or "-",
+            "Descrição Técnica": item.descricao_tecnica or "-",
             "Unidade": item.unidade or "-",
             "Quantidade": item.quantidade,
         }
@@ -668,12 +668,12 @@ def solicitacao_compra_pdf_view(request, pk):
     ]
     return _pdf_relatorio_probatorio_response(
         f"{solicitacao.numero}.pdf",
-        f"Solicitacao de Compra {solicitacao.numero}",
+        f"Solicitação de Compra {solicitacao.numero}",
         resumo,
         _historico_pdf(solicitacao),
         extras,
-        extras_titulo="Itens da Solicitacao",
-        extras_colunas=[("Centro de Custo", 170), ("Descricao Tecnica", 210), ("Unidade", 45), ("Quantidade", 70)],
+        extras_titulo="Itens da Solicitação",
+        extras_colunas=[("Centro de Custo", 170), ("Descrição Técnica", 210), ("Unidade", 45), ("Quantidade", 70)],
         incluir_historico=True,
     )
 
@@ -686,21 +686,21 @@ def cotacao_pdf_view(request, pk):
         pk=pk,
     )
     resumo = {
-        "Numero": cotacao.numero,
-        "Solicitacao": cotacao.solicitacao.numero,
+        "Número": cotacao.numero,
+        "Solicitação": cotacao.solicitacao.numero,
         "Fornecedor": cotacao.fornecedor,
         "Status": cotacao.get_status_display(),
         "Data": cotacao.data_cotacao.strftime("%d/%m/%Y"),
         "Validade": cotacao.validade_ate.strftime("%d/%m/%Y") if cotacao.validade_ate else "-",
         "Justificativa": cotacao.justificativa_escolha or "-",
-        "Enviado para aprovacao": str(cotacao.enviado_para_aprovacao_por) if cotacao.enviado_para_aprovacao_por else "-",
+        "Enviado para aprovação": str(cotacao.enviado_para_aprovacao_por) if cotacao.enviado_para_aprovacao_por else "-",
         "Aprovado por": str(cotacao.aprovado_por) if cotacao.aprovado_por else "-",
         "Parecer": cotacao.parecer_aprovacao or "-",
     }
     extras = [
         {
             "Centro de Custo": f"{item.item_solicitacao.plano_contas.codigo} - {item.item_solicitacao.plano_contas.descricao}",
-            "Descricao Tecnica": item.item_solicitacao.descricao_tecnica or "-",
+            "Descrição Técnica": item.item_solicitacao.descricao_tecnica or "-",
             "Quantidade": item.item_solicitacao.quantidade,
             "Valor Unitario": money_br(item.valor_unitario),
             "Valor Total": money_br(item.valor_total),
@@ -709,12 +709,12 @@ def cotacao_pdf_view(request, pk):
     ]
     return _pdf_relatorio_probatorio_response(
         f"{cotacao.numero}.pdf",
-        f"Cotacao {cotacao.numero}",
+        f"Cotação {cotacao.numero}",
         resumo,
         _historico_pdf(cotacao),
         extras,
         extras_titulo="Itens Cotados",
-        extras_colunas=[("Centro de Custo", 150), ("Descricao Tecnica", 165), ("Quantidade", 55), ("Valor Unitario", 60), ("Valor Total", 65)],
+        extras_colunas=[("Centro de Custo", 150), ("Descrição Técnica", 165), ("Quantidade", 55), ("Valor Unitario", 60), ("Valor Total", 65)],
         incluir_historico=True,
     )
 
@@ -723,9 +723,9 @@ def solicitacao_compra_export_view(request):
     queryset = _get_queryset_solicitacao(request).prefetch_related("itens__plano_contas").order_by("-data_solicitacao", "-id")
     linhas = [
         {
-            "Numero": solicitacao.numero,
+            "Número": solicitacao.numero,
             "Obra": solicitacao.obra.codigo,
-            "Titulo": solicitacao.titulo,
+            "Título": solicitacao.titulo,
             "Solicitante": solicitacao.solicitante,
             "Status": solicitacao.get_status_display(),
             "Data": solicitacao.data_solicitacao.strftime("%d/%m/%Y"),
@@ -735,7 +735,7 @@ def solicitacao_compra_export_view(request):
         }
         for solicitacao in queryset
     ]
-    return _exportar_excel_response("solicitacoes_compra.xlsx", "Solicitacoes", linhas)
+    return _exportar_excel_response("solicitacoes_compra.xlsx", "Solicitações", linhas)
 
 
 def solicitacao_compra_lista_pdf_view(request):
@@ -743,9 +743,9 @@ def solicitacao_compra_lista_pdf_view(request):
     resumo = {"Quantidade de Registros": queryset.count(), "Emitido em": _datahora_local(timezone.now()).strftime("%d/%m/%Y %H:%M")}
     extras = [
         {
-            "Numero": solicitacao.numero,
+            "Número": solicitacao.numero,
             "Obra": solicitacao.obra.codigo,
-            "Titulo": solicitacao.titulo,
+            "Título": solicitacao.titulo,
             "Status": solicitacao.get_status_display(),
             "Data": solicitacao.data_solicitacao.strftime("%d/%m/%Y"),
         }
@@ -753,12 +753,12 @@ def solicitacao_compra_lista_pdf_view(request):
     ]
     return _pdf_relatorio_probatorio_response(
         "solicitacoes_compra_lista.pdf",
-        "Lista de Solicitacoes de Compra",
+        "Lista de Solicitações de Compra",
         resumo,
         [],
         extras,
-        extras_titulo="Lista de Solicitacoes",
-        extras_colunas=[("Numero", 75), ("Obra", 55), ("Titulo", 200), ("Status", 80), ("Data", 85)],
+        extras_titulo="Lista de Solicitações",
+        extras_colunas=[("Número", 75), ("Obra", 55), ("Título", 200), ("Status", 80), ("Data", 85)],
         incluir_historico=False,
     )
 
@@ -767,8 +767,8 @@ def cotacao_export_view(request):
     queryset = _get_queryset_cotacao(request).order_by("-data_cotacao", "-id")
     linhas = [
         {
-            "Numero": cotacao.numero,
-            "Solicitacao": cotacao.solicitacao.numero,
+            "Número": cotacao.numero,
+            "Solicitação": cotacao.solicitacao.numero,
             "Fornecedor": cotacao.fornecedor,
             "Status": cotacao.get_status_display(),
             "Data": cotacao.data_cotacao.strftime("%d/%m/%Y"),
@@ -778,7 +778,7 @@ def cotacao_export_view(request):
         }
         for cotacao in queryset
     ]
-    return _exportar_excel_response("cotacoes.xlsx", "Cotacoes", linhas)
+    return _exportar_excel_response("cotacoes.xlsx", "Cotações", linhas)
 
 
 def cotacao_lista_pdf_view(request):
@@ -786,8 +786,8 @@ def cotacao_lista_pdf_view(request):
     resumo = {"Quantidade de Registros": queryset.count(), "Emitido em": _datahora_local(timezone.now()).strftime("%d/%m/%Y %H:%M")}
     extras = [
         {
-            "Numero": cotacao.numero,
-            "Solicitacao": cotacao.solicitacao.numero,
+            "Número": cotacao.numero,
+            "Solicitação": cotacao.solicitacao.numero,
             "Fornecedor": cotacao.fornecedor,
             "Status": cotacao.get_status_display(),
             "Valor Total": money_br(cotacao.valor_total),
@@ -796,11 +796,11 @@ def cotacao_lista_pdf_view(request):
     ]
     return _pdf_relatorio_probatorio_response(
         "cotacoes_lista.pdf",
-        "Lista de Cotacoes",
+        "Lista de Cotações",
         resumo,
         [],
         extras,
-        extras_titulo="Lista de Cotacoes",
-        extras_colunas=[("Numero", 80), ("Solicitacao", 80), ("Fornecedor", 190), ("Status", 75), ("Valor Total", 70)],
+        extras_titulo="Lista de Cotações",
+        extras_colunas=[("Número", 80), ("Solicitação", 80), ("Fornecedor", 190), ("Status", 75), ("Valor Total", 70)],
         incluir_historico=False,
     )

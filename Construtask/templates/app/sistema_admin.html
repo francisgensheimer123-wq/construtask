@@ -8,7 +8,7 @@
     <div class="toolbar">
         <div>
             <h2>Gerenciamento do Sistema</h2>
-            <p>Area exclusiva do superuser tecnico Construtask para sustentacao da plataforma e criacao do admin de cada empresa.</p>
+            <p>Área exclusiva do superuser técnico Construtask para sustentacao da plataforma e criação do admin de cada empresa.</p>
         </div>
         <div>
             <a class="btn secondary" href="{% url 'home' %}">Voltar</a>
@@ -87,7 +87,7 @@
         <div class="toolbar">
             <div>
                 <h3>Empresa em Gestao</h3>
-                <p class="muted">Selecione a empresa para consultar a base SaaS e administrar o usuario admin da empresa.</p>
+                <p class="muted">Selecione a empresa para consultar a base SaaS e administrar o usuário admin da empresa.</p>
             </div>
         </div>
         <form method="get" style="display:flex; gap:12px; align-items:end; flex-wrap:wrap;">
@@ -108,7 +108,7 @@
         <h3>{{ empresa.nome }}</h3>
         {% if empresa.nome_fantasia %}<p>Nome fantasia: {{ empresa.nome_fantasia }}</p>{% endif %}
         <p>CNPJ: {{ empresa.cnpj }}</p>
-        <p class="muted">A partir desta area a Construtask cria o admin principal da empresa. A gestao diaria da empresa ocorre no ambiente do admin da propria empresa.</p>
+        <p class="muted">A partir desta área a Construtask cria o admin principal da empresa. A gestao diaria da empresa ocorre no ambiente do admin da propria empresa.</p>
     </section>
 
     <section class="panel" style="margin-bottom: 24px;">
@@ -198,7 +198,7 @@
         <div class="toolbar">
             <div>
                 <h3>Base Operacional SaaS</h3>
-                <p class="muted">Diagnostico de banco, storage, backup e configuracao segura para sustentacao da plataforma.</p>
+                <p class="muted">Diagnostico de banco, storage, backup e configuração segura para sustentacao da plataforma.</p>
             </div>
             <div>
                 <span class="badge bg-{% if base_saas.status == 'ok' %}success{% elif base_saas.status == 'degraded' %}warning{% else %}danger{% endif %}">
@@ -240,7 +240,7 @@
                 <strong>{% if base_saas_backup.ultimo_backup %}{{ base_saas_backup.ultimo_backup.executado_em|date:"d/m/Y H:i" }}{% else %}-{% endif %}</strong>
             </div>
             <div class="card">
-                <span>Teste de Recuperacao</span>
+                <span>Teste de Recuperação</span>
                 <strong>{% if base_saas_backup.ultimo_teste_recuperacao %}{{ base_saas_backup.ultimo_teste_recuperacao.executado_em|date:"d/m/Y H:i" }}{% else %}-{% endif %}</strong>
             </div>
             <div class="card">
@@ -248,7 +248,7 @@
                 <strong>{{ base_saas_backup.provedor|default:"-" }}</strong>
             </div>
             <div class="card">
-                <span>Retencao</span>
+                <span>Retenção</span>
                 <strong>{{ base_saas_backup.retencao_dias }} dia(s)</strong>
             </div>
         </div>
@@ -258,7 +258,7 @@
         <div class="toolbar">
             <div>
                 <h3>Admin da Empresa</h3>
-                <p class="muted">A Construtask cria aqui o usuario administrador principal da empresa. Os demais usuarios ficam sob responsabilidade desse admin.</p>
+                <p class="muted">A Construtask cria aqui o usuário administrador principal da empresa. Os demais usuarios ficam sob responsabilidade desse admin.</p>
             </div>
         </div>
 
@@ -266,7 +266,7 @@
         <table class="compact-table" style="margin-bottom:16px;">
             <thead>
                 <tr>
-                    <th>Usuario</th>
+                    <th>Usuário</th>
                     <th>Email</th>
                     <th>Funcao</th>
                 </tr>

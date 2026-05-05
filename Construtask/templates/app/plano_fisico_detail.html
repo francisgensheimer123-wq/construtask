@@ -53,7 +53,7 @@
 <div class="toolbar">
     <div>
         <h2>{% if plano.numero %}{{ plano.numero }} - {% endif %}{{ plano.titulo }}</h2>
-        <p>Visao consolidada do cronograma, com datas planejadas, datas reais, percentuais e vinculo objetivo com a EAP.</p>
+        <p>Visão consolidada do cronograma, com datas planejadas, datas reais, percentuais e vinculo objetivo com a EAP.</p>
     </div>
     <div style="display:flex; gap:10px;">
         <a class="btn secondary" href="{% url 'mapa_correspondencia_list' %}">Mapeamento EAP</a>
@@ -81,17 +81,17 @@
                 <tr><td>Obra</td><td>{{ plano.obra.codigo }} - {{ plano.obra.nome }}</td></tr>
                 <tr><td>Versao</td><td>v{{ plano.versao }}</td></tr>
                 <tr><td>Status</td><td><span class="badge bg-{{ plano|workflow_badge_class }}">{{ plano.get_status_display }}</span> <small class="text-muted">{{ plano|workflow_stage_display }}</small></td></tr>
-                <tr><td>Baseline</td><td>{% if plano.is_baseline %}Sim{% else %}Nao{% endif %}</td></tr>
-                <tr><td>Data Base</td><td>{% if plano.data_base %}{{ plano.data_base|date:"d/m/Y" }}{% else %}Nao informado{% endif %}</td></tr>
+                <tr><td>Baseline</td><td>{% if plano.is_baseline %}Sim{% else %}Não{% endif %}</td></tr>
+                <tr><td>Data Base</td><td>{% if plano.data_base %}{{ plano.data_base|date:"d/m/Y" }}{% else %}Não informado{% endif %}</td></tr>
                 <tr><td>Importado em</td><td>{{ plano.created_at|date:"d/m/Y H:i" }}</td></tr>
-                <tr><td>Responsavel</td><td>{{ plano.responsavel_importacao.username }}</td></tr>
-                <tr><td>Descricao</td><td class="wrap-text">{{ plano.descricao|default:"Nao informado" }}</td></tr>
+                <tr><td>Responsável</td><td>{{ plano.responsavel_importacao.username }}</td></tr>
+                <tr><td>Descrição</td><td class="wrap-text">{{ plano.descricao|default:"Não informado" }}</td></tr>
             </tbody>
         </table>
     </div>
 
     <div class="panel">
-        <h3>Desvios e Integracao</h3>
+        <h3>Desvios e Integração</h3>
         <table class="compact-table">
             <tbody>
                 <tr><td>Atividades Atrasadas</td><td class="money">{{ estatisticas.atrasados }}</td></tr>
@@ -119,7 +119,7 @@
         <table class="compact-table">
             <thead>
                 <tr>
-                    <th>Codigo</th>
+                    <th>Código</th>
                     <th>Atividade</th>
                     <th class="text-right">Desvio</th>
                     <th class="text-right">% Prev.</th>
@@ -148,7 +148,7 @@
         {% if curva_planejada %}
         <canvas id="curvaSChart" height="120"></canvas>
         {% else %}
-        <p class="empty">Curva S indisponivel para este cronograma.</p>
+        <p class="empty">Curva S indisponível para este cronograma.</p>
         {% endif %}
     </div>
 </section>
@@ -172,7 +172,7 @@
             <table class="compact-table cronograma-table">
                 <thead>
                     <tr>
-                        <th class="nowrap">Codigo</th>
+                        <th class="nowrap">Código</th>
                         <th>Atividade</th>
                         <th class="nowrap">Inicio Prev.</th>
                         <th class="nowrap">Fim Prev.</th>
@@ -186,7 +186,7 @@
                         <th class="nowrap">EAP</th>
                         <th class="text-right nowrap">Vlr. Planejado</th>
                         <th class="text-right nowrap">Vlr. Realizado</th>
-                        <th class="nowrap">Acoes</th>
+                        <th class="nowrap">Ações</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -201,10 +201,10 @@
                                 </span>
                             </div>
                         </td>
-                        <td class="nowrap">{% if item.inicio_previsto_exibicao %}{{ item.inicio_previsto_exibicao|date:"d/m/Y" }}{% else %}Nao informado{% endif %}</td>
-                        <td class="nowrap">{% if item.fim_previsto_exibicao %}{{ item.fim_previsto_exibicao|date:"d/m/Y" }}{% else %}Nao informado{% endif %}</td>
-                        <td class="nowrap">{% if item.inicio_real_exibicao %}{{ item.inicio_real_exibicao|date:"d/m/Y" }}{% else %}Nao informado{% endif %}</td>
-                        <td class="nowrap">{% if item.fim_real_exibicao %}{{ item.fim_real_exibicao|date:"d/m/Y" }}{% else %}Nao informado{% endif %}</td>
+                        <td class="nowrap">{% if item.inicio_previsto_exibicao %}{{ item.inicio_previsto_exibicao|date:"d/m/Y" }}{% else %}Não informado{% endif %}</td>
+                        <td class="nowrap">{% if item.fim_previsto_exibicao %}{{ item.fim_previsto_exibicao|date:"d/m/Y" }}{% else %}Não informado{% endif %}</td>
+                        <td class="nowrap">{% if item.inicio_real_exibicao %}{{ item.inicio_real_exibicao|date:"d/m/Y" }}{% else %}Não informado{% endif %}</td>
+                        <td class="nowrap">{% if item.fim_real_exibicao %}{{ item.fim_real_exibicao|date:"d/m/Y" }}{% else %}Não informado{% endif %}</td>
                         <td class="money nowrap">{{ item.percentual_previsto_exibicao|trunc2 }}%</td>
                         <td class="money nowrap">{{ item.percentual_realizado_exibicao|trunc2 }}%</td>
                         <td class="money nowrap">
@@ -232,7 +232,7 @@
                                     <div style="color:#9f1239; font-size:12px; white-space:normal;">{{ item.erro_vinculo_exibicao }}</div>
                                 {% endif %}
                             {% else %}
-                                Nao informado
+                                Não informado
                             {% endif %}
                         </td>
                         <td class="money nowrap">{{ item.valor_planejado_exibicao|money_br }}</td>

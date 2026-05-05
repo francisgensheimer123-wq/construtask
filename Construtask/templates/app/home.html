@@ -220,13 +220,13 @@
 <div class="toolbar">
     <div>
         <h2>Painel Operacional</h2>
-        <p>Visao integrada de custo, prazo, qualidade e aquisicoes{% if obra_contexto %} da obra {{ obra_contexto.codigo }} - {{ obra_contexto.nome }}{% endif %}.</p>
+        <p>Visão integrada de custo, prazo, qualidade e aquisições{% if obra_contexto %} da obra {{ obra_contexto.codigo }} - {{ obra_contexto.nome }}{% endif %}.</p>
     </div>
     <div style="display:flex; gap:10px; flex-wrap:wrap;">
-        <a class="btn secondary" href="{% url 'nao_conformidade_list' %}">Nao Conformidades</a>
-        <a class="btn secondary" href="{% url 'solicitacao_compra_list' %}">Solicitacoes</a>
-        <a class="btn secondary" href="{% url 'cotacao_list' %}">Cotacoes</a>
-        <a class="btn secondary" href="{% url 'compromisso_list' %}">Compras e Contratacoes</a>
+        <a class="btn secondary" href="{% url 'nao_conformidade_list' %}">Não Conformidades</a>
+        <a class="btn secondary" href="{% url 'solicitacao_compra_list' %}">Solicitações</a>
+        <a class="btn secondary" href="{% url 'cotacao_list' %}">Cotações</a>
+        <a class="btn secondary" href="{% url 'compromisso_list' %}">Compras e Contratações</a>
     </div>
 </div>
 
@@ -356,21 +356,21 @@
                 </tr>
             </thead>
             <tbody>
-                <tr><td>Riscos criticos</td><td class="money">{{ resumo_riscos.criticos }}</td></tr>
+                <tr><td>Riscos críticos</td><td class="money">{{ resumo_riscos.criticos }}</td></tr>
                 <tr><td>Riscos altos</td><td class="money">{{ resumo_riscos.altos }}</td></tr>
                 <tr><td>Riscos em tratamento</td><td class="money">{{ resumo_riscos.em_tratamento }}</td></tr>
                 <tr><td>NCs abertas</td><td class="money">{{ nao_conformidades_abertas|length }}</td></tr>
             </tbody>
         </table>
         <div style="margin-top:18px;">
-            <h4 style="margin:0 0 10px;">Nao conformidades abertas</h4>
+            <h4 style="margin:0 0 10px;">Não conformidades abertas</h4>
             {% if nao_conformidades_abertas %}
             <table class="compact-table">
                 <thead>
                     <tr>
                         <th>Status</th>
-                        <th>Descricao</th>
-                        <th>Responsavel</th>
+                        <th>Descrição</th>
+                        <th>Responsável</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -388,7 +388,7 @@
                 </tbody>
             </table>
             {% else %}
-            <p class="empty">Nenhuma nao conformidade aberta.</p>
+            <p class="empty">Nenhuma não conformidade aberta.</p>
             {% endif %}
         </div>
     </div>
@@ -440,7 +440,7 @@
             <thead>
                 <tr>
                     <th>Correlação</th>
-                    <th>Nivel</th>
+                    <th>Nível</th>
                     <th class="text-right">Ocorrências</th>
                     <th>Leitura executiva</th>
                 </tr>
@@ -469,8 +469,8 @@
 <section class="grid-2">
     <div class="panel">
         <div class="toolbar">
-            <h3>Aquisicoes Estruturadas</h3>
-            <a class="btn secondary" href="{% url 'solicitacao_compra_create' %}">Nova Solicitacao</a>
+            <h3>Aquisições Estruturadas</h3>
+            <a class="btn secondary" href="{% url 'solicitacao_compra_create' %}">Nova Solicitação</a>
         </div>
         <table class="compact-table">
             <thead>
@@ -489,12 +489,12 @@
             </tbody>
         </table>
         <div style="margin-top:18px;">
-            <h4 style="margin:0 0 10px;">Ultimos resultados de cotacao</h4>
+            <h4 style="margin:0 0 10px;">Últimos resultados de cotação</h4>
             {% if ultimas_ordens_compra %}
             <table class="compact-table">
                 <thead>
                     <tr>
-                        <th>Numero</th>
+                        <th>Número</th>
                         <th>Fornecedor</th>
                         <th class="text-right">Valor</th>
                     </tr>
@@ -524,7 +524,7 @@
             <thead>
                 <tr>
                     <th>Indicador</th>
-                    <th>Nivel</th>
+                    <th>Nível</th>
                     <th class="text-right">Quantidade</th>
                 </tr>
             </thead>
@@ -539,7 +539,7 @@
             </tbody>
         </table>
         <div style="margin-top:18px;">
-            <h4 style="margin:0 0 10px;">Contratos com saldo critico</h4>
+            <h4 style="margin:0 0 10px;">Contratos com saldo crítico</h4>
             {% if alertas %}
             <table class="compact-table">
                 <thead>
@@ -568,9 +568,9 @@
                 <thead>
                     <tr>
                         <th>Regra</th>
-                        <th>Descricao</th>
-                        <th>Referencia</th>
-                        <th>Nivel</th>
+                        <th>Descrição</th>
+                        <th>Referência</th>
+                        <th>Nível</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -601,7 +601,7 @@
                 </tbody>
             </table>
             {% else %}
-            <p class="empty">Nenhum alerta automatico aberto.</p>
+            <p class="empty">Nenhum alerta automático aberto.</p>
             {% endif %}
         </div>
         <div style="margin-top:18px;">
@@ -613,7 +613,7 @@
                         <th>Data</th>
                         <th>Regra</th>
                         <th>Resultado</th>
-                        <th>Referencia</th>
+                        <th>Referência</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -628,7 +628,7 @@
                 </tbody>
             </table>
             {% else %}
-            <p class="empty">Nenhuma automacao com alteracao relevante registrada.</p>
+            <p class="empty">Nenhuma automação com alteração relevante registrada.</p>
             {% endif %}
         </div>
     </div>
@@ -636,7 +636,7 @@
 
 <section class="panel" style="margin-top:18px;">
     <div class="toolbar">
-        <h3>Principais Itens do Orcamento</h3>
+        <h3>Principais Itens do Orçamento</h3>
         <a class="btn secondary" href="{% url 'plano_contas_list' %}">Plano de Contas</a>
     </div>
     {% if top_itens_orcamento %}
@@ -644,7 +644,7 @@
         <thead>
             <tr>
                 <th>Centro de Custo</th>
-                <th class="text-right">Orcado</th>
+                <th class="text-right">Orçado</th>
                 <th class="text-right">Comprometido</th>
                 <th class="text-right">Medido</th>
                 <th class="text-right">Executado</th>
@@ -669,7 +669,7 @@
         </tbody>
     </table>
     {% else %}
-    <p class="empty">Nenhum item orcamentario disponivel.</p>
+    <p class="empty">Nenhum item orçamentário disponível.</p>
     {% endif %}
 </section>
 {% endif %}

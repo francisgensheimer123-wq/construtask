@@ -8,7 +8,7 @@
 <div class="toolbar">
     <div>
     <h2>{% if risco.codigo %}{{ risco.codigo }} - {% endif %}{{ risco.titulo }}</h2>
-        <p>Visao consolidada do risco, matriz de classificacao, plano de resposta e historico de tratamento.</p>
+        <p>Visão consolidada do risco, matriz de classificacao, plano de resposta e histórico de tratamento.</p>
     </div>
     <div style="display:flex; gap:10px;">
         {% if pode_editar %}
@@ -19,11 +19,11 @@
 </div>
 
 <section class="cards">
-    <div class="card"><span>Nivel do Risco</span><strong>{{ risco.nivel }}</strong></div>
+    <div class="card"><span>Nível do Risco</span><strong>{{ risco.nivel }}</strong></div>
     <div class="card"><span>Probabilidade</span><strong>{{ risco.probabilidade }}</strong></div>
     <div class="card"><span>Impacto</span><strong>{{ risco.impacto }}</strong></div>
     <div class="card"><span>Status</span><strong style="text-align:left;">{{ risco.get_status_display }}</strong><small class="text-muted">{{ risco|workflow_stage_display }}</small></div>
-    <div class="card"><span>Responsavel</span><strong style="text-align:left;">{{ risco.responsavel.username }}</strong></div>
+    <div class="card"><span>Responsável</span><strong style="text-align:left;">{{ risco.responsavel.username }}</strong></div>
     <div class="card"><span>Dias para Meta</span><strong>{% if dias_para_meta != None %}{{ dias_para_meta }}{% else %}-{% endif %}</strong></div>
 </section>
 
@@ -74,10 +74,10 @@
 
 <section class="grid-2">
     <div class="panel">
-        <h3>Descricao e Causa</h3>
+        <h3>Descrição e Causa</h3>
         <table class="compact-table">
             <tbody>
-                <tr><td>Descricao</td><td class="wrap-text">{{ risco.descricao|linebreaksbr }}</td></tr>
+                <tr><td>Descrição</td><td class="wrap-text">{{ risco.descricao|linebreaksbr }}</td></tr>
                 <tr><td>Causa Raiz</td><td class="wrap-text">{{ risco.causa|default:"-"|linebreaksbr }}</td></tr>
                 <tr><td>Plano de Resposta</td><td class="wrap-text">{{ risco.plano_resposta|default:"-"|linebreaksbr }}</td></tr>
                 <tr><td>Observacoes</td><td class="wrap-text">{{ risco.observacoes|default:"-"|linebreaksbr }}</td></tr>
@@ -86,7 +86,7 @@
     </div>
 
     <div class="panel">
-        <h3>Acoes Operacionais</h3>
+        <h3>Ações Operacionais</h3>
         <div class="actions" style="display:flex; flex-wrap:wrap; gap:10px;">
             {% if pode_tratar %}
             <form method="post">{% csrf_token %}<input type="hidden" name="acao" value="iniciar_tratamento"><button class="btn" type="submit">Iniciar Tratamento</button></form>
@@ -108,15 +108,15 @@
 </section>
 
 <section class="panel">
-    <h3>Historico do Risco</h3>
+    <h3>Histórico do Risco</h3>
     {% if historico %}
     <table class="compact-table">
         <thead>
             <tr>
                 <th>Data</th>
-                <th>Acao</th>
-                <th>Usuario</th>
-                <th>Observacao</th>
+                <th>Ação</th>
+                <th>Usuário</th>
+                <th>Observação</th>
             </tr>
         </thead>
         <tbody>
@@ -131,7 +131,7 @@
         </tbody>
     </table>
     {% else %}
-    <p class="empty">Nenhum historico registrado.</p>
+    <p class="empty">Nenhum histórico registrado.</p>
     {% endif %}
 </section>
 {% endblock %}

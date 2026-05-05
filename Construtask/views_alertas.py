@@ -101,7 +101,7 @@ def alerta_operacional_workflow_view(request, pk):
     alerta = get_object_or_404(AlertaOperacional.objects.select_related("obra"), pk=pk)
     obra_contexto = _obter_obra_contexto(request)
     if not obra_contexto or alerta.obra_id != obra_contexto.id:
-        raise Http404("Alerta operacional nao encontrado para a obra selecionada.")
+        raise Http404("Alerta operacional não encontrado para a obra selecionada.")
     if request.method != "POST":
         return redirect("alerta_operacional_detail", pk=alerta.pk)
 
@@ -116,18 +116,18 @@ def alerta_operacional_workflow_view(request, pk):
 
     if acao == "assumir":
         if not can_assume_alert(request.user):
-            messages.error(request, "Seu perfil nao pode assumir alertas para tratamento.")
+            messages.error(request, "Seu perfil não pode assumir alertas para tratamento.")
             return redirect(next_url)
         if not prazo_solucao:
-            messages.error(request, "Informe o prazo para solucao ao assumir o alerta.")
+            messages.error(request, "Informe o prazo para solução ao assumir o alerta.")
             return redirect(next_url)
         try:
             prazo_solucao_em = date.fromisoformat(prazo_solucao)
         except ValueError:
-            messages.error(request, "Informe um prazo de solucao valido.")
+            messages.error(request, "Informe um prazo de solução valido.")
             return redirect(next_url)
         if prazo_solucao_em < timezone.localdate():
-            messages.error(request, "O prazo para solucao nao pode estar no passado.")
+            messages.error(request, "O prazo para solução não pode estar no passado.")
             return redirect(next_url)
         atualizar_status_alerta(
             alerta,
@@ -141,7 +141,7 @@ def alerta_operacional_workflow_view(request, pk):
         messages.success(request, "Alerta colocado em tratamento.")
     elif acao == "justificar":
         if not can_justify_alert(request.user):
-            messages.error(request, "Seu perfil nao pode justificar alertas operacionais.")
+            messages.error(request, "Seu perfil não pode justificar alertas operacionais.")
             return redirect(next_url)
         if not observacao:
             messages.error(request, "Informe a justificativa para registrar o alerta.")
@@ -157,10 +157,10 @@ def alerta_operacional_workflow_view(request, pk):
         messages.success(request, "Justificativa registrada com sucesso.")
     elif acao == "encerrar":
         if not can_close_alert(request.user):
-            messages.error(request, "Seu perfil nao pode encerrar alertas operacionais.")
+            messages.error(request, "Seu perfil não pode encerrar alertas operacionais.")
             return redirect(next_url)
         if not observacao:
-            messages.error(request, "Informe a evidencia ou comentario de encerramento.")
+            messages.error(request, "Informe a evidência ou comentario de encerramento.")
             return redirect(next_url)
         atualizar_status_alerta(
             alerta,
@@ -173,7 +173,7 @@ def alerta_operacional_workflow_view(request, pk):
         messages.success(request, "Alerta encerrado com sucesso.")
     elif acao == "reabrir":
         if not can_close_alert(request.user):
-            messages.error(request, "Seu perfil nao pode reabrir alertas operacionais.")
+            messages.error(request, "Seu perfil não pode reabrir alertas operacionais.")
             return redirect(next_url)
         atualizar_status_alerta(
             alerta,
@@ -185,7 +185,7 @@ def alerta_operacional_workflow_view(request, pk):
         )
         messages.success(request, "Alerta reaberto.")
     else:
-        messages.error(request, "Acao do alerta nao reconhecida.")
+        messages.error(request, "Ação do alerta não reconhecida.")
 
     return redirect(next_url)
 
@@ -203,7 +203,7 @@ def alerta_operacional_dashboard_export_view(request):
             {
                 "Secao": "Prioridades Executivas",
                 "Item": item["frente"],
-                "Nivel": item["nivel"].upper(),
+                "Nível": item["nivel"].upper(),
                 "Quantidade": item["total"],
                 "Detalhe": item["acao"],
             }
@@ -213,7 +213,7 @@ def alerta_operacional_dashboard_export_view(request):
             {
                 "Secao": "Correlacoes Operacionais",
                 "Item": item["titulo"],
-                "Nivel": item["nivel"].upper(),
+                "Nível": item["nivel"].upper(),
                 "Quantidade": item["quantidade"],
                 "Detalhe": item["descricao"],
             }
@@ -223,13 +223,13 @@ def alerta_operacional_dashboard_export_view(request):
             {
                 "Secao": "Alertas em Atraso",
                 "Item": alerta.codigo_regra,
-                "Nivel": alerta.severidade,
+                "Nível": alerta.severidade,
                 "Quantidade": 1,
-                "Detalhe": f"{alerta.titulo} | Responsavel: {getattr(alerta.responsavel, 'username', '-') or '-'} | Prazo: {alerta.prazo_solucao_em.strftime('%d/%m/%Y') if alerta.prazo_solucao_em else '-'}",
+                "Detalhe": f"{alerta.titulo} | Responsável: {getattr(alerta.responsavel, 'username', '-') or '-'} | Prazo: {alerta.prazo_solucao_em.strftime('%d/%m/%Y') if alerta.prazo_solucao_em else '-'}",
             }
         )
     if not linhas:
-        linhas.append({"Secao": "Resumo", "Item": "Sem dados", "Nivel": "-", "Quantidade": 0, "Detalhe": "Nenhum alerta executivo consolidado."})
+        linhas.append({"Secao": "Resumo", "Item": "Sem dados", "Nível": "-", "Quantidade": 0, "Detalhe": "Nenhum alerta executivo consolidado."})
     return _exportar_excel_response("painel_alertas_operacionais.xlsx", "Painel Alertas Operacionais", linhas)
 
 
@@ -246,7 +246,7 @@ def alerta_operacional_dashboard_pdf_view(request):
         "Obra": str(obra),
         "Score Operacional": f"{score.get('pontuacao', Decimal('0.00'))}",
         "Faixa": score.get("faixa", "-"),
-        "Alertas criticos": len(dados["alertas_criticos"]),
+        "Alertas críticos": len(dados["alertas_criticos"]),
         "Alertas em atraso": len(dados["alertas_em_atraso"]),
         "Execucoes recentes": len(dados["execucoes_recentes"]),
     }
@@ -255,16 +255,16 @@ def alerta_operacional_dashboard_pdf_view(request):
             "titulo": "Prioridades Executivas",
             "colunas": [
                 {"chave": "Frente", "titulo": "Frente"},
-                {"chave": "Nivel", "titulo": "Nivel"},
+                {"chave": "Nível", "titulo": "Nível"},
                 {"chave": "Total", "titulo": "Total"},
-                {"chave": "Acao", "titulo": "Acao"},
+                {"chave": "Ação", "titulo": "Ação"},
             ],
             "linhas": [
                 {
                     "Frente": item["frente"],
-                    "Nivel": item["nivel"].upper(),
+                    "Nível": item["nivel"].upper(),
                     "Total": item["total"],
-                    "Acao": item["acao"],
+                    "Ação": item["acao"],
                 }
                 for item in dados["prioridades_executivas"]
             ],
@@ -272,17 +272,17 @@ def alerta_operacional_dashboard_pdf_view(request):
         {
             "titulo": "Correlacoes Operacionais",
             "colunas": [
-                {"chave": "Titulo", "titulo": "Titulo"},
-                {"chave": "Nivel", "titulo": "Nivel"},
+                {"chave": "Título", "titulo": "Título"},
+                {"chave": "Nível", "titulo": "Nível"},
                 {"chave": "Quantidade", "titulo": "Qtd"},
-                {"chave": "Descricao", "titulo": "Descricao"},
+                {"chave": "Descrição", "titulo": "Descrição"},
             ],
             "linhas": [
                 {
-                    "Titulo": item["titulo"],
-                    "Nivel": item["nivel"].upper(),
+                    "Título": item["titulo"],
+                    "Nível": item["nivel"].upper(),
                     "Quantidade": item["quantidade"],
-                    "Descricao": item["descricao"],
+                    "Descrição": item["descricao"],
                 }
                 for item in dados["correlacoes_operacionais"]
             ],
@@ -295,6 +295,6 @@ def alerta_operacional_dashboard_pdf_view(request):
         [],
         secoes[0]["linhas"] + secoes[1]["linhas"],
         extras_titulo="Leitura Executiva Consolidada",
-        extras_colunas=[("Titulo", 160), ("Nivel", 60), ("Quantidade", 55), ("Descricao", 220)],
+        extras_colunas=[("Título", 160), ("Nível", 60), ("Quantidade", 55), ("Descrição", 220)],
         incluir_historico=False,
     )

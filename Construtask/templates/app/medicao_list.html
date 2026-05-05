@@ -7,22 +7,22 @@
 {% block content %}
 <div class="toolbar">
     <div>
-        <h2>Medicoes</h2>
-        <p>Acompanhamento das medicoes por obra e status.</p>
+        <h2>Medições</h2>
+        <p>Acompanhamento das medições por obra e status.</p>
     </div>
     <div style="display:flex; gap:10px;">
         <a class="btn secondary" href="{% url 'medicao_export' %}?q={{ busca|urlencode }}">Exportar Excel</a>
         <a class="btn secondary" href="{% url 'medicao_lista_pdf' %}?q={{ busca|urlencode }}">Exportar PDF</a>
-        <a class="btn" href="{% url 'medicao_create' %}">Nova Medicao</a>
+        <a class="btn" href="{% url 'medicao_create' %}">Nova Medição</a>
     </div>
 </div>
 
 <section class="panel" style="margin-bottom:18px;">
     <form method="get" class="toolbar" style="justify-content:flex-start; flex-wrap:wrap;">
-        <input type="text" name="q" value="{{ busca }}" placeholder="Buscar por numero, fornecedor ou CNPJ" style="max-width:320px;">
+        <input type="text" name="q" value="{{ busca }}" placeholder="Buscar por número, fornecedor ou CNPJ" style="max-width:320px;">
         <input type="text" name="fornecedor" value="{{ fornecedor_filtro }}" placeholder="Fornecedor" style="max-width:220px;">
-        <input type="text" name="responsavel" value="{{ responsavel_filtro }}" placeholder="Responsavel" style="max-width:200px;">
-        <input type="text" name="contrato" value="{{ contrato_filtro }}" placeholder="Numero do contrato" style="max-width:200px;">
+        <input type="text" name="responsavel" value="{{ responsavel_filtro }}" placeholder="Responsável" style="max-width:200px;">
+        <input type="text" name="contrato" value="{{ contrato_filtro }}" placeholder="Número do contrato" style="max-width:200px;">
         <input type="date" name="data_inicio" value="{{ data_inicio }}" style="max-width:170px;">
         <input type="date" name="data_fim" value="{{ data_fim }}" style="max-width:170px;">
         <select name="obra" style="max-width:220px;">
@@ -51,15 +51,15 @@
 <table class="compact-table">
     <thead>
         <tr>
-            <th>Numero</th>
+            <th>Número</th>
             <th>Obra</th>
             <th>Status</th>
             <th>Contrato</th>
             <th>Fornecedor</th>
-            <th>Descricao</th>
+            <th>Descrição</th>
             <th class="text-right">Valor Total</th>
             <th>Data</th>
-            <th>Acoes</th>
+            <th>Ações</th>
         </tr>
     </thead>
     <tbody>
@@ -92,15 +92,15 @@
 {% if is_paginated %}
 <div class="panel" style="margin-top:16px;">
     <div class="toolbar" style="justify-content:space-between; gap:12px; flex-wrap:wrap;">
-        <span class="muted">Pagina {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+        <span class="muted">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
         <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
             {% if page_obj.has_previous %}
             <a class="btn secondary" href="?{% if querystring_sem_pagina %}{{ querystring_sem_pagina }}&{% endif %}page=1">Primeira</a>
             <a class="btn secondary" href="?{% if querystring_sem_pagina %}{{ querystring_sem_pagina }}&{% endif %}page={{ page_obj.previous_page_number }}">Anterior</a>
             {% endif %}
             {% if page_obj.has_next %}
-            <a class="btn secondary" href="?{% if querystring_sem_pagina %}{{ querystring_sem_pagina }}&{% endif %}page={{ page_obj.next_page_number }}">Proxima</a>
-            <a class="btn secondary" href="?{% if querystring_sem_pagina %}{{ querystring_sem_pagina }}&{% endif %}page={{ page_obj.paginator.num_pages }}">Ultima</a>
+            <a class="btn secondary" href="?{% if querystring_sem_pagina %}{{ querystring_sem_pagina }}&{% endif %}page={{ page_obj.next_page_number }}">Próxima</a>
+            <a class="btn secondary" href="?{% if querystring_sem_pagina %}{{ querystring_sem_pagina }}&{% endif %}page={{ page_obj.paginator.num_pages }}">Última</a>
             {% endif %}
         </div>
     </div>

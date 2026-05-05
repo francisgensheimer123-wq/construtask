@@ -37,14 +37,14 @@ def _empresa_redirect_kwargs(empresa):
 
 def _exigir_admin_sistema(request):
     if not is_admin_sistema(request.user):
-        messages.error(request, "Apenas o superuser tecnico Construtask pode acessar o gerenciamento do sistema.")
+        messages.error(request, "Apenas o superuser técnico Construtask pode acessar o gerenciamento do sistema.")
         return False
     return True
 
 
 def _exigir_admin_empresa_vinculado(request):
     if not is_admin_empresa_vinculado(request.user):
-        messages.error(request, "Apenas a administracao da empresa pode acessar esta pagina.")
+        messages.error(request, "Apenas a administracao da empresa pode acessar esta página.")
         return False
     return True
 
@@ -63,106 +63,106 @@ def _catalogo_alertas_empresa(parametros):
     return [
         {
             "codigo": "PLAN-SUP-001",
-            "titulo": "Atividade planejada sem solicitacao de compra antecipada",
-            "gatilho": "Atividade futura sem solicitacao compativel vinculada",
+            "titulo": "Atividade planejada sem solicitação de compra antecipada",
+            "gatilho": "Atividade futura sem solicitação compatível vinculada",
             "valor_atual": _formatar_parametro_alerta(parametros.planejamento_suprimentos_janela_dias, "dias"),
             "impacto": "Antecipa risco de suprimento e atraso de mobilizacao.",
         },
         {
             "codigo": "CONT-MED-001",
-            "titulo": "Contrato ativo sem medicao registrada",
-            "gatilho": "Contrato ativo sem medicao apos a tolerancia definida",
+            "titulo": "Contrato ativo sem medição registrada",
+            "gatilho": "Contrato ativo sem medição após a tolerância definida",
             "valor_atual": _formatar_parametro_alerta(parametros.contrato_sem_medicao_dias, "dias"),
-            "impacto": "Sinaliza perda de ritmo contratual e falta de lastro de execucao.",
+            "impacto": "Sinaliza perda de ritmo contratual e falta de lastro de execução.",
         },
         {
             "codigo": "MED-NF-001",
-            "titulo": "Medicao sem nota fiscal vinculada",
-            "gatilho": "Medicao aprovada sem nota fiscal dentro do prazo operacional",
+            "titulo": "Medição sem nota fiscal vinculada",
+            "gatilho": "Medição aprovada sem nota fiscal dentro do prazo operacional",
             "valor_atual": _formatar_parametro_alerta(parametros.medicao_sem_nota_dias, "dias"),
             "impacto": "Ajuda a controlar faturamento, fluxo documental e competencia.",
         },
         {
             "codigo": "NF-RAT-001",
             "titulo": "Nota fiscal sem rateio completo",
-            "gatilho": "Percentual pendente de rateio acima do minimo definido",
+            "gatilho": "Percentual pendente de rateio acima do mínimo definido",
             "valor_atual": _formatar_parametro_alerta(parametros.nota_sem_rateio_percentual_minimo, "percentual"),
             "impacto": "Evita custo financeiro sem apropriacao completa na obra.",
         },
         {
             "codigo": "RISK-DUE-001",
-            "titulo": "Risco com prazo vencido sem tratamento concluido",
-            "gatilho": "Prazo de tratamento vencido acima da tolerancia",
+            "titulo": "Risco com prazo vencido sem tratamento concluído",
+            "gatilho": "Prazo de tratamento vencido acima da tolerância",
             "valor_atual": _formatar_parametro_alerta(parametros.risco_vencido_tolerancia_dias, "dias"),
-            "impacto": "Destaca riscos sem acao efetiva antes que virem problema real.",
+            "impacto": "Destaca riscos sem ação efetiva antes que virem problema real.",
         },
         {
             "codigo": "NC-EVO-001",
-            "titulo": "Nao conformidade sem evolucao recente",
-            "gatilho": "Nao conformidade aberta sem nova movimentacao",
+            "titulo": "Não conformidade sem evolução recente",
+            "gatilho": "Não conformidade aberta sem nova movimentação",
             "valor_atual": _formatar_parametro_alerta(parametros.nao_conformidade_sem_evolucao_dias, "dias"),
-            "impacto": "Reforca governanca de qualidade e encerramento com evidencia.",
+            "impacto": "Reforca governanca de qualidade e encerramento com evidência.",
         },
         {
             "codigo": "PLAN-PROG-001",
-            "titulo": "Atividade iniciada sem avanço fisico registrado",
-            "gatilho": "Atividade com inicio atingido sem progresso acima da tolerancia",
+            "titulo": "Atividade iniciada sem avanço físico registrado",
+            "gatilho": "Atividade com inicio atingido sem progresso acima da tolerância",
             "valor_atual": _formatar_parametro_alerta(parametros.atividade_sem_avanco_tolerancia_dias, "dias"),
             "impacto": "Aponta atraso imediato no cronograma e ajuda a agir cedo.",
         },
         {
             "codigo": "PLAN-PROG-002",
-            "titulo": "Avanco fisico abaixo do tempo decorrido",
-            "gatilho": "Desvio percentual de prazo apos percentual minimo previsto",
-            "valor_atual": f"Minimo {parametros.desvio_prazo_percentual_minimo_previsto}% / tolerancia {parametros.desvio_prazo_tolerancia_percentual}%",
+            "titulo": "Avanço físico abaixo do tempo decorrido",
+            "gatilho": "Desvio percentual de prazo após percentual mínimo previsto",
+            "valor_atual": f"Mínimo {parametros.desvio_prazo_percentual_minimo_previsto}% / tolerância {parametros.desvio_prazo_tolerancia_percentual}%",
             "impacto": "Sinaliza tendencia de atraso crescente antes do estouro final.",
         },
         {
             "codigo": "PLAN-PROG-003",
-            "titulo": "Projecao de termino alem do prazo da obra",
-            "gatilho": "Data estimada de termino excede a folga de prazo definida",
+            "titulo": "Projeção de término além do prazo da obra",
+            "gatilho": "Data estimada de término excede a folga de prazo definida",
             "valor_atual": _formatar_parametro_alerta(parametros.estouro_prazo_tolerancia_dias, "dias"),
             "impacto": "Mostra risco de estouro global de prazo com base no ritmo atual.",
         },
         {
             "codigo": "COST-PROG-001",
             "titulo": "Custo realizado acima do previsto proporcional",
-            "gatilho": "Custo acima da tolerancia percentual definida",
+            "gatilho": "Custo acima da tolerância percentual definida",
             "valor_atual": _formatar_parametro_alerta(parametros.desvio_custo_tolerancia_percentual, "percentual"),
             "impacto": "Ajuda a detectar estouro de custo antes de contaminar a obra inteira.",
         },
         {
             "codigo": "COST-PROG-002",
-            "titulo": "Lancamento de custo sem avanço fisico correspondente",
-            "gatilho": "Valor realizado sem avanço fisico acima do minimo definido",
+            "titulo": "Lançamento de custo sem avanço físico correspondente",
+            "gatilho": "Valor realizado sem avanço físico acima do mínimo definido",
             "valor_atual": _formatar_parametro_alerta(parametros.custo_sem_avanco_valor_minimo, "moeda"),
-            "impacto": "Identifica custo sem lastro fisico e possivel retrabalho ou baixa produtividade.",
+            "impacto": "Identifica custo sem lastro físico e possível retrabalho ou baixa produtividade.",
         },
         {
             "codigo": "COST-BUD-001",
-            "titulo": "Compromisso acima do valor orcado",
-            "gatilho": "Compromisso acima do orcado somando a tolerancia percentual",
+            "titulo": "Compromisso acima do valor orçado",
+            "gatilho": "Compromisso acima do orçado somando a tolerância percentual",
             "valor_atual": _formatar_parametro_alerta(parametros.compromisso_acima_orcado_tolerancia_percentual, "percentual"),
-            "impacto": "Protege o orcamento contra contratacao ou compra acima do previsto.",
+            "impacto": "Protege o orçamento contra contratação ou compra acima do previsto.",
         },
         {
             "codigo": "RISK-ACC-001",
-            "titulo": "Acumulo de riscos operacionais nao tratados",
-            "gatilho": "Quantidade de riscos ativos acima do limite e do nivel critico",
-            "valor_atual": f"Minimo {parametros.acumulo_riscos_quantidade_minima} / critico {parametros.acumulo_riscos_quantidade_critica}",
-            "impacto": "Evidencia perda sistêmica de controle na obra.",
+            "titulo": "Acúmulo de riscos operacionais não tratados",
+            "gatilho": "Quantidade de riscos ativos acima do limite e do nível crítico",
+            "valor_atual": f"Mínimo {parametros.acumulo_riscos_quantidade_minima} / crítico {parametros.acumulo_riscos_quantidade_critica}",
+            "impacto": "Evidência perda sistêmica de controle na obra.",
         },
         {
             "codigo": "ALERT-SLA-001",
             "titulo": "Alerta sem workflow recente",
-            "gatilho": "Alerta sem nova movimentacao acima da tolerancia operacional",
+            "gatilho": "Alerta sem nova movimentação acima da tolerância operacional",
             "valor_atual": _formatar_parametro_alerta(parametros.alerta_sem_workflow_dias, "dias"),
             "impacto": "O score so reduz quando o alerta envelhece sem tratamento efetivo.",
         },
         {
             "codigo": "ALERT-SLA-002",
-            "titulo": "Prazo de solucao do alerta estourado",
-            "gatilho": "Alerta aberto alem do prazo padrao de solucao da empresa",
+            "titulo": "Prazo de solução do alerta estourado",
+            "gatilho": "Alerta aberto além do prazo padrão de solução da empresa",
             "valor_atual": _formatar_parametro_alerta(parametros.alerta_prazo_solucao_dias, "dias"),
             "impacto": "Distingue alerta ativo de alerta negligenciado na leitura executiva da obra.",
         },
@@ -182,7 +182,7 @@ class EmpresaAdminForm(forms.Form):
 
 
 class SistemaEmpresaCreateForm(forms.ModelForm):
-    """Formulario de cadastro de empresa no painel tecnico do sistema."""
+    """Formulario de cadastro de empresa no painel técnico do sistema."""
 
     class Meta:
         model = Empresa
@@ -261,23 +261,23 @@ class ParametroAlertaEmpresaForm(forms.ModelForm):
             "alerta_prazo_solucao_dias": forms.NumberInput(attrs={"min": 1}),
         }
         labels = {
-            "planejamento_suprimentos_janela_dias": "Dias futuros para alerta de atividade sem solicitacao",
-            "contrato_sem_medicao_dias": "Dias sem medicao para alertar contrato ativo",
-            "medicao_sem_nota_dias": "Dias sem nota fiscal para alertar medicao",
-            "nota_sem_rateio_percentual_minimo": "Percentual minimo pendente para alertar nota sem rateio",
-            "risco_vencido_tolerancia_dias": "Dias de tolerancia para risco vencido",
-            "nao_conformidade_sem_evolucao_dias": "Dias sem evolucao para alertar nao conformidade",
-            "atividade_sem_avanco_tolerancia_dias": "Dias de tolerancia apos inicio da atividade sem avancar",
-            "desvio_prazo_percentual_minimo_previsto": "Percentual previsto minimo para avaliar desvio de prazo",
-            "desvio_prazo_tolerancia_percentual": "Diferenca percentual minima para alertar desvio de prazo",
-            "estouro_prazo_tolerancia_dias": "Dias de tolerancia para estourar prazo da obra",
+            "planejamento_suprimentos_janela_dias": "Dias futuros para alerta de atividade sem solicitação",
+            "contrato_sem_medicao_dias": "Dias sem medição para alertar contrato ativo",
+            "medicao_sem_nota_dias": "Dias sem nota fiscal para alertar medição",
+            "nota_sem_rateio_percentual_minimo": "Percentual mínimo pendente para alertar nota sem rateio",
+            "risco_vencido_tolerancia_dias": "Dias de tolerância para risco vencido",
+            "nao_conformidade_sem_evolucao_dias": "Dias sem evolução para alertar não conformidade",
+            "atividade_sem_avanco_tolerancia_dias": "Dias de tolerância após início da atividade sem avançar",
+            "desvio_prazo_percentual_minimo_previsto": "Percentual previsto mínimo para avaliar desvio de prazo",
+            "desvio_prazo_tolerancia_percentual": "Diferença percentual mínima para alertar desvio de prazo",
+            "estouro_prazo_tolerancia_dias": "Dias de tolerância para estourar prazo da obra",
             "desvio_custo_tolerancia_percentual": "Percentual acima do custo proporcional para alertar desvio",
-            "custo_sem_avanco_valor_minimo": "Valor minimo sem avanço fisico para alertar custo sem lastro",
-            "compromisso_acima_orcado_tolerancia_percentual": "Percentual de tolerancia acima do orcado para compromissos",
+            "custo_sem_avanco_valor_minimo": "Valor mínimo sem avanço físico para alertar custo sem lastro",
+            "compromisso_acima_orcado_tolerancia_percentual": "Percentual de tolerância acima do orçado para compromissos",
             "acumulo_riscos_quantidade_minima": "Quantidade minima de riscos ativos para gerar alerta",
-            "acumulo_riscos_quantidade_critica": "Quantidade de riscos ativos para tornar o alerta critico",
+            "acumulo_riscos_quantidade_critica": "Quantidade de riscos ativos para tornar o alerta crítico",
             "alerta_sem_workflow_dias": "Dias sem workflow para o score penalizar um alerta",
-            "alerta_prazo_solucao_dias": "Prazo padrao de solucao do alerta para o score penalizar",
+            "alerta_prazo_solucao_dias": "Prazo padrão de solução do alerta para o score penalizar",
         }
 
     def clean(self):
@@ -285,7 +285,7 @@ class ParametroAlertaEmpresaForm(forms.ModelForm):
         quantidade_minima = cleaned.get("acumulo_riscos_quantidade_minima")
         quantidade_critica = cleaned.get("acumulo_riscos_quantidade_critica")
         if quantidade_minima and quantidade_critica and quantidade_critica < quantidade_minima:
-            self.add_error("acumulo_riscos_quantidade_critica", "O nivel critico deve ser maior ou igual ao nivel minimo de disparo.")
+            self.add_error("acumulo_riscos_quantidade_critica", "O nível crítico deve ser maior ou igual ao nível mínimo de disparo.")
         return cleaned
 
 
@@ -304,13 +304,13 @@ class ParametroComunicacaoEmpresaForm(forms.ModelForm):
         }
         labels = {
             "frequencia_curto_prazo_dias": "Curto prazo (dias)",
-            "frequencia_medio_prazo_dias": "Medio prazo (dias)",
+            "frequencia_medio_prazo_dias": "Médio prazo (dias)",
             "frequencia_longo_prazo_dias": "Longo prazo (dias)",
         }
         help_texts = {
-            "frequencia_curto_prazo_dias": "Frequencia padrao das reunioes de curto prazo da empresa.",
-            "frequencia_medio_prazo_dias": "Frequencia padrao das reunioes de médio prazo da empresa.",
-            "frequencia_longo_prazo_dias": "Frequencia padrao das reunioes de longo prazo da empresa.",
+            "frequencia_curto_prazo_dias": "Frequência padrão das reunioes de curto prazo da empresa.",
+            "frequencia_medio_prazo_dias": "Frequência padrão das reuniões de médio prazo da empresa.",
+            "frequencia_longo_prazo_dias": "Frequência padrão das reunioes de longo prazo da empresa.",
         }
 
 
@@ -327,7 +327,7 @@ class UsuarioEmpresaListView(View):
         
         empresa = get_empresa_do_usuario(request.user)
         if not empresa:
-            messages.error(request, "Voce nao esta vinculado a nenhuma empresa.")
+            messages.error(request, "Você não está vinculado a nenhuma empresa.")
             return redirect("home")
         
         # Usuarios da empresa
@@ -365,8 +365,8 @@ class UsuarioEmpresaListView(View):
             entidade="UsuarioEmpresa",
             identificador=f"Empresa {empresa.nome}",
             acao="ADMIN_LIST",
-            finalidade="Gestao administrativa de usuarios e permissoes por empresa",
-            detalhes="Consulta administrativa da area de usuarios da empresa.",
+            finalidade="Gestao administrativa de usuarios e permissões por empresa",
+            detalhes="Consulta administrativa da área de usuarios da empresa.",
         )
         
         status_plano = TenantService.status_plano(empresa)
@@ -385,7 +385,7 @@ class UsuarioEmpresaListView(View):
         return render(request, self.template_name, contexto)
     
     def post(self, request):
-        """Processa acoes de usuarios ou obras."""
+        """Processa ações de usuarios ou obras."""
         if not _exigir_admin_empresa_vinculado(request):
             return redirect("home")
         
@@ -394,7 +394,7 @@ class UsuarioEmpresaListView(View):
             return redirect("home")
         
         if not empresa:
-            messages.error(request, "Empresa nao encontrada.")
+            messages.error(request, "Empresa não encontrada.")
             return redirect("home")
         
         # Verificar qual acao
@@ -440,7 +440,7 @@ class UsuarioEmpresaListView(View):
         return redirect("empresa_admin")
     
     def _atualizar_obras_usuario(self, request, empresa):
-        """Atualizar obras permitidas de um usuario."""
+        """Atualizar obras permitidas de um usuário."""
         usuario_empresa_id = request.POST.get("usuario_empresa_id")
         obras_selecionadas = request.POST.getlist("obras")
         papel_aprovacao = request.POST.get("papel_aprovacao") or "TECNICO_OBRAS"
@@ -450,7 +450,7 @@ class UsuarioEmpresaListView(View):
             
             admin_empresa = get_empresa_do_usuario(request.user)
             if admin_empresa != usuario_empresa.empresa:
-                messages.error(request, "Voce so pode gerenciar usuarios da sua empresa.")
+                messages.error(request, "Você so pode gerenciar usuarios da sua empresa.")
                 return redirect("empresa_admin")
             
             if not usuario_empresa.is_admin_empresa:
@@ -463,7 +463,7 @@ class UsuarioEmpresaListView(View):
                 messages.info(request, "Admin da empresa ja tem acesso a todas as obras.")
             
         except UsuarioEmpresa.DoesNotExist:
-            messages.error(request, "Usuario empresa nao encontrado.")
+            messages.error(request, "Usuário empresa não encontrado.")
         
         return redirect("empresa_admin")
 
@@ -472,7 +472,7 @@ class UsuarioEmpresaListView(View):
         try:
             usuario_empresa = UsuarioEmpresa.objects.get(pk=usuario_empresa_id, empresa=empresa)
         except UsuarioEmpresa.DoesNotExist:
-            messages.error(request, "Usuario da empresa nao encontrado.")
+            messages.error(request, "Usuário da empresa não encontrado.")
             return redirect("empresa_admin")
 
         permissoes = {}
@@ -483,11 +483,11 @@ class UsuarioEmpresaListView(View):
                 modulo_permissoes[acao] = request.POST.get(campo) == "on"
             permissoes[modulo] = modulo_permissoes
         atualizar_permissoes_usuario_empresa(usuario_empresa, permissoes, concedido_por=request.user)
-        messages.success(request, f"Permissoes de modulo atualizadas para {usuario_empresa.usuario.username}.")
+        messages.success(request, f"Permissões de módulo atualizadas para {usuario_empresa.usuario.username}.")
         return redirect("empresa_admin")
     
     def _criar_usuario(self, request, empresa):
-        """Criar novo usuario."""
+        """Criar novo usuário."""
         username = request.POST.get("username", "").strip()
         email = request.POST.get("email", "").strip()
         password = request.POST.get("password", "").strip()
@@ -499,7 +499,7 @@ class UsuarioEmpresaListView(View):
             return redirect("empresa_admin")
         
         if User.objects.filter(username=username).exists():
-            messages.error(request, "Ja existe um usuario com este username.")
+            messages.error(request, "Ja existe um usuário com este username.")
             return redirect("empresa_admin")
             
         try:
@@ -527,7 +527,7 @@ class UsuarioEmpresaListView(View):
             obras = Obra.objects.filter(pk__in=obras_selecionadas, empresa=empresa)
             usuario_empresa.obras_permitidas.set(obras)
         
-        messages.success(request, f"Usuario {username} criado com sucesso!")
+        messages.success(request, f"Usuário {username} criado com sucesso!")
         return redirect("empresa_admin")
     
     def _criar_obra(self, request, empresa):
@@ -550,7 +550,7 @@ class UsuarioEmpresaListView(View):
                     break
             
             if not codigo:
-                messages.error(request, "Nao foi possivel gerar um codigo unico para a obra.")
+                messages.error(request, "Não foi possível gerar um código único para a obra.")
                 return redirect("empresa_admin")
             
             try:
@@ -577,18 +577,18 @@ class UsuarioEmpresaListView(View):
 
 class UsuarioEmpresaCreateView(View):
     """
-    Criar um novo usuario e vincula-lo a empresa do admin.
+    Criar um novo usuário e vincula-lo a empresa do admin.
     """
     template_name = "app/usuario_empresa_form.html"
     
     def get(self, request):
         if not is_admin_empresa(request.user) and not request.user.is_superuser:
-            messages.error(request, "Voce nao tem permissao para acessar esta pagina.")
+            messages.error(request, "Você não tem permissão para acessar esta página.")
             return redirect("home")
         
         empresa = get_empresa_do_usuario(request.user)
         if not empresa and not request.user.is_superuser:
-            messages.error(request, "Voce nao esta vinculado a nenhuma empresa.")
+            messages.error(request, "Você não está vinculado a nenhuma empresa.")
             return redirect("home")
         
         if request.user.is_superuser:
@@ -602,7 +602,7 @@ class UsuarioEmpresaCreateView(View):
     
     def post(self, request):
         if not is_admin_empresa(request.user) and not request.user.is_superuser:
-            messages.error(request, "Voce nao tem permissao.")
+            messages.error(request, "Você não tem permissão.")
             return redirect("home")
         
         username = request.POST.get("username", "").strip()
@@ -624,12 +624,12 @@ class UsuarioEmpresaCreateView(View):
             empresa = Empresa.objects.filter(pk=empresa_id).first()
         
         if not empresa:
-            messages.error(request, "Empresa nao encontrada.")
+            messages.error(request, "Empresa não encontrada.")
             return redirect("home")
         
         # Verificar se username ja existe
         if User.objects.filter(username=username).exists():
-            messages.error(request, "Ja existe um usuario com este username.")
+            messages.error(request, "Ja existe um usuário com este username.")
             return redirect("usuario_empresa_create")
         
         # Criar usuario
@@ -654,7 +654,7 @@ class UsuarioEmpresaCreateView(View):
             obras = Obra.objects.filter(pk__in=obras_selecionadas, empresa=empresa)
             usuario_empresa.obras_permitidas.set(obras)
         
-        messages.success(request, f"Usuario {username} criado com sucesso!")
+        messages.success(request, f"Usuário {username} criado com sucesso!")
         return redirect("usuario_empresa_list")
 
 
@@ -698,7 +698,7 @@ class SistemaAdminView(View):
             messages.success(request, f"Plano {plano.get_nome_display()} salvo com sucesso.")
             return redirect(f"{reverse_lazy('sistema_admin')}?empresa={empresa.pk}")
 
-        messages.error(request, "Acao de sistema nao reconhecida.")
+        messages.error(request, "Ação de sistema não reconhecida.")
         return redirect(f"{reverse_lazy('sistema_admin')}?empresa={empresa.pk}")
 
     def _build_context(self, *, empresa=None, empresa_create_form=None):
@@ -754,11 +754,11 @@ class SistemaAdminView(View):
             return redirect(f"{reverse_lazy('sistema_admin')}?empresa={empresa.pk}")
 
         if User.objects.filter(username=username).exists():
-            messages.error(request, "Ja existe um usuario com este username.")
+            messages.error(request, "Ja existe um usuário com este username.")
             return redirect(f"{reverse_lazy('sistema_admin')}?empresa={empresa.pk}")
 
         if UsuarioEmpresa.objects.filter(empresa=empresa, is_admin_empresa=True).exists():
-            messages.info(request, "A empresa ja possui um admin cadastrado. Crie outro apenas se isso for realmente necessario.")
+            messages.info(request, "A empresa ja possui um admin cadastrado. Crie outro apenas se isso for realmente necessário.")
 
         user = User.objects.create_user(
             username=username,

@@ -382,7 +382,7 @@ def _pdf_obter_metadados_relatorio(titulo, resumo):
         "sistema": "CONSTRUTASK",
         "relatorio": _pdf_valor_documento(titulo, vazio="Relat\u00f3rio"),
         "codigo_documento": _pdf_valor_documento(
-            resumo.get("Numero")
+            resumo.get("Número")
             or resumo.get("C\u00f3digo")
             or resumo.get("C\u00f3digo Documento")
             or resumo.get("Identificador")
@@ -442,7 +442,7 @@ def _png_scanline_unfilter(filtro, linha_filtrada, anterior, bpp):
             diagonal = anterior[indice - bpp] if anterior and indice >= bpp else 0
             resultado[indice] = (valor + _paeth(esquerda, acima, diagonal)) & 0xFF
         return resultado
-    raise ValueError("Filtro PNG nao suportado.")
+    raise ValueError("Filtro PNG não suportado.")
 
 
 def _carregar_png_para_pdf(caminho_logo):
@@ -916,11 +916,11 @@ def _pdf_relatorio_probatorio_response(
                 "linhas": [
                     {
                         "Data": linha.get("Data", "-"),
-                        "A\u00e7\u00e3o": linha.get("Acao", linha.get("A\u00e7\u00e3o", "-")),
-                        "Usu\u00e1rio": linha.get("Usuario", linha.get("Usu\u00e1rio", "-")),
-                        "Descri\u00e7\u00e3o": linha.get("Descricao", linha.get("Descri\u00e7\u00e3o", "-")),
+                        "A\u00e7\u00e3o": linha.get("Ação", linha.get("A\u00e7\u00e3o", "-")),
+                        "Usu\u00e1rio": linha.get("Usuário", linha.get("Usu\u00e1rio", "-")),
+                        "Descri\u00e7\u00e3o": linha.get("Descrição", linha.get("Descri\u00e7\u00e3o", "-")),
                     }
-                    for linha in (historico or [{"Data": "-", "Acao": "-", "Usuario": "-", "Descricao": "-"}])
+                    for linha in (historico or [{"Data": "-", "Ação": "-", "Usuário": "-", "Descrição": "-"}])
                 ],
             }
         )
@@ -970,14 +970,14 @@ def _exportar_relatorio_probatorio_excel_response(
     output = BytesIO()
     resumo_linhas = _normalizar_linhas_exportacao([{"Campo": chave, "Valor": valor} for chave, valor in resumo.items()])
     historico_normalizado = _normalizar_linhas_exportacao(
-        historico_linhas or [{"Data": "-", "Acao": "-", "Usuario": "-", "Descricao": "-"}]
+        historico_linhas or [{"Data": "-", "Ação": "-", "Usuário": "-", "Descrição": "-"}]
     )
     extras_normalizados = _normalizar_linhas_exportacao(extras_linhas or [{"Informacao": "-"}])
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
         pd.DataFrame(resumo_linhas).to_excel(writer, index=False, sheet_name=sheet_resumo)
         _aplicar_layout_excel_relatorio(writer.book[sheet_resumo], "RELATORIO PROBATORIO DE APROVACAO", sheet_resumo)
-        pd.DataFrame(historico_normalizado).to_excel(writer, index=False, sheet_name="Historico")
-        _aplicar_layout_excel_relatorio(writer.book["Historico"], "RELATORIO PROBATORIO DE APROVACAO", "Historico")
+        pd.DataFrame(historico_normalizado).to_excel(writer, index=False, sheet_name="Histórico")
+        _aplicar_layout_excel_relatorio(writer.book["Histórico"], "RELATORIO PROBATORIO DE APROVACAO", "Histórico")
         if extras_sheet_name:
             pd.DataFrame(extras_normalizados).to_excel(writer, index=False, sheet_name=extras_sheet_name)
             _aplicar_layout_excel_relatorio(writer.book[extras_sheet_name], "RELATORIO PROBATORIO DE APROVACAO", extras_sheet_name)

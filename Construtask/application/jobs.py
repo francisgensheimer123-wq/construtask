@@ -21,7 +21,7 @@ def enfileirar_sincronizacao_alertas(request):
         return None
     return enfileirar_job(
         tipo="SINCRONIZAR_ALERTAS_OBRA",
-        descricao=f"Sincronizacao operacional de alertas da obra {obra.codigo}",
+        descricao=f"Sincronização operacional de alertas da obra {obra.codigo}",
         solicitado_por=request.user,
         empresa=obra.empresa,
         obra=obra,
@@ -35,7 +35,7 @@ def enfileirar_importacao_plano_contas(request, arquivo):
         return None
     job = enfileirar_job(
         tipo="IMPORTAR_PLANO_CONTAS",
-        descricao=f"Importacao de plano de contas da obra {obra.codigo}",
+        descricao=f"Importação de plano de contas da obra {obra.codigo}",
         solicitado_por=request.user,
         empresa=obra.empresa,
         obra=obra,
@@ -51,11 +51,11 @@ def enfileirar_relatorio_financeiro(request, *, relatorio, parametros):
         return None
     if relatorio == "FECHAMENTO_MENSAL":
         descricao = (
-            f"Relatorio de fechamento mensal da obra {obra.codigo} "
+            f"Relatório de fechamento mensal da obra {obra.codigo} "
             f"({int(parametros['mes']):02d}/{int(parametros['ano'])})"
         )
     else:
-        descricao = f"Relatorio de projecao financeira da obra {obra.codigo} ({int(parametros['meses'])} meses)"
+        descricao = f"Relatório de projeção financeira da obra {obra.codigo} ({int(parametros['meses'])} meses)"
     return enfileirar_job(
         tipo="GERAR_RELATORIO_FINANCEIRO",
         descricao=descricao,

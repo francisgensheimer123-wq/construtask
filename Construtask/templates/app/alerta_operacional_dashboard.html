@@ -29,7 +29,7 @@
             <small class="text-muted">{{ score_operacional.faixa }}</small>
         </div>
         <div class="card">
-            <span>Alertas criticos</span>
+            <span>Alertas críticos</span>
             <strong>{{ alertas_criticos|length }}</strong>
         </div>
         <div class="card">
@@ -53,7 +53,7 @@
                     <tr>
                         <th>Componente</th>
                         <th class="text-right">Pontuacao</th>
-                        <th>Nivel</th>
+                        <th>Nível</th>
                         <th>Leitura</th>
                     </tr>
                 </thead>
@@ -82,9 +82,9 @@
                 <thead>
                     <tr>
                         <th>Frente</th>
-                        <th>Nivel</th>
+                        <th>Nível</th>
                         <th class="text-right">Quantidade</th>
-                        <th>Acao</th>
+                        <th>Ação</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -114,7 +114,7 @@
                 <thead>
                     <tr>
                         <th>Correlacao</th>
-                        <th>Nivel</th>
+                        <th>Nível</th>
                         <th class="text-right">Ocorrencias</th>
                         <th>Leitura</th>
                     </tr>
@@ -146,7 +146,7 @@
                         <th>Data</th>
                         <th>Regra</th>
                         <th>Resultado</th>
-                        <th>Referencia</th>
+                        <th>Referência</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -161,7 +161,7 @@
                 </tbody>
             </table>
             {% else %}
-            <p class="empty">Nenhuma execucao automatica recente.</p>
+            <p class="empty">Nenhuma execução automática recente.</p>
             {% endif %}
         </div>
     </section>
@@ -169,16 +169,16 @@
     <section class="grid-2">
         <div class="panel">
             <div class="toolbar">
-                <h3>Alertas Criticos em Aberto</h3>
+                <h3>Alertas Críticos em Aberto</h3>
             </div>
             {% if alertas_criticos %}
             <table class="compact-table">
                 <thead>
                     <tr>
                         <th>Regra</th>
-                        <th>Titulo</th>
+                        <th>Título</th>
                         <th>Status</th>
-                        <th>Responsavel</th>
+                        <th>Responsável</th>
                         <th>Prazo</th>
                     </tr>
                 </thead>
@@ -195,7 +195,7 @@
                 </tbody>
             </table>
             {% else %}
-            <p class="empty">Nenhum alerta critico em aberto.</p>
+            <p class="empty">Nenhum alerta crítico em aberto.</p>
             {% endif %}
         </div>
 
@@ -208,9 +208,9 @@
                 <thead>
                     <tr>
                         <th>Regra</th>
-                        <th>Titulo</th>
+                        <th>Título</th>
                         <th>Tipo</th>
-                        <th>Responsavel</th>
+                        <th>Responsável</th>
                         <th>Prazo</th>
                     </tr>
                 </thead>

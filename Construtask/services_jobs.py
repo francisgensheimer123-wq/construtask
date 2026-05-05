@@ -72,7 +72,7 @@ def enfileirar_job(
 def executar_job(job):
     handler = JOB_HANDLERS.get(job.tipo)
     if not handler:
-        raise ValueError(f"Handler nao registrado para o job {job.tipo}.")
+        raise ValueError(f"Handler não registrado para o job {job.tipo}.")
 
     with transaction.atomic():
         job.status = "EM_EXECUCAO"
@@ -145,7 +145,7 @@ def _executar_job_seguro(job):
     if not handler:
         job.status = "FALHOU"
         job.concluido_em = _tz.now()
-        job.erro = f"Handler nao registrado para tipo '{job.tipo}'."
+        job.erro = f"Handler não registrado para tipo '{job.tipo}'."
         job.save(update_fields=["status", "concluido_em", "erro", "atualizado_em"])
         return
     try:
@@ -188,7 +188,7 @@ def executar_job_sincronizar_alertas(job):
 def executar_job_importar_plano_contas(job):
     obra = job.obra or Obra.objects.get(pk=job.parametros["obra_id"])
     if not job.arquivo_entrada:
-        raise ValueError("Job de importacao sem arquivo de entrada.")
+        raise ValueError("Job de importação sem arquivo de entrada.")
     with job.arquivo_entrada.open("rb") as arquivo:
         importar_plano_contas_excel(arquivo, obra=obra)
     return {
@@ -242,7 +242,7 @@ def executar_job_relatorio_financeiro(job):
         metadata.update({"relatorio": tipo_relatorio, "meses": meses})
         return metadata
 
-    raise ValueError("Tipo de relatorio financeiro nao suportado.")
+    raise ValueError("Tipo de relatório financeiro não suportado.")
 
 
 @registrar_job_handler("IMPORTAR_CRONOGRAMA")
@@ -250,7 +250,7 @@ def executar_job_importar_cronograma(job):
     obra = job.obra or Obra.objects.get(pk=job.parametros["obra_id"])
 
     if not job.arquivo_entrada:
-        raise ValueError("Job de importacao de cronograma sem arquivo de entrada.")
+        raise ValueError("Job de importação de cronograma sem arquivo de entrada.")
 
     titulo = job.parametros.get("titulo") or None
     criar_baseline = job.parametros.get("criar_baseline", False)

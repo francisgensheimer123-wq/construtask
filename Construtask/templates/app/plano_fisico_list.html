@@ -8,7 +8,7 @@
 <div class="toolbar">
     <div>
         <h2>Cronogramas Fisicos</h2>
-        <p>Versionamento, baselines e acompanhamento do planejamento fisico por obra.</p>
+        <p>Versionamento, baselines e acompanhamento do planejamento físico por obra.</p>
     </div>
     <div style="display:flex; gap:10px;">
         <a class="btn secondary" href="{% url 'plano_fisico_dashboard' %}">Dashboard</a>
@@ -35,7 +35,7 @@
     <form method="get" style="display:grid; grid-template-columns: 2fr 1fr 1fr auto; gap:12px; align-items:end;">
         <div class="field" style="margin-bottom:0;">
             <label for="id_q">Busca</label>
-            <input id="id_q" type="text" name="q" value="{{ busca }}" placeholder="Titulo, descricao, atividade, codigo">
+            <input id="id_q" type="text" name="q" value="{{ busca }}" placeholder="Título, descrição, atividade, código">
         </div>
         <div class="field" style="margin-bottom:0;">
             <label for="id_status">Status</label>
@@ -66,14 +66,14 @@
     <table class="compact-table">
         <thead>
             <tr>
-                <th>Titulo</th>
+                <th>Título</th>
                 <th>Versao</th>
                 <th>Status</th>
                 <th class="text-right">Itens</th>
                 <th class="text-right">% Geral</th>
-                <th>Importacao</th>
-                <th>Responsavel</th>
-                <th>Acoes</th>
+                <th>Importação</th>
+                <th>Responsável</th>
+                <th>Ações</th>
             </tr>
         </thead>
         <tbody>
@@ -102,7 +102,7 @@
         </tbody>
     </table>
     {% else %}
-    <p class="empty">Nenhum cronograma fisico encontrado no contexto atual.</p>
+    <p class="empty">Nenhum cronograma físico encontrado no contexto atual.</p>
     {% endif %}
 </section>
 

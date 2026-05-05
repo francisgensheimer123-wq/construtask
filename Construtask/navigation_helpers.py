@@ -58,11 +58,11 @@ def _obter_grupos_navegacao():
         "planejamento": {
             "slug": "planejamento",
             "titulo": "Planejamento",
-            "descricao": "Organize o orcamento, acompanhe o cronograma e monitore os riscos da obra em um unico fluxo.",
+            "descricao": "Organize o orçamento, acompanhe o cronograma e monitore os riscos da obra em um único fluxo.",
             "itens": [
                 {
                     "titulo": "Plano de Contas",
-                    "descricao": "Estruture a EAP, acompanhe o orcado e mantenha as baselines de referencia.",
+                    "descricao": "Estruture a EAP, acompanhe o orçado e mantenha as baselines de referência.",
                     "url_name": "plano_contas_list",
                 },
                 {
@@ -85,7 +85,7 @@ def _obter_grupos_navegacao():
         "qualidade": {
             "slug": "qualidade",
             "titulo": "Qualidade",
-            "descricao": "Concentre o controle documental, as nao conformidades e as evidencias formais da obra.",
+            "descricao": "Concentre o controle documental, as não conformidades e as evidências formais da obra.",
             "itens": [
                 {
                     "titulo": "Documentos",
@@ -93,21 +93,21 @@ def _obter_grupos_navegacao():
                     "url_name": "documento_list",
                 },
                 {
-                    "titulo": "Nao Conformidades",
-                    "descricao": "Gerencie tratativas, evidencias e encerramentos das ocorrencias de qualidade.",
+                    "titulo": "Não Conformidades",
+                    "descricao": "Gerencie tratativas, evidências e encerramentos das ocorrencias de qualidade.",
                     "url_name": "nao_conformidade_list",
                 },
                 {
-                    "titulo": "Central de Evidencias",
-                    "descricao": "Acesse rapidamente os comprovantes formais e registros probatorios da operacao.",
+                    "titulo": "Central de Evidências",
+                    "descricao": "Acesse rapidamente os comprovantes formais e registros probatorios da operação.",
                     "url_name": "central_evidencias",
                 },
             ],
         },
         "aquisicoes": {
             "slug": "aquisicoes",
-            "titulo": "Aquisicoes",
-            "descricao": "Administre fornecedores, solicitacoes, cotacoes, ordens e compromissos em uma jornada unica.",
+            "titulo": "Aquisições",
+            "descricao": "Administre fornecedores, solicitações, cotações, ordens e compromissos em uma jornada unica.",
             "itens": [
                 {
                     "titulo": "Fornecedores",
@@ -115,18 +115,18 @@ def _obter_grupos_navegacao():
                     "url_name": "fornecedor_list",
                 },
                 {
-                    "titulo": "Solicitacoes",
+                    "titulo": "Solicitações",
                     "descricao": "Abra e acompanhe as demandas de compra originadas pela obra.",
                     "url_name": "solicitacao_compra_list",
                 },
                 {
-                    "titulo": "Cotacoes",
-                    "descricao": "Compare propostas e consolide o processo de aquisicao.",
+                    "titulo": "Cotações",
+                    "descricao": "Compare propostas e consolide o processo de aquisição.",
                     "url_name": "cotacao_list",
                 },
                 {
                     "titulo": "Ordens de Compra",
-                    "descricao": "Visualize as ordens emitidas a partir das cotacoes aprovadas.",
+                    "descricao": "Visualize as ordens emitidas a partir das cotações aprovadas.",
                     "url_name": "ordem_compra_list",
                 },
             ],
@@ -134,7 +134,7 @@ def _obter_grupos_navegacao():
         "comunicacoes": {
             "slug": "comunicacoes",
             "titulo": "Comunicacoes",
-            "descricao": "Conduza pautas, atas e acompanhamentos formais da obra em um fluxo unico e rastreavel.",
+            "descricao": "Conduza pautas, atas e acompanhamentos formais da obra em um fluxo único e rastreavel.",
             "itens": [
                 {
                     "titulo": "Reunioes da Obra",
@@ -151,7 +151,7 @@ def _obter_grupos_navegacao():
         "financeiro": {
             "slug": "financeiro",
             "titulo": "Financeiro",
-            "descricao": "Mantenha contratos, medicoes, notas e projetado financeiro em uma leitura operacional unica.",
+            "descricao": "Mantenha contratos, medições, notas e projetado financeiro em uma leitura operacional unica.",
             "itens": [
                 {
                     "titulo": "Contratos e Pedidos",
@@ -160,16 +160,16 @@ def _obter_grupos_navegacao():
                 },
                 {
                     "titulo": "Notas Fiscais",
-                    "descricao": "Controle emissao, rateio e situacao financeira das notas da obra.",
+                    "descricao": "Controle emissao, rateio e situação financeira das notas da obra.",
                     "url_name": "nota_fiscal_list",
                 },
                 {
-                    "titulo": "Medicoes",
+                    "titulo": "Medições",
                     "descricao": "Acompanhe lancamentos, aprovacoes e valores medidos.",
                     "url_name": "medicao_list",
                 },
                 {
-                    "titulo": "Projecao Financeira",
+                    "titulo": "Projeção Financeira",
                     "descricao": "Projete entradas e saidas futuras com base no andamento da obra.",
                     "url_name": "projecao_financeira",
                 },
@@ -177,17 +177,17 @@ def _obter_grupos_navegacao():
         },
         "relatorios": {
             "slug": "relatorios",
-            "titulo": "Relatorios",
+            "titulo": "Relatórios",
             "descricao": "Acesse os consolidadores e visoes executivas mais usados para acompanhamento da obra.",
             "itens": [
                 {
-                    "titulo": "Dossie da Obra",
-                    "descricao": "Reuna documentos, evidencias e registros formais em uma visao consolidada.",
+                    "titulo": "Dossiê da Obra",
+                    "descricao": "Reuna documentos, evidências e registros formais em uma visão consolidada.",
                     "url_name": "dossie_obra",
                 },
                 {
                     "titulo": "Curva ABC",
-                    "descricao": "Analise concentracao de custos e prioridades do orcamento em uma leitura gerencial.",
+                    "descricao": "Análise concentracao de custos e prioridades do orçamento em uma leitura gerencial.",
                     "url_name": "curva_abc",
                 },
                 {
@@ -204,11 +204,11 @@ def _obter_grupos_navegacao():
             "itens": [
                 {
                     "titulo": "Governanca LGPD",
-                    "descricao": "Consulte os controles e evidencias de governanca de dados do sistema.",
+                    "descricao": "Consulte os controles e evidências de governanca de dados do sistema.",
                     "url_name": "lgpd_governanca",
                 },
                 {
-                    "titulo": "Politica de Privacidade",
+                    "titulo": "Política de Privacidade",
                     "descricao": "Acesse o documento institucional de privacidade disponibilizado aos usuarios.",
                     "url_name": "politica_privacidade",
                 },

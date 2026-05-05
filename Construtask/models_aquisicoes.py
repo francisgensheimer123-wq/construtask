@@ -43,8 +43,8 @@ class Fornecedor(models.Model):
 
 class FornecedorAvaliacao(models.Model):
     class Meta:
-        verbose_name = "AvaliaÃ§Ã£o de Fornecedor"
-        verbose_name_plural = "AvaliaÃ§Ãµes de Fornecedor"
+        verbose_name = "Avaliação de Fornecedor"
+        verbose_name_plural = "Avaliações de Fornecedor"
         ordering = ["-avaliado_em"]
 
     fornecedor = models.ForeignKey(Fornecedor, on_delete=models.CASCADE, related_name="avaliacoes")
@@ -63,8 +63,8 @@ class FornecedorAvaliacao(models.Model):
 
 class SolicitacaoCompra(models.Model):
     class Meta:
-        verbose_name = "SolicitaÃ§Ã£o de Compra"
-        verbose_name_plural = "SolicitaÃ§Ãµes de Compra"
+        verbose_name = "Solicitação de Compra"
+        verbose_name_plural = "Solicitações de Compra"
         ordering = ["-data_solicitacao", "-id"]
         indexes = [
             models.Index(fields=["empresa", "obra", "status"]),
@@ -72,9 +72,9 @@ class SolicitacaoCompra(models.Model):
 
     STATUS_CHOICES = (
         ("RASCUNHO", "Rascunho"),
-        ("EM_APROVACAO", "Em Aprovacao"),
+        ("EM_APROVACAO", "Em Aprovação"),
         ("APROVADA", "Aprovada"),
-        ("COTANDO", "Em CotaÃ§Ã£o"),
+        ("COTANDO", "Em Cotação"),
         ("ENCERRADA", "Encerrada"),
         ("CANCELADA", "Cancelada"),
     )
@@ -146,13 +146,13 @@ class SolicitacaoCompraItem(models.Model):
 
 class Cotacao(models.Model):
     class Meta:
-        verbose_name = "CotaÃ§Ã£o"
-        verbose_name_plural = "CotaÃ§Ãµes"
+        verbose_name = "Cotação"
+        verbose_name_plural = "Cotações"
         ordering = ["-data_cotacao", "-id"]
 
     STATUS_CHOICES = (
         ("RASCUNHO", "Rascunho"),
-        ("EM_APROVACAO", "Em Aprovacao"),
+        ("EM_APROVACAO", "Em Aprovação"),
         ("EM_ANALISE", "Em Análise"),
         ("APROVADA", "Aprovada"),
         ("REJEITADA", "Rejeitada"),
@@ -221,8 +221,8 @@ class CotacaoItem(models.Model):
 
 class CotacaoAnexo(models.Model):
     class Meta:
-        verbose_name = "Anexo da CotaÃ§Ã£o"
-        verbose_name_plural = "Anexos das CotaÃ§Ãµes"
+        verbose_name = "Anexo da Cotação"
+        verbose_name_plural = "Anexos das Cotações"
         ordering = ["id"]
 
     cotacao = models.ForeignKey(Cotacao, on_delete=models.CASCADE, related_name="anexos")
@@ -247,7 +247,7 @@ class OrdemCompra(models.Model):
         ("EM_APROVACAO", "Em Aprovação"),
         ("APROVADA", "Aprovada"),
         ("PARCIAL", "Parcial"),
-        ("CONCLUIDA", "ConcluÃ­da"),
+        ("CONCLUIDA", "Concluída"),
         ("CANCELADA", "Cancelada"),
     )
 

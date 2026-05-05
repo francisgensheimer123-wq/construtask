@@ -19,7 +19,7 @@
 <section class="cards">
     <div class="card"><span>Total de Riscos</span><strong>{{ total_riscos }}</strong></div>
     <div class="card"><span>Riscos Ativos</span><strong>{{ riscos_ativos }}</strong></div>
-    <div class="card"><span>Riscos Criticos</span><strong>{{ riscos_criticos }}</strong></div>
+    <div class="card"><span>Riscos Críticos</span><strong>{{ riscos_criticos }}</strong></div>
     <div class="card"><span>Em Tratamento</span><strong>{{ riscos_em_tratamento }}</strong></div>
     <div class="card"><span>Fechados</span><strong>{{ riscos_fechados }}</strong></div>
     <div class="card"><span>Categoria Prazo</span><strong>{{ riscos_prazo }}</strong></div>
@@ -29,7 +29,7 @@
     <form method="get" class="filters-grid" style="display:grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap:12px; align-items:end;">
         <div class="field" style="margin-bottom:0;">
             <label for="id_q">Busca</label>
-            <input id="id_q" type="text" name="q" value="{{ busca }}" placeholder="Titulo, descricao, processo, EAP">
+            <input id="id_q" type="text" name="q" value="{{ busca }}" placeholder="Título, descrição, processo, EAP">
         </div>
         <div class="field" style="margin-bottom:0;">
             <label for="id_status">Status</label>
@@ -50,13 +50,13 @@
             </select>
         </div>
         <div class="field" style="margin-bottom:0;">
-            <label for="id_nivel">Nivel</label>
+            <label for="id_nivel">Nível</label>
             <select id="id_nivel" name="nivel">
                 <option value="">Todos</option>
                 <option value="BAIXO" {% if nivel_filtro == "BAIXO" %}selected{% endif %}>Baixo</option>
-                <option value="MEDIO" {% if nivel_filtro == "MEDIO" %}selected{% endif %}>Medio</option>
+                <option value="MEDIO" {% if nivel_filtro == "MEDIO" %}selected{% endif %}>Médio</option>
                 <option value="ALTO" {% if nivel_filtro == "ALTO" %}selected{% endif %}>Alto</option>
-                <option value="CRITICO" {% if nivel_filtro == "CRITICO" %}selected{% endif %}>Critico</option>
+                <option value="CRITICO" {% if nivel_filtro == "CRITICO" %}selected{% endif %}>Crítico</option>
             </select>
         </div>
         <div class="actions" style="margin:0;">
@@ -70,15 +70,15 @@
     <table class="compact-table">
         <thead>
             <tr>
-                <th>Nivel</th>
-                <th>Titulo</th>
+                <th>Nível</th>
+                <th>Título</th>
                 <th>Categoria</th>
                 <th>Processo</th>
                 <th>EAP</th>
                 <th>Status</th>
-                <th>Responsavel</th>
+                <th>Responsável</th>
                 <th>Meta</th>
-                <th>Acoes</th>
+                <th>Ações</th>
             </tr>
         </thead>
         <tbody>

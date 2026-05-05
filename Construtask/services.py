@@ -61,13 +61,13 @@ def importar_plano_contas_excel(arquivo, obra=None):
         except ProtectedError as exc:
             if obra:
                 mensagem = (
-                    "Nao e possivel importar um novo plano de contas enquanto existirem "
-                    "compromissos, medicoes ou notas vinculados ao plano atual."
+                    "Não e possível importar um novo plano de contas enquanto existirem "
+                    "compromissos, medições ou notas vinculados ao plano atual."
                 )
             else:
                 mensagem = (
-                    "Nao e possivel substituir o plano de contas legado enquanto existirem "
-                    "compromissos, medicoes ou notas vinculados ao plano atual."
+                    "Não e possível substituir o plano de contas legado enquanto existirem "
+                    "compromissos, medições ou notas vinculados ao plano atual."
                 )
             raise ValidationError(mensagem) from exc
 
@@ -77,7 +77,7 @@ def importar_plano_contas_excel(arquivo, obra=None):
             if not codigo:
                 continue
 
-            descricao = str(row.get("DESCRIÇÃO", row.get("DESCRIÃ‡ÃƒO", ""))).strip()
+            descricao = str(row.get("DESCRIÇÃO", row.get("DESCRIÇÃO", ""))).strip()
             unidade = row.get("UN")
             quantidade = tratar_decimal(row.get("QTD"))
             valor_unitario = tratar_decimal(row.get("VALOR UNIT."))

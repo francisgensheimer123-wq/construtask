@@ -5,8 +5,8 @@
 {% block content %}
 <div class="form-page-shell">
 <div class="panel">
-    <h2>Nova Solicitacao de Compra</h2>
-    <p>Registre a demanda inicial com os centros de custo e os itens tecnicos que serao enviados para cotacao.</p>
+    <h2>Nova Solicitação de Compra</h2>
+    <p>Registre a demanda inicial com os centros de custo e os itens tecnicos que serao enviados para cotação.</p>
     <form method="post">
         {% csrf_token %}
         {% for field in form %}
@@ -20,7 +20,7 @@
         {% endfor %}
 
         <div class="field">
-            <label>Itens da Solicitacao</label>
+            <label>Itens da Solicitação</label>
             {{ item_formset.management_form }}
             {% if item_formset.non_form_errors %}
             <div class="message error" style="margin-bottom:10px;">{{ item_formset.non_form_errors }}</div>
@@ -29,7 +29,7 @@
                 <thead>
                     <tr>
                         <th>Centro de Custo</th>
-                        <th>Descricao Tecnica</th>
+                        <th>Descrição Técnica</th>
                         <th>Unidade</th>
                         <th class="text-right">Quantidade</th>
                         <th>Excluir</th>

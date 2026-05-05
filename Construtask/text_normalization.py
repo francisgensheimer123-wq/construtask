@@ -54,7 +54,7 @@ TEXT_NORMALIZATION_TARGETS = {
     "Construtask.Obra": ("nome", "cliente", "responsavel", "descricao"),
     "Construtask.AnexoOperacional": ("descricao",),
     "Construtask.Compromisso": ("descricao", "fornecedor", "responsavel", "torre", "bloco", "etapa", "parecer_aprovacao"),
-    "Construtask.Medicao": ("descricao", "fornecedor", "responsavel", "torre", "bloco", "etapa", "parecer_aprovacao"),
+    "Construtask.Medição": ("descricao", "fornecedor", "responsavel", "torre", "bloco", "etapa", "parecer_aprovacao"),
     "Construtask.NotaFiscal": ("fornecedor", "descricao", "torre", "bloco", "etapa"),
     "Construtask.OrcamentoBaseline": ("descricao", "parecer_aprovacao"),
     "Construtask.Documento": ("processo", "codigo_documento", "titulo"),
@@ -63,7 +63,7 @@ TEXT_NORMALIZATION_TARGETS = {
     "Construtask.Fornecedor": ("razao_social", "nome_fantasia", "contato"),
     "Construtask.SolicitacaoCompra": ("titulo", "descricao", "observacoes"),
     "Construtask.SolicitacaoCompraItem": ("descricao_tecnica", "unidade"),
-    "Construtask.Cotacao": ("observacoes", "justificativa_escolha"),
+    "Construtask.Cotação": ("observacoes", "justificativa_escolha"),
     "Construtask.CotacaoAnexo": ("descricao",),
     "Construtask.OrdemCompra": ("descricao",),
 }

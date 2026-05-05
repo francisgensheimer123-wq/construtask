@@ -157,9 +157,9 @@ class RequestObservabilityMiddleware:
                 duracao_ms=duration_ms,
             )
         except (OperationalError, ProgrammingError, TransactionManagementError, DatabaseError):
-            logger.debug("Falha tolerada ao persistir metrica de requisicao", exc_info=True)
+            logger.debug("Falha tolerada ao persistir métrica de requisição", exc_info=True)
         except Exception:
-            logger.debug("Erro nao bloqueante ao persistir metrica de requisicao", exc_info=True)
+            logger.debug("Erro não bloqueante ao persistir métrica de requisição", exc_info=True)
         return response
 
     def process_exception(self, request, exception):
@@ -204,4 +204,4 @@ class RequestObservabilityMiddleware:
         except (OperationalError, ProgrammingError, TransactionManagementError, DatabaseError):
             logger.debug("Falha tolerada ao persistir rastro de erro da aplicacao", exc_info=True)
         except Exception:
-            logger.debug("Erro nao bloqueante ao persistir rastro de erro da aplicacao", exc_info=True)
+            logger.debug("Erro não bloqueante ao persistir rastro de erro da aplicacao", exc_info=True)

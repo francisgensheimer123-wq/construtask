@@ -1,5 +1,5 @@
 """
-Modulo de autenticacao e permissoes.
+Módulo de autenticacao e permissões.
 Mantem compatibilidade com imports legados, usando a trilha oficial de tenant.
 """
 
@@ -24,7 +24,7 @@ class LoginRequiredMixin(DjangoLoginRequiredMixin):
 
     def dispatch(self, request, *args, **kwargs):
         if not request.user.is_authenticated:
-            messages.error(request, "Voce precisa fazer login para acessar esta pagina.")
+            messages.error(request, "Você precisa fazer login para acessar esta página.")
             return HttpResponseRedirect(f"{reverse_lazy('login')}?next={request.path}")
         return super().dispatch(request, *args, **kwargs)
 
@@ -76,7 +76,7 @@ class ConstrutaskLoginView(LoginView):
         if not bloqueado_ate:
             return "Muitas tentativas de login. Tente novamente em alguns minutos."
         return (
-            "Muitas tentativas de login. Tente novamente apos "
+            "Muitas tentativas de login. Tente novamente após "
             f"{timezone.localtime(bloqueado_ate).strftime('%d/%m/%Y %H:%M')}."
         )
 
@@ -161,7 +161,7 @@ class ConstrutaskLogoutView(LogoutView):
             estado = critical_cache_get(cache_key) or {}
             if estado.get("session_key") == request.session.session_key:
                 critical_cache_delete(cache_key)
-        messages.info(request, "Voce foi desconectado com sucesso.")
+        messages.info(request, "Você foi desconectado com sucesso.")
         return super().dispatch(request, *args, **kwargs)
 
 

@@ -56,7 +56,7 @@ def _agendar_sincronizacao_alertas(obra_contexto):
         task_sincronizar_alertas_obra.delay(obra_contexto.pk)
     except Exception:
         logger.warning(
-            "Falha ao agendar sincronizacao assincrona de alertas",
+            "Falha ao agendar sincronização assincrona de alertas",
             extra={"obra_id": obra_contexto.pk},
             exc_info=True,
         )

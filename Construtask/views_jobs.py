@@ -31,10 +31,10 @@ def sincronizar_alertas_job_view(request):
     if request.method != "POST":
         return redirect("alerta_operacional_list")
     if not obra:
-        messages.error(request, "Selecione uma obra antes de solicitar a sincronizacao dos alertas.")
+        messages.error(request, "Selecione uma obra antes de solicitar a sincronização dos alertas.")
         return redirect("alerta_operacional_list")
     enfileirar_sincronizacao_alertas(request)
-    messages.success(request, "Sincronizacao de alertas enfileirada com sucesso.")
+    messages.success(request, "Sincronização de alertas enfileirada com sucesso.")
     return redirect("alerta_operacional_list")
 
 
@@ -58,7 +58,7 @@ def plano_contas_importar_job_view(request):
         )
 
     enfileirar_importacao_plano_contas(request, arquivo)
-    messages.success(request, "Importacao enviada para processamento assíncrono.")
+    messages.success(request, "Importação enviada para processamento assíncrono.")
     return redirect("jobs_assincronos")
 
 
@@ -69,7 +69,7 @@ def relatorio_financeiro_job_view(request, relatorio):
         destino = "fechamento_mensal" if relatorio == "fechamento" else "projecao_financeira"
         return redirect(destino)
     if not obra:
-        messages.error(request, "Selecione uma obra antes de solicitar a geracao do relatorio.")
+        messages.error(request, "Selecione uma obra antes de solicitar a geracao do relatório.")
         return redirect("jobs_assincronos")
 
     if relatorio == "fechamento":
@@ -82,5 +82,5 @@ def relatorio_financeiro_job_view(request, relatorio):
         enfileirar_relatorio_financeiro(request, relatorio="PROJECAO_FINANCEIRA", parametros={"meses": meses})
         redirect_name = f"{reverse('projecao_financeira')}?meses={meses}"
 
-    messages.success(request, "Relatorio enfileirado para geracao assíncrona.")
+    messages.success(request, "Relatório enfileirado para geracao assíncrona.")
     return redirect(redirect_name)

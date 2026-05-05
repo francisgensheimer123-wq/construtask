@@ -9,7 +9,7 @@ User = get_user_model()
 
 
 class Command(BaseCommand):
-    help = "Registra uma execucao de backup SaaS com evidencias de operacao."
+    help = "Registra uma execução de backup SaaS com evidências de operação."
 
     def add_arguments(self, parser):
         parser.add_argument("--provedor", default=getattr(settings, "CONSTRUTASK_BACKUP_PROVIDER", ""))
@@ -27,7 +27,7 @@ class Command(BaseCommand):
             try:
                 usuario = User.objects.get(username=options["usuario"])
             except User.DoesNotExist as exc:
-                raise CommandError("Usuario informado para auditoria do backup nao encontrado.") from exc
+                raise CommandError("Usuário informado para auditoria do backup não encontrado.") from exc
 
         executado_em = timezone.now()
         if options["executado_em"]:

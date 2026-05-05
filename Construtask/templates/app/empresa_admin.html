@@ -185,7 +185,7 @@
     <div class="toolbar">
         <div>
             <h2>Gerenciamento da Empresa</h2>
-            <p>Esta area e exclusiva para o admin da empresa {{ empresa.nome }}.</p>
+            <p>Está área e exclusiva para o admin da empresa {{ empresa.nome }}.</p>
         </div>
         <div>
             <a class="btn secondary" href="{% url 'home' %}">Voltar</a>
@@ -203,7 +203,7 @@
     <section class="panel" style="margin-bottom: 20px;">
         <h3>{{ empresa.nome }}</h3>
         <p>CNPJ: {{ empresa.cnpj }}</p>
-        <p class="muted">O admin da empresa pode configurar parametros operacionais, definir a frequencia das reunioes e gerir usuarios operacionais vinculados.</p>
+        <p class="muted">O admin da empresa pode configurar parâmetros operacionais, definir a frequência das reunioes e gerir usuarios operacionais vinculados.</p>
     </section>
 
     {% if status_plano %}
@@ -277,7 +277,7 @@
         <div class="toolbar">
             <div>
                 <h3>Gatilhos Operacionais dos Alertas</h3>
-                <p class="muted">Ajuste os valores que disparam cada alerta automatico da empresa.</p>
+                <p class="muted">Ajuste os valores que disparam cada alerta automático da empresa.</p>
             </div>
         </div>
 
@@ -285,7 +285,7 @@
             <table class="compact-table regras-table">
                 <thead>
                     <tr>
-                        <th class="code-cell">Codigo</th>
+                        <th class="code-cell">Código</th>
                         <th>Regra</th>
                         <th>Gatilho Configuravel</th>
                         <th class="no-break-data">Valor Atual</th>
@@ -310,7 +310,7 @@
     <section class="panel" style="margin-bottom: 24px;">
         <div class="toolbar">
             <div>
-                <h3>Parametros Operacionais dos Alertas</h3>
+                <h3>Parâmetros Operacionais dos Alertas</h3>
                 <p class="muted">Ajuste as tolerancias usadas pelas regras automaticas da empresa.</p>
             </div>
         </div>
@@ -343,7 +343,7 @@
                 </table>
             </div>
             <div class="actions">
-                <button type="submit" class="btn">Salvar Parametros de Alerta</button>
+                <button type="submit" class="btn">Salvar Parâmetros de Alerta</button>
             </div>
         </form>
     </section>
@@ -351,8 +351,8 @@
     <section class="panel" style="margin-bottom: 24px;">
         <div class="toolbar">
             <div>
-                <h3>Frequencia das Reunioes</h3>
-                <p class="muted">Configure a cadencia padrao das reunioes por horizonte de acompanhamento.</p>
+                <h3>Frequência das Reunioes</h3>
+                <p class="muted">Configure a cadencia padrão das reunioes por horizonte de acompanhamento.</p>
             </div>
         </div>
         <form method="post" class="panel admin-subpanel">
@@ -405,7 +405,7 @@
                     <input type="text" name="cliente" id="id_cliente">
                 </div>
                 <div class="field">
-                    <label for="id_responsavel">Responsavel</label>
+                    <label for="id_responsavel">Responsável</label>
                     <input type="text" name="responsavel" id="id_responsavel">
                 </div>
                 <div class="field">
@@ -427,7 +427,7 @@
                 </div>
             </div>
             <div class="field" style="margin-top: 12px;">
-                <label for="id_descricao">Descricao</label>
+                <label for="id_descricao">Descrição</label>
                 <textarea name="descricao" id="id_descricao" rows="2"></textarea>
             </div>
 
@@ -448,12 +448,12 @@
         <table>
             <thead>
                 <tr>
-                    <th>Usuario</th>
+                    <th>Usuário</th>
                     <th>Email</th>
                     <th>Tipo</th>
                     <th>Funcao</th>
                     <th>Obras Permitidas</th>
-                    <th>Acoes</th>
+                    <th>Ações</th>
                 </tr>
             </thead>
             <tbody>
@@ -465,7 +465,7 @@
                         {% if ue.is_admin_empresa %}
                         <span style="color:#059669; font-weight:600;">Admin da Empresa</span>
                         {% else %}
-                        <span style="color:#6b7280;">Usuario</span>
+                        <span style="color:#6b7280;">Usuário</span>
                         {% endif %}
                     </td>
                     <td>{{ ue.get_papel_aprovacao_display }}</td>
@@ -498,12 +498,12 @@
                             {% csrf_token %}
                             <input type="hidden" name="acao" value="atualizar_permissoes_usuario">
                             <input type="hidden" name="usuario_empresa_id" value="{{ ue.pk }}">
-                            <p class="permissoes-caption">Defina as permissoes do usuario por modulo e por acao operacional.</p>
+                            <p class="permissoes-caption">Defina as permissões do usuário por módulo e por ação operacional.</p>
                             <div class="permissoes-wrap">
                                 <table class="permissoes-table">
                                     <thead>
                                         <tr>
-                                            <th>Modulo</th>
+                                            <th>Módulo</th>
                                             <th>View</th>
                                             <th>Create</th>
                                             <th>Update</th>
@@ -528,7 +528,7 @@
                                 </table>
                             </div>
                             <div class="actions" style="margin-top:10px;">
-                                <button type="submit" class="btn secondary">Salvar Permissoes</button>
+                                <button type="submit" class="btn secondary">Salvar Permissões</button>
                             </div>
                         </form>
                         {% else %}
@@ -540,11 +540,11 @@
             </tbody>
         </table>
         {% else %}
-        <p class="empty">Nenhum usuario cadastrado para esta empresa.</p>
+        <p class="empty">Nenhum usuário cadastrado para está empresa.</p>
         {% endif %}
 
         {# ── Formulário de novo usuário — bloqueado se limite atingido ── #}
-        <h4 style="margin-top: 20px; margin-bottom: 12px;">Novo Usuario Operacional</h4>
+        <h4 style="margin-top: 20px; margin-bottom: 12px;">Novo Usuário Operacional</h4>
 
         {% if status_plano and status_plano.alerta_usuario %}
         <div class="alerta-limite">
@@ -579,7 +579,7 @@
                         <option value="GERENTE_OBRAS">Gerente de Obras</option>
                         <option value="COORDENADOR_OBRAS">Coordenador de Obras</option>
                         <option value="ENGENHEIRO_OBRAS">Engenheiro de Obras</option>
-                        <option value="TECNICO_OBRAS" selected>Tecnico de Obras</option>
+                        <option value="TECNICO_OBRAS" selected>Técnico de Obras</option>
                     </select>
                 </div>
             </div>
@@ -594,7 +594,7 @@
             </div>
 
             <div class="actions">
-                <button type="submit" class="btn">Criar Usuario</button>
+                <button type="submit" class="btn">Criar Usuário</button>
             </div>
         </form>
         {% endif %}

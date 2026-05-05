@@ -17,7 +17,7 @@ class QualidadeWorkflowService:
     def _validar_transicao(cls, nc, novo_status):
         if novo_status not in cls.TRANSICOES_PERMITIDAS.get(nc.status, set()):
             raise ValidationError(
-                f"Transicao invalida de {nc.get_status_display()} para "
+                f"Transicao inválida de {nc.get_status_display()} para "
                 f"{dict(NaoConformidade.STATUS_CHOICES).get(novo_status, novo_status)}."
             )
 

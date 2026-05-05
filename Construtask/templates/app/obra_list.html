@@ -16,7 +16,7 @@
 
 <section class="panel" style="margin-bottom:18px;">
     <form method="get" class="toolbar" style="justify-content:flex-start;">
-        <input type="text" name="q" value="{{ busca }}" placeholder="Buscar por codigo, nome ou cliente" style="max-width:320px;">
+        <input type="text" name="q" value="{{ busca }}" placeholder="Buscar por código, nome ou cliente" style="max-width:320px;">
         <select name="status" style="max-width:220px;">
             <option value="">Todos os status</option>
             {% for value, label in status_choices %}
@@ -31,13 +31,13 @@
 <table class="compact-table">
     <thead>
         <tr>
-            <th>Codigo</th>
+            <th>Código</th>
             <th>Nome</th>
             <th>Cliente</th>
-            <th>Responsavel</th>
+            <th>Responsável</th>
             <th>Status</th>
-            <th>Periodo</th>
-            <th>Acoes</th>
+            <th>Período</th>
+            <th>Ações</th>
         </tr>
     </thead>
     <tbody>

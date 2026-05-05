@@ -28,7 +28,7 @@ class LgpdGovernancaView(LoginRequiredMixin, TemplateView):
 
     def dispatch(self, request, *args, **kwargs):
         if not request.user.is_superuser and not is_admin_empresa(request.user):
-            messages.error(request, "Voce nao tem permissao para acessar a governanca LGPD.")
+            messages.error(request, "Você não tem permissão para acessar a governanca LGPD.")
             return redirect("home")
         return super().dispatch(request, *args, **kwargs)
 
@@ -65,7 +65,7 @@ class LgpdGovernancaView(LoginRequiredMixin, TemplateView):
         acao = request.POST.get("acao")
         if acao == "registrar_consentimento":
             categoria = request.POST.get("categoria_titular") or "USUARIO"
-            finalidade = (request.POST.get("finalidade") or "Comunicacao institucional e operacao autorizada").strip()
+            finalidade = (request.POST.get("finalidade") or "Comunicacao institucional e operação autorizada").strip()
             texto = (request.POST.get("texto_aceito") or "Consentimento LGPD registrado no portal Construtask.").strip()
             email = (request.POST.get("email_referencia") or "").strip()
             registrar_consentimento(
@@ -84,13 +84,13 @@ class LgpdGovernancaView(LoginRequiredMixin, TemplateView):
                 revogar_consentimento(consentimento, usuario=request.user)
                 messages.success(request, "Consentimento revogado com sucesso.")
             else:
-                messages.error(request, "Consentimento nao encontrado.")
+                messages.error(request, "Consentimento não encontrado.")
             return redirect("lgpd_governanca")
 
         if acao in {"excluir_fornecedor", "anonimizar_fornecedor", "descartar_fornecedor"}:
             fornecedor = Fornecedor.objects.filter(pk=request.POST.get("fornecedor_id")).first()
             if not fornecedor or (empresa and fornecedor.empresa_id != empresa.pk and not request.user.is_superuser):
-                messages.error(request, "Fornecedor nao encontrado para tratamento LGPD.")
+                messages.error(request, "Fornecedor não encontrado para tratamento LGPD.")
                 return redirect("lgpd_governanca")
             if acao == "excluir_fornecedor":
                 excluir_logicamente_fornecedor(
@@ -98,7 +98,7 @@ class LgpdGovernancaView(LoginRequiredMixin, TemplateView):
                     usuario=request.user,
                     justificativa=(request.POST.get("justificativa") or "").strip(),
                 )
-                messages.success(request, "Fornecedor marcado com exclusao logica.")
+                messages.success(request, "Fornecedor marcado com exclusão logica.")
             elif acao == "anonimizar_fornecedor":
                 anonimizar_fornecedor_inativo(fornecedor)
                 messages.success(request, "Fornecedor anonimizado.")
@@ -137,12 +137,12 @@ def lgpd_governanca_pdf_view(request):
     if not request.user.is_authenticated:
         return redirect("login")
     if not request.user.is_superuser and not is_admin_empresa(request.user):
-        messages.error(request, "Voce nao tem permissao para exportar a governanca LGPD.")
+        messages.error(request, "Você não tem permissão para exportar a governanca LGPD.")
         return redirect("home")
 
     empresa = get_empresa_operacional(request)
     resumo = {
-        "Empresa": empresa.nome if empresa else "Nao informada",
+        "Empresa": empresa.nome if empresa else "Não informada",
         "Emitido em": _datahora_local(timezone.now()).strftime("%d/%m/%Y %H:%M"),
         "Categorias Mapeadas": len(obter_inventario_dados_pessoais()),
         "Registros de Acesso Recentes": RegistroAcessoDadoPessoal.objects.filter(empresa=empresa).count() if empresa else RegistroAcessoDadoPessoal.objects.count(),
@@ -150,10 +150,10 @@ def lgpd_governanca_pdf_view(request):
     }
     historico = [
         {
-            "Data": _datahora_local(log.criado_em).strftime("%d/%m/%Y %H:%M") if log.criado_em else "Nao informado",
-            "Acao": log.get_acao_display(),
-            "Usuario": str(log.usuario) if log.usuario else "Nao informado",
-            "Descricao": f"{log.entidade} | {log.identificador or 'Nao informado'} | {log.finalidade}",
+            "Data": _datahora_local(log.criado_em).strftime("%d/%m/%Y %H:%M") if log.criado_em else "Não informado",
+            "Ação": log.get_acao_display(),
+            "Usuário": str(log.usuario) if log.usuario else "Não informado",
+            "Descrição": f"{log.entidade} | {log.identificador or 'Não informado'} | {log.finalidade}",
         }
         for log in RegistroAcessoDadoPessoal.objects.select_related("usuario", "empresa").filter(empresa=empresa)[:20]
     ]
@@ -162,7 +162,7 @@ def lgpd_governanca_pdf_view(request):
             "Categoria": item["categoria_titular"],
             "Entidade": item["entidade"],
             "Base Legal": item["base_legal"],
-            "Retencao": item["retencao"],
+            "Retenção": item["retencao"],
         }
         for item in obter_inventario_dados_pessoais()
     ]
@@ -173,6 +173,6 @@ def lgpd_governanca_pdf_view(request):
         historico,
         extras,
         extras_titulo="Inventario de Tratamento",
-        extras_colunas=[("Categoria", 90), ("Entidade", 150), ("Base Legal", 120), ("Retencao", 135)],
+        extras_colunas=[("Categoria", 90), ("Entidade", 150), ("Base Legal", 120), ("Retenção", 135)],
         incluir_historico=True,
     )

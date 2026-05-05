@@ -64,7 +64,7 @@ class AuditService:
         
         Args:
             request: HttpRequest object
-            acao: Ação performed (CREATE, UPDATE, DELETE, etc.)
+            ação: Ação performed (CREATE, UPDATE, DELETE, etc.)
             instance: Model instance
             antes: Estado antes da operação (dict)
             depois: Estado depois da operação (dict)

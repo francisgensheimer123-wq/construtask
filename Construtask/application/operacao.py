@@ -7,42 +7,42 @@ from ..queries.operacao import construir_alertas_operacionais_tecnicos
 CHECKLIST_DEPLOY = [
     {"fase": "Pre-deploy", "itens": [
         "Executar migrate no ambiente alvo.",
-        "Validar health e readiness apos aplicacao das variaveis.",
+        "Validar health e readiness após aplicacao das variaveis.",
         "Confirmar storage persistente, backup e restore recentes.",
     ]},
     {"fase": "Deploy", "itens": [
-        "Publicar a release com configuracao segura e worker ativo.",
-        "Verificar jobs assincronos e filas logo apos a subida.",
+        "Publicar a release com configuração segura e worker ativo.",
+        "Verificar jobs assincronos e filas logo após a subida.",
         "Monitorar erros 500 e endpoints lentos nos primeiros minutos.",
     ]},
     {"fase": "Pos-deploy", "itens": [
-        "Abrir dashboard tecnico e revisar alertas operacionais.",
-        "Executar smoke test de login, home, cronogramas e relatorios principais.",
-        "Registrar evidencias da versao, horario e responsavel pelo deploy.",
+        "Abrir dashboard técnico e revisar alertas operacionais.",
+        "Executar smoke test de login, home, cronogramas e relatórios principais.",
+        "Registrar evidências da versão, horário e responsável pelo deploy.",
     ]},
 ]
 
 CHECKLIST_ROLLBACK = [
-    "Interromper novas operacoes pesadas e comunicar a janela de reversao.",
+    "Interromper novas operações pesadas e comunicar a janela de reversão.",
     "Reaplicar a release estavel anterior e validar readiness.",
-    "Executar smoke test minimo apos rollback.",
+    "Executar smoke test mínimo após rollback.",
     "Registrar causa, impacto e plano corretivo antes do novo deploy.",
 ]
 
 ROTINAS_ACOMPANHAMENTO = [
     {"frequencia": "Diaria", "itens": [
-        "Revisar alertas tecnicos criticos e jobs falhos.",
+        "Revisar alertas tecnicos críticos e jobs falhos.",
         "Conferir erros 500, latencia alta e readiness.",
         "Confirmar se o backup anterior foi registrado.",
     ]},
     {"frequencia": "Semanal", "itens": [
-        "Aplicar retencao de observabilidade.",
+        "Aplicar retenção de observabilidade.",
         "Executar diagnostico de latencia operacional.",
         "Validar amostra de documentos em storage persistente.",
     ]},
     {"frequencia": "Mensal", "itens": [
-        "Executar e registrar teste de recuperacao.",
-        "Revisar configuracoes de seguranca e dominios confiaveis.",
+        "Executar e registrar teste de recuperação.",
+        "Revisar configuracoes de segurança e dominios confiaveis.",
         "Atualizar baseline de riscos tecnicos e pendencias estruturais.",
     ]},
 ]

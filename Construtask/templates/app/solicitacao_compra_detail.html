@@ -2,7 +2,7 @@
 {% load formatters %}
 
 {% block main_class %}main-full{% endblock %}
-{% block title %}Detalhe da Solicitacao | Construtask{% endblock %}
+{% block title %}Detalhe da Solicitação | Construtask{% endblock %}
 
 {% block content %}
 <div class="toolbar">
@@ -12,21 +12,21 @@
     </div>
     <div style="display:flex; gap:10px;">
         <a class="btn secondary" href="{% url 'solicitacao_compra_pdf' solicitacao.pk %}">Gerar PDF</a>
-        <a class="btn secondary" href="{% url 'cotacao_create' %}?solicitacao={{ solicitacao.pk }}">Nova Cotacao</a>
+        <a class="btn secondary" href="{% url 'cotacao_create' %}?solicitacao={{ solicitacao.pk }}">Nova Cotação</a>
         <a class="btn secondary" href="{% url 'solicitacao_compra_list' %}">Voltar</a>
     </div>
 </div>
 
 <section class="grid-2">
     <div class="panel">
-        <h3>Dados da solicitacao</h3>
+        <h3>Dados da solicitação</h3>
         <table class="compact-table">
             <tbody>
                 <tr><th>Obra</th><td>{{ solicitacao.obra.codigo }} - {{ solicitacao.obra.nome }}</td></tr>
                 <tr><th>Centro de custo principal</th><td>{% if solicitacao.plano_contas %}{{ solicitacao.plano_contas.codigo }} - {{ solicitacao.plano_contas.descricao }}{% else %}-{% endif %}</td></tr>
                 <tr><th>Solicitante</th><td>{{ solicitacao.solicitante }}</td></tr>
                 <tr><th>Data</th><td>{{ solicitacao.data_solicitacao|date:"d/m/Y" }}</td></tr>
-                <tr><th>Descricao</th><td class="wrap-text">{{ solicitacao.descricao|default:"-" }}</td></tr>
+                <tr><th>Descrição</th><td class="wrap-text">{{ solicitacao.descricao|default:"-" }}</td></tr>
                 <tr><th>Observacoes</th><td class="wrap-text">{{ solicitacao.observacoes|default:"-" }}</td></tr>
             </tbody>
         </table>
@@ -37,12 +37,12 @@
         <table class="compact-table">
             <tbody>
                 <tr><th>Status</th><td><span class="badge bg-{{ solicitacao|workflow_badge_class }}">{{ solicitacao.get_status_display }}</span> <small class="text-muted">{{ solicitacao|workflow_stage_display }}</small></td></tr>
-                <tr><th>Enviado para aprovacao</th><td>{% if solicitacao.enviado_para_aprovacao_por %}{{ solicitacao.enviado_para_aprovacao_por.username }} em {{ solicitacao.enviado_para_aprovacao_em|date:"d/m/Y H:i" }}{% else %}-{% endif %}</td></tr>
+                <tr><th>Enviado para aprovação</th><td>{% if solicitacao.enviado_para_aprovacao_por %}{{ solicitacao.enviado_para_aprovacao_por.username }} em {{ solicitacao.enviado_para_aprovacao_em|date:"d/m/Y H:i" }}{% else %}-{% endif %}</td></tr>
                 <tr><th>Aprovado por</th><td>{% if solicitacao.aprovado_por %}{{ solicitacao.aprovado_por.username }} em {{ solicitacao.aprovado_em|date:"d/m/Y H:i" }}{% else %}-{% endif %}</td></tr>
                 <tr><th>Ultimo parecer</th><td>{{ solicitacao.parecer_aprovacao|default:"-" }}</td></tr>
                 <tr><th>Valor estimado</th><td>{{ solicitacao.valor_estimado_total|money_br }}</td></tr>
-                <tr><th class="text-right">Cotacoes</th><td class="money">{{ solicitacao.cotacoes.count }}</td></tr>
-                <tr><th class="text-right">Resultados em Compras e Contratacoes</th><td class="money">{{ compromissos_resultantes|length }}</td></tr>
+                <tr><th class="text-right">Cotações</th><td class="money">{{ solicitacao.cotacoes.count }}</td></tr>
+                <tr><th class="text-right">Resultados em Compras e Contratações</th><td class="money">{{ compromissos_resultantes|length }}</td></tr>
             </tbody>
         </table>
         <form method="post" style="margin-top:12px;">
@@ -66,12 +66,12 @@
 
 <section class="grid-2">
     <div class="panel">
-        <h3>Cotacoes Vinculadas</h3>
+        <h3>Cotações Vinculadas</h3>
         {% if solicitacao.cotacoes.all %}
         <table class="compact-table">
             <thead>
                 <tr>
-                    <th>Numero</th>
+                    <th>Número</th>
                     <th>Fornecedor</th>
                     <th>Status</th>
                     <th>Data</th>
@@ -92,17 +92,17 @@
             </tbody>
         </table>
         {% else %}
-        <p class="empty">Ainda nao ha cotacoes vinculadas.</p>
+        <p class="empty">Ainda não há cotações vinculadas.</p>
         {% endif %}
     </div>
 
     <div class="panel">
-        <h3>Compras e Contratacoes Geradas</h3>
+        <h3>Compras e Contratações Geradas</h3>
         {% if compromissos_resultantes %}
         <table class="compact-table">
             <thead>
                 <tr>
-                    <th>Numero</th>
+                    <th>Número</th>
                     <th>Tipo</th>
                     <th>Fornecedor</th>
                     <th class="text-right">Valor</th>
@@ -120,7 +120,7 @@
             </tbody>
         </table>
         {% else %}
-        <p class="empty">Nenhum contrato ou pedido gerado a partir desta solicitacao.</p>
+        <p class="empty">Nenhum contrato ou pedido gerado a partir desta solicitação.</p>
         {% endif %}
     </div>
 </section>
@@ -132,7 +132,7 @@
         <thead>
                 <tr>
                     <th>Centro de Custo</th>
-                    <th>Descricao Tecnica</th>
+                    <th>Descrição Técnica</th>
                     <th>Unidade</th>
                     <th class="text-right">Quantidade</th>
                 </tr>
@@ -149,7 +149,7 @@
         </tbody>
     </table>
     {% else %}
-    <p class="empty">Ainda nao ha itens cadastrados para esta solicitacao.</p>
+    <p class="empty">Ainda não há itens cadastrados para está solicitação.</p>
     {% endif %}
 </section>
 
@@ -160,8 +160,8 @@
         <thead>
             <tr>
                 <th>Data/Hora</th>
-                <th>Acao</th>
-                <th>Usuario</th>
+                <th>Ação</th>
+                <th>Usuário</th>
                 <th>Resumo</th>
             </tr>
         </thead>
@@ -170,7 +170,7 @@
             <tr>
                 <td>{{ evento.timestamp|date:"d/m/Y H:i" }}</td>
                 <td>{{ evento.get_acao_display }}</td>
-                <td>{{ evento.usuario|default:"Nao informado" }}</td>
+                <td>{{ evento.usuario|default:"Não informado" }}</td>
                 <td>{{ evento.entidade_label }}</td>
             </tr>
             {% endfor %}

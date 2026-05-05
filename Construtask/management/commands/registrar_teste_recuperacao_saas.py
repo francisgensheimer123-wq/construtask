@@ -9,7 +9,7 @@ User = get_user_model()
 
 
 class Command(BaseCommand):
-    help = "Registra um teste de recuperacao SaaS associado a um backup existente."
+    help = "Registra um teste de recuperação SaaS associado a um backup existente."
 
     def add_arguments(self, parser):
         parser.add_argument("--backup-id", type=int, required=True)
@@ -22,14 +22,14 @@ class Command(BaseCommand):
         try:
             backup = OperacaoBackupSaaS.objects.get(pk=options["backup_id"], tipo="BACKUP")
         except OperacaoBackupSaaS.DoesNotExist as exc:
-            raise CommandError("Backup de referencia nao encontrado.") from exc
+            raise CommandError("Backup de referência não encontrado.") from exc
 
         usuario = None
         if options["usuario"]:
             try:
                 usuario = User.objects.get(username=options["usuario"])
             except User.DoesNotExist as exc:
-                raise CommandError("Usuario informado para auditoria do teste nao encontrado.") from exc
+                raise CommandError("Usuário informado para auditoria do teste não encontrado.") from exc
 
         executado_em = timezone.now()
         if options["executado_em"]:
@@ -54,4 +54,4 @@ class Command(BaseCommand):
             executado_em=executado_em,
             detalhes={"backup_id": backup.pk},
         )
-        self.stdout.write(self.style.SUCCESS(f"Teste de recuperacao registrado com id {operacao.pk}."))
+        self.stdout.write(self.style.SUCCESS(f"Teste de recuperação registrado com id {operacao.pk}."))

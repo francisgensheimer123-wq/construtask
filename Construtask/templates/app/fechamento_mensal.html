@@ -43,7 +43,7 @@
     <div class="card"><span>Medido</span><strong>{{ resumo.valor_medido|money_br }}</strong></div>
     <div class="card"><span>Notas</span><strong>{{ resumo.valor_notas|money_br }}</strong></div>
     <div class="card"><span>Qtd. Compromissos</span><strong>{{ resumo.qtd_compromissos }}</strong></div>
-    <div class="card"><span>Qtd. Medicoes</span><strong>{{ resumo.qtd_medicoes }}</strong></div>
+    <div class="card"><span>Qtd. Medições</span><strong>{{ resumo.qtd_medicoes }}</strong></div>
     <div class="card"><span>Qtd. Notas</span><strong>{{ resumo.qtd_notas }}</strong></div>
 </section>
 
@@ -89,7 +89,7 @@
     </table>
     </div>
     {% else %}
-    <p class="empty">Sem movimentacoes por centro de custo no periodo selecionado.</p>
+    <p class="empty">Sem movimentacoes por centro de custo no período selecionado.</p>
     {% endif %}
 </section>
 
@@ -119,12 +119,12 @@
     </table>
     </div>
     {% else %}
-    <p class="empty">Nenhum job recente para esta obra.</p>
+    <p class="empty">Nenhum job recente para está obra.</p>
     {% endif %}
 </section>
 
 <section class="panel">
-    <h3>Ultimos Fechamentos Registrados</h3>
+    <h3>Últimos Fechamentos Registrados</h3>
     {% if fechamentos %}
     <div class="table-scroll">
     <table class="compact-table" style="min-width:820px;">

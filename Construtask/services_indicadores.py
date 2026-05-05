@@ -169,7 +169,7 @@ class IndicadoresService:
             "pontuacao": pontuacao.quantize(Decimal("0.01")),
             "maximo": maximo,
             "nivel": cls._faixa_componente(pontuacao, maximo),
-            "detalhe": f"{total} alertas de lastro operacional, medicoes, notas e suprimentos fora do SLA.",
+            "detalhe": f"{total} alertas de lastro operacional, medições, notas e suprimentos fora do SLA.",
         }
 
     @classmethod
@@ -191,7 +191,7 @@ class IndicadoresService:
             "pontuacao": pontuacao.quantize(Decimal("0.01")),
             "maximo": maximo,
             "nivel": cls._faixa_componente(pontuacao, maximo),
-            "detalhe": f"{riscos_criticos} riscos criticos, {riscos_altos} riscos altos, {ncs_abertas.count()} NCs abertas, {alertas_criticos} alertas criticos fora do SLA e {alertas_risco_qualidade} alertas dessa frente fora do SLA.",
+            "detalhe": f"{riscos_criticos} riscos críticos, {riscos_altos} riscos altos, {ncs_abertas.count()} NCs abertas, {alertas_criticos} alertas críticos fora do SLA e {alertas_risco_qualidade} alertas dessa frente fora do SLA.",
         }
 
     @staticmethod
@@ -223,7 +223,7 @@ class IndicadoresService:
         if pontuacao >= Decimal("85.00"):
             return "Excelente"
         if pontuacao >= Decimal("70.00"):
-            return "Saudavel"
+            return "Saudável"
         if pontuacao >= Decimal("50.00"):
-            return "Atencao"
-        return "Critico"
+            return "Atenção"
+        return "Crítico"

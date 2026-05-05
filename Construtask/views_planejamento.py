@@ -1,5 +1,5 @@
 """
-Views do modulo de planejamento fisico.
+Views do módulo de planejamento físico.
 """
 
 from collections import defaultdict
@@ -314,7 +314,7 @@ class PlanoFisicoCreateView(CreateView):
             if resumo.get("sem_datas"):
                 messages.warning(
                     self.request,
-                    f"Foram encontradas {resumo['sem_datas']} linha(s) com data de inicio ou fim nao identificada(s)."
+                    f"Foram encontradas {resumo['sem_datas']} linha(s) com data de inicio ou fim não identificada(s)."
                 )
             return redirect("plano_fisico_detail", pk=plano.pk)
         except Exception as e:
@@ -522,7 +522,7 @@ class PlanoFisicoItemUpdateView(UpdateView):
         return response
 
     def form_invalid(self, form):
-        messages.error(self.request, "Nao foi possivel salvar a atividade. Revise os campos destacados.")
+        messages.error(self.request, "Não foi possível salvar a atividade. Revise os campos destacados.")
         return super().form_invalid(form)
 
     def get_success_url(self):
@@ -648,11 +648,11 @@ class MapaCorrespondenciaListView(TemplateView):
 @login_required
 def sugerir_mapeamento_ajax(request):
     if request.method not in ["GET", "POST"]:
-        return JsonResponse({"error": "Metodo nao permitido"}, status=405)
+        return JsonResponse({"error": "Método não permitido"}, status=405)
 
     item_id = request.GET.get("item_id") or request.POST.get("item_id")
     if not item_id:
-        return JsonResponse({"error": "Item nao informado"}, status=400)
+        return JsonResponse({"error": "Item não informado"}, status=400)
 
     try:
         item = get_object_or_404(
@@ -701,7 +701,7 @@ def sugerir_mapeamento_ajax(request):
 @login_required
 def vincular_mapeamento_ajax(request):
     if request.method != "POST":
-        return JsonResponse({"error": "Metodo nao permitido"}, status=405)
+        return JsonResponse({"error": "Método não permitido"}, status=405)
 
     item_id = request.POST.get("item_id")
     ids_brutos = request.POST.getlist("plano_contas_ids[]") or request.POST.getlist("plano_contas_ids")
@@ -711,7 +711,7 @@ def vincular_mapeamento_ajax(request):
             ids_brutos = [parte.strip() for parte in ids_unico.split(",") if parte.strip()]
 
     if not item_id:
-        return JsonResponse({"error": "Item nao informado"}, status=400)
+        return JsonResponse({"error": "Item não informado"}, status=400)
 
     try:
         item = get_object_or_404(
@@ -758,7 +758,7 @@ def vincular_mapeamento_ajax(request):
 
         return JsonResponse({
             "success": True,
-            "mensagem": "Vinculos atualizados com sucesso!",
+            "mensagem": "Vínculos atualizados com sucesso!",
             "codigos": [centro.codigo for centro in centros],
         })
     except ValidationError as e:
@@ -770,12 +770,12 @@ def vincular_mapeamento_ajax(request):
 @login_required
 def gerar_curva_s_ajax(request):
     if request.method != "GET":
-        return JsonResponse({"error": "Metodo nao permitido"}, status=405)
+        return JsonResponse({"error": "Método não permitido"}, status=405)
 
     plano_id = request.GET.get("plano_id")
     data_corte = request.GET.get("data_corte")
     if not plano_id:
-        return JsonResponse({"error": "Cronograma nao informado"}, status=400)
+        return JsonResponse({"error": "Cronograma não informado"}, status=400)
 
     try:
         plano = get_object_or_404(

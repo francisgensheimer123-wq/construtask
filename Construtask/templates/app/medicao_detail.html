@@ -24,14 +24,14 @@
     <div style="display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap;">
         <div>
             <strong>Workflow de Aprovação</strong>
-            <p class="muted" style="margin:6px 0 0 0;">Funcao atual: {{ papel_aprovacao|default:"Nao configurada" }} | Alcada: {{ limite_aprovacao_label }}</p>
+            <p class="muted" style="margin:6px 0 0 0;">Função atual: {{ papel_aprovacao|default:"Não configurada" }} | Alçada: {{ limite_aprovacao_label }}</p>
         </div>
         <div style="min-width:min(100%, 420px);">
             <form method="post">
                 {% csrf_token %}
                 <div class="field" style="margin-bottom:10px;">
                     <label for="id_parecer_aprovacao_medicao">Parecer</label>
-                    <textarea id="id_parecer_aprovacao_medicao" name="parecer_aprovacao" rows="3" placeholder="Opcional no envio/aprovacao e obrigatorio na devolucao para ajuste.">{{ medicao.parecer_aprovacao }}</textarea>
+                    <textarea id="id_parecer_aprovacao_medicao" name="parecer_aprovacao" rows="3" placeholder="Opcional no envio/aprovação e obrigatorio na devolucao para ajuste.">{{ medicao.parecer_aprovacao }}</textarea>
                 </div>
                 <div style="display:flex; gap:10px; flex-wrap:wrap;">
                     {% if pode_enviar_para_aprovacao and medicao.status == "EM_ELABORACAO" %}

@@ -7,7 +7,7 @@ from ...observability import health_status, readiness_status
 
 
 class Command(BaseCommand):
-    help = "Valida a prontidao operacional da aplicacao para producao."
+    help = "Valida a prontidao operacional da aplicacao para produção."
 
     def add_arguments(self, parser):
         parser.add_argument("--json", action="store_true", dest="as_json", help="Retorna o diagnostico em JSON.")
@@ -34,7 +34,7 @@ class Command(BaseCommand):
             self.stdout.write(json.dumps(payload, ensure_ascii=True, default=str, indent=2))
             return
 
-        self.stdout.write(self.style.NOTICE(f"Prontidao de producao: {payload['status'].upper()}"))
+        self.stdout.write(self.style.NOTICE(f"Prontidao de produção: {payload['status'].upper()}"))
         self.stdout.write(f"- health: {health['status'].upper()}")
         self.stdout.write(f"- readiness: {readiness['status'].upper()}")
         if payload["deploy_checks"]:

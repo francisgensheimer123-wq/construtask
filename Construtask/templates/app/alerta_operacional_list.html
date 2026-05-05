@@ -75,7 +75,7 @@
     <div class="page-header">
         <div>
             <h1>Central de Alertas Operacionais</h1>
-            <p>Trate, justifique e acompanhe os alertas automaticos da obra em um unico fluxo.</p>
+            <p>Trate, justifique e acompanhe os alertas automaticos da obra em um único fluxo.</p>
         </div>
         <div class="page-actions">
             <a class="btn btn-secondary" href="{% url 'alerta_operacional_dashboard' %}">Painel Executivo</a>
@@ -132,7 +132,7 @@
                         </select>
                     </label>
                     <label>
-                        <span>Responsavel</span>
+                        <span>Responsável</span>
                         <select name="responsavel">
                             <option value="">Todos</option>
                             {% for responsavel_id, responsavel_nome in responsaveis_disponiveis %}
@@ -230,14 +230,14 @@
                     <thead>
                         <tr>
                             <th class="no-break-data">Regra</th>
-                            <th>Descricao</th>
+                            <th>Descrição</th>
                             <th class="no-break-data">Severidade</th>
                             <th class="no-break-data">Status</th>
-                            <th class="no-break-data">Responsavel</th>
+                            <th class="no-break-data">Responsável</th>
                             <th class="no-break-data">Prazo</th>
                             <th class="no-break-data">Atraso</th>
                             <th class="no-break-data">Atualizado em</th>
-                            <th class="no-break-data">Acoes</th>
+                            <th class="no-break-data">Ações</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -256,7 +256,7 @@
                             <td class="no-break-data">
                                 <span class="badge bg-{{ alerta|workflow_badge_class }}">{{ alerta.get_status_display }}</span>
                             </td>
-                            <td class="no-break-data">{{ alerta.responsavel|default:"Nao informado" }}</td>
+                            <td class="no-break-data">{{ alerta.responsavel|default:"Não informado" }}</td>
                             <td class="no-break-data">{% if alerta.prazo_solucao_em %}{{ alerta.prazo_solucao_em|date:"d/m/Y" }}{% else %}-{% endif %}</td>
                             <td class="no-break-data">
                                 {% if alerta.em_atraso_prazo %}
@@ -296,7 +296,7 @@
                                 <th>Data</th>
                                 <th>Regra</th>
                                 <th>Resultado</th>
-                                <th>Referencia</th>
+                                <th>Referência</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -311,7 +311,7 @@
                         </tbody>
                     </table>
                     {% else %}
-                    <p class="empty">Nenhuma automacao com alteracao relevante registrada.</p>
+                    <p class="empty">Nenhuma automação com alteração relevante registrada.</p>
                     {% endif %}
                 </div>
             </div>
@@ -327,7 +327,7 @@
                     <table class="compact-table alerta-mini-table">
                         <thead>
                             <tr>
-                                <th>Codigo</th>
+                                <th>Código</th>
                                 <th>Frente</th>
                                 <th>Parametro</th>
                             </tr>

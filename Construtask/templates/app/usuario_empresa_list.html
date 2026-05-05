@@ -8,11 +8,11 @@
 <div class="toolbar">
     <div>
         <h2>Usuarios da Empresa</h2>
-        <p>Gerencie os usuarios da empresa {{ empresa.nome }} e suas permissoes de acesso.</p>
+        <p>Gerencie os usuarios da empresa {{ empresa.nome }} e suas permissões de acesso.</p>
     </div>
     <div style="display:flex; gap:10px;">
         {% if is_admin_sistema %}
-        <a class="btn secondary" href="{% url 'usuario_empresa_create' %}">Novo Usuario</a>
+        <a class="btn secondary" href="{% url 'usuario_empresa_create' %}">Novo Usuário</a>
         {% endif %}
         <a class="btn secondary" href="{% url 'home' %}">Voltar</a>
     </div>
@@ -51,11 +51,11 @@
     <table>
         <thead>
             <tr>
-                <th>Usuario</th>
+                <th>Usuário</th>
                 <th>Email</th>
                 <th>Tipo</th>
                 <th>Obras Permitidas</th>
-                <th>Acoes</th>
+                <th>Ações</th>
             </tr>
         </thead>
         <tbody>
@@ -67,7 +67,7 @@
                     {% if ue.is_admin_empresa %}
                     <span style="color: #059669; font-weight: 600;">Admin da Empresa</span>
                     {% else %}
-                    <span style="color: #6b7280;">Usuario</span>
+                    <span style="color: #6b7280;">Usuário</span>
                     {% endif %}
                 </td>
                 <td>
@@ -100,7 +100,7 @@
         </tbody>
     </table>
     {% else %}
-    <p class="empty">Nenhum usuario cadastrado para esta empresa.</p>
+    <p class="empty">Nenhum usuário cadastrado para está empresa.</p>
     {% endif %}
 </section>
 {% endblock %}

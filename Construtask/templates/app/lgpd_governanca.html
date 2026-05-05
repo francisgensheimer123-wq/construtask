@@ -6,7 +6,7 @@
 <div class="toolbar">
     <div>
         <h2>Governanca LGPD</h2>
-        <p>Inventario minimo de dados pessoais, regras de retencao e trilha de acesso administrativo.</p>
+        <p>Inventario mínimo de dados pessoais, regras de retenção e trilha de acesso administrativo.</p>
     </div>
     <div>
         {% if empresa_lgpd %}
@@ -25,7 +25,7 @@
                 <th>Dados Tratados</th>
                 <th>Finalidade</th>
                 <th>Base Legal</th>
-                <th>Retencao</th>
+                <th>Retenção</th>
             </tr>
         </thead>
         <tbody>
@@ -62,7 +62,7 @@
             {% for item in inventario_modelos_lgpd %}
             <tr>
                 <td>{{ item.app_label }}.{{ item.modelo }}</td>
-                <td>{% if item.possui_dados_pessoais %}Sim{% else %}Nao{% endif %}</td>
+                <td>{% if item.possui_dados_pessoais %}Sim{% else %}Não{% endif %}</td>
                 <td>
                     {% if item.campos_pessoais %}
                         {% for campo in item.campos_pessoais %}
@@ -79,7 +79,7 @@
 </section>
 
 <section class="panel" style="margin-bottom: 20px;">
-    <h3>Politica Base de Retencao</h3>
+    <h3>Política Base de Retenção</h3>
     <table class="compact-table">
         <thead>
             <tr>
@@ -99,13 +99,13 @@
 </section>
 
 <section class="panel" style="margin-bottom: 20px;">
-    <h3>Descarte e Anonimizacao</h3>
+    <h3>Descarte e Anonimização</h3>
     <table class="compact-table" style="margin-bottom: 16px;">
         <thead>
             <tr>
                 <th>Entidade</th>
                 <th>Criterio</th>
-                <th>Acao Recomendada</th>
+                <th>Ação Recomendada</th>
             </tr>
         </thead>
         <tbody>
@@ -148,9 +148,9 @@
             <tr>
                 <th>Categoria</th>
                 <th>Entidade</th>
-                <th>Descricao</th>
+                <th>Descrição</th>
                 <th>Identificador</th>
-                <th>Acoes</th>
+                <th>Ações</th>
             </tr>
         </thead>
         <tbody>
@@ -166,7 +166,7 @@
                         {% csrf_token %}
                         <input type="hidden" name="fornecedor_id" value="{{ item.objeto_id }}">
                         <input type="hidden" name="justificativa" value="Tratamento iniciado pela central LGPD">
-                        <button class="btn secondary" type="submit" name="acao" value="excluir_fornecedor">Exclusao Logica</button>
+                        <button class="btn secondary" type="submit" name="acao" value="excluir_fornecedor">Exclusão Logica</button>
                         <button class="btn secondary" type="submit" name="acao" value="anonimizar_fornecedor">Anonimizar</button>
                         <button class="btn secondary" type="submit" name="acao" value="descartar_fornecedor">Descartar</button>
                     </form>
@@ -198,7 +198,7 @@
         <div class="field">
             <label for="id_categoria_titular">Categoria</label>
             <select id="id_categoria_titular" name="categoria_titular">
-                <option value="USUARIO">Usuario</option>
+                <option value="USUARIO">Usuário</option>
                 <option value="COLABORADOR">Colaborador</option>
                 <option value="FORNECEDOR">Fornecedor</option>
                 <option value="CLIENTE">Cliente</option>
@@ -206,7 +206,7 @@
             </select>
         </div>
         <div class="field">
-            <label for="id_email_referencia">Email de Referencia</label>
+            <label for="id_email_referencia">Email de Referência</label>
             <input type="email" id="id_email_referencia" name="email_referencia">
         </div>
         <div class="field">
@@ -226,10 +226,10 @@
             <tr>
                 <th>Data</th>
                 <th>Categoria</th>
-                <th>Referencia</th>
+                <th>Referência</th>
                 <th>Finalidade</th>
                 <th>Status</th>
-                <th>Acoes</th>
+                <th>Ações</th>
             </tr>
         </thead>
         <tbody>
@@ -249,7 +249,7 @@
                         <button class="btn secondary" type="submit">Revogar</button>
                     </form>
                     {% else %}
-                    <span class="muted">Sem acoes</span>
+                    <span class="muted">Sem ações</span>
                     {% endif %}
                 </td>
             </tr>
@@ -263,15 +263,15 @@
 </section>
 
 <section class="panel">
-    <h3>Ultimos Acessos a Dados Pessoais</h3>
+    <h3>Últimos Acessos a Dados Pessoais</h3>
     <table class="compact-table">
         <thead>
             <tr>
                 <th>Data/Hora</th>
-                <th>Usuario</th>
+                <th>Usuário</th>
                 <th>Categoria</th>
                 <th>Entidade</th>
-                <th>Acao</th>
+                <th>Ação</th>
                 <th>Identificador</th>
                 <th>Finalidade</th>
             </tr>
@@ -280,11 +280,11 @@
             {% for log in logs_dados_pessoais %}
             <tr>
                 <td>{{ log.criado_em|date:"d/m/Y H:i" }}</td>
-                <td>{{ log.usuario|default:"Nao informado" }}</td>
+                <td>{{ log.usuario|default:"Não informado" }}</td>
                 <td>{{ log.get_categoria_titular_display }}</td>
                 <td>{{ log.entidade }}</td>
                 <td>{{ log.get_acao_display }}</td>
-                <td>{{ log.identificador|default:"Nao informado" }}</td>
+                <td>{{ log.identificador|default:"Não informado" }}</td>
                 <td>{{ log.finalidade }}</td>
             </tr>
             {% empty %}
@@ -297,13 +297,13 @@
 </section>
 
 <section class="panel">
-    <h3>Historico de Tratamento</h3>
+    <h3>Histórico de Tratamento</h3>
     <table class="compact-table">
         <thead>
             <tr>
                 <th>Data/Hora</th>
-                <th>Usuario</th>
-                <th>Acao</th>
+                <th>Usuário</th>
+                <th>Ação</th>
                 <th>Entidade</th>
                 <th>Identificador</th>
                 <th>Finalidade</th>
@@ -313,7 +313,7 @@
             {% for item in tratamentos_lgpd %}
             <tr>
                 <td>{{ item.criado_em|date:"d/m/Y H:i" }}</td>
-                <td>{{ item.usuario|default:"Nao informado" }}</td>
+                <td>{{ item.usuario|default:"Não informado" }}</td>
                 <td>{{ item.get_acao_display }}</td>
                 <td>{{ item.entidade }}</td>
                 <td>{{ item.identificador|default:"-" }}</td>

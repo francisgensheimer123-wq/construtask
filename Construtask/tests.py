@@ -152,7 +152,7 @@ class UploadPathsTests(TestCase):
 
         self.assertEqual(
             caminho,
-            f"Empresa Modelo/Obra Central/aquisições/cotacoes/{data.year}/{data.month:02d}/proposta.pdf",
+            f"Empresa Modelo/Obra Central/aquisições/cotações/{data.year}/{data.month:02d}/proposta.pdf",
         )
 
     def test_anexo_operacional_herda_empresa_e_obra_do_compromisso(self):
@@ -248,7 +248,7 @@ class RegrasFinanceirasTests(BaseFinanceTestCase):
         )
         medicao = Medicao.objects.create(
             contrato=contrato,
-            descricao="Primeira medicao",
+            descricao="Primeira medição",
             valor_medido=Decimal("600.00"),
             data_medicao="2026-03-10",
         )
@@ -366,7 +366,7 @@ class ItemizacaoTests(BaseFinanceTestCase):
 
         medicao = Medicao.objects.create(
             contrato=contrato,
-            descricao="Medicao itemizada",
+            descricao="Medição itemizada",
             data_medicao="2026-03-10",
         )
 
@@ -438,7 +438,7 @@ class ItemizacaoTests(BaseFinanceTestCase):
         )
         medicao_existente = Medicao.objects.create(
             contrato=contrato,
-            descricao="Medicao anterior",
+            descricao="Medição anterior",
             data_medicao="2026-03-10",
         )
         MedicaoItem.objects.create(
@@ -451,7 +451,7 @@ class ItemizacaoTests(BaseFinanceTestCase):
 
         medicao = Medicao.objects.create(
             contrato=contrato,
-            descricao="Nova medicao",
+            descricao="Nova medição",
             data_medicao="2026-03-12",
         )
 
@@ -474,7 +474,7 @@ class ServicesTests(BaseFinanceTestCase):
         self.compromisso = Compromisso.objects.create(
             tipo="CONTRATO",
             centro_custo=self.analitico,
-            descricao="Contrato servico",
+            descricao="Contrato serviço",
             fornecedor="Fornecedor A",
             cnpj="12.345.678/0001-90",
             responsavel="Maria",
@@ -572,8 +572,8 @@ class ServicesTests(BaseFinanceTestCase):
         arquivo = BytesIO()
         df = pd.DataFrame(
             [
-                {"ITEM": "1", "DESCRIÃ‡ÃƒO": "Estrutura", "UN": None, "QTD": None, "VALOR UNIT.": None},
-                {"ITEM": "1.1", "DESCRIÃ‡ÃƒO": "Concreto", "UN": "m3", "QTD": "2", "VALOR UNIT.": "50"},
+                {"ITEM": "1", "DESCRIÇÃO": "Estrutura", "UN": None, "QTD": None, "VALOR UNIT.": None},
+                {"ITEM": "1.1", "DESCRIÇÃO": "Concreto", "UN": "m3", "QTD": "2", "VALOR UNIT.": "50"},
             ]
         )
         df.to_excel(arquivo, index=False)
@@ -588,8 +588,8 @@ class ImportacaoPlanoContasServiceTests(TestCase):
         arquivo = BytesIO()
         df = pd.DataFrame(
             [
-                {"ITEM": "1", "DESCRIÃ‡ÃƒO": "Estrutura", "UN": None, "QTD": None, "VALOR UNIT.": None},
-                {"ITEM": "1.1", "DESCRIÃ‡ÃƒO": "Concreto", "UN": "m3", "QTD": "2", "VALOR UNIT.": "50"},
+                {"ITEM": "1", "DESCRIÇÃO": "Estrutura", "UN": None, "QTD": None, "VALOR UNIT.": None},
+                {"ITEM": "1.1", "DESCRIÇÃO": "Concreto", "UN": "m3", "QTD": "2", "VALOR UNIT.": "50"},
             ]
         )
         df.to_excel(arquivo, index=False)
@@ -678,7 +678,7 @@ class DomainTests(BaseFinanceTestCase):
         )
         medicao = Medicao(
             contrato=contrato,
-            descricao="Medicao 1",
+            descricao="Medição 1",
             valor_medido=Decimal("100.00"),
             data_medicao="2026-03-05",
         )
@@ -703,7 +703,7 @@ class DomainTests(BaseFinanceTestCase):
         )
         medicao = Medicao.objects.create(
             contrato=contrato,
-            descricao="Medicao 1",
+            descricao="Medição 1",
             valor_medido=Decimal("100.00"),
             data_medicao="2026-03-05",
         )
@@ -797,7 +797,7 @@ class AppViewsTests(BaseFinanceTestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Nao foi possivel identificar o registro para exclusao.")
+        self.assertContains(response, "Não foi possível identificar o registro para exclusão.")
 
     def test_exclusao_plano_contas_protegida_mostra_motivo_ao_usuario(self):
         response = self.client.post(
@@ -807,7 +807,7 @@ class AppViewsTests(BaseFinanceTestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "nao pode ser excluido porque possui vinculos em outras operacoes do sistema")
+        self.assertContains(response, "não pode ser excluido porque possui vínculos em outras operacoes do sistema")
 
     def test_grupo_planejamento_exibe_links_agrupados(self):
         response = self.client.get(reverse("modulo_grupo", args=["planejamento"]))
@@ -850,7 +850,7 @@ class AppViewsTests(BaseFinanceTestCase):
     def test_grupos_agrupados_adicionais_respondem_com_sucesso(self):
         cenarios = (
             ("comunicacoes", "Comunicacoes"),
-            ("relatorios", "Relatorios"),
+            ("relatorios", "Relatórios"),
             ("juridico", "Juridico"),
         )
 
@@ -900,7 +900,7 @@ class AppViewsTests(BaseFinanceTestCase):
     def test_cronograma_detail_atualiza_realizado_de_folha_e_define_inicio_real(self):
         plano = PlanoFisico.objects.create(
             obra=self.obra,
-            titulo="Cronograma lancamento direto",
+            titulo="Cronograma lançamento direto",
             responsavel_importacao=self.user,
             status="ATIVO",
         )
@@ -1021,11 +1021,11 @@ class AppViewsTests(BaseFinanceTestCase):
                 "codigo": self.obra.codigo,
                 "nome": "Obra Atualizada",
                 "cliente": "Cliente Revisado",
-                "responsavel": "Responsavel Revisado",
+                "responsavel": "Responsável Revisado",
                 "status": "EM_ANDAMENTO",
                 "data_inicio": "",
                 "data_fim": "",
-                "descricao": "Descricao atualizada",
+                "descricao": "Descrição atualizada",
             },
             follow=True,
         )
@@ -1065,7 +1065,7 @@ class AppViewsTests(BaseFinanceTestCase):
         self.assertContains(response, "Gatilhos Operacionais dos Alertas")
         self.assertContains(response, "PLAN-SUP-001")
         self.assertContains(response, "COST-BUD-001")
-        self.assertContains(response, "Dias sem nota fiscal para alertar medicao")
+        self.assertContains(response, "Dias sem nota fiscal para alertar medição")
 
     def test_usuario_nao_lista_obras_de_outra_empresa(self):
         empresa_2 = Empresa.objects.create(
@@ -1188,7 +1188,7 @@ class AppViewsTests(BaseFinanceTestCase):
             obra=self.obra,
             tipo_documento="PROCEDIMENTO",
             codigo_documento="PRO-2026-0101",
-            titulo="Procedimento Tecnico",
+            titulo="Procedimento Técnico",
             criado_por=self.user,
             status="EM_REVISAO",
         )
@@ -1230,7 +1230,7 @@ class AppViewsTests(BaseFinanceTestCase):
             obra=self.obra,
             tipo_documento="PROCEDIMENTO",
             codigo_documento="PRO-2026-0102",
-            titulo="Documento Em Revisao",
+            titulo="Documento Em Revisão",
             criado_por=self.user,
             status="EM_REVISAO",
         )
@@ -1351,7 +1351,7 @@ class AppViewsTests(BaseFinanceTestCase):
             empresa=self.empresa,
             obra=self.obra,
             plano_contas=self.analitico,
-            descricao="Falha com evidencia em tratamento",
+            descricao="Falha com evidência em tratamento",
             responsavel=self.user,
             criado_por=self.user,
         )
@@ -1360,7 +1360,7 @@ class AppViewsTests(BaseFinanceTestCase):
             reverse("nao_conformidade_detail", args=[nc.pk]),
             {
                 "acao": "TRATAMENTO",
-                "observacao": "Tratamento iniciado com evidencia.",
+                "observacao": "Tratamento iniciado com evidência.",
                 "evidencia_tratamento": "Registro fotografico anexado.",
                 "evidencia_tratamento_anexo": SimpleUploadedFile(
                     "tratamento.pdf",
@@ -1385,7 +1385,7 @@ class AppViewsTests(BaseFinanceTestCase):
             empresa=self.empresa,
             obra=self.obra,
             plano_contas=self.analitico,
-            descricao="Falha sem evidencia anexada",
+            descricao="Falha sem evidência anexada",
             responsavel=self.user,
             criado_por=self.user,
         )
@@ -1403,7 +1403,7 @@ class AppViewsTests(BaseFinanceTestCase):
         self.assertEqual(response.status_code, 200)
         nc.refresh_from_db()
         self.assertEqual(nc.status, "ABERTA")
-        self.assertContains(response, "A comprovacao de tratamento exige descricao e anexo.")
+        self.assertContains(response, "A comprovação de tratamento exige descrição e anexo.")
 
     def test_nao_conformidade_encerramento_exige_anexo_de_encerramento(self):
         nc = QualidadeWorkflowService.abrir(
@@ -1436,7 +1436,7 @@ class AppViewsTests(BaseFinanceTestCase):
         self.assertEqual(response.status_code, 200)
         nc.refresh_from_db()
         self.assertEqual(nc.status, "EM_VERIFICACAO")
-        self.assertContains(response, "A comprovacao de encerramento exige descricao e anexo.")
+        self.assertContains(response, "A comprovação de encerramento exige descrição e anexo.")
 
     def test_obra_concluida_bloqueia_telas_de_lancamento(self):
         self.obra.status = "CONCLUIDA"
@@ -1579,7 +1579,7 @@ class AppViewsTests(BaseFinanceTestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Base Operacional SaaS")
-        self.assertContains(response, "Backup e recuperacao")
+        self.assertContains(response, "Backup e recuperação")
         self.assertContains(response, "Storage de arquivos")
         self.assertContains(response, "Cadastrar Nova Empresa")
 
@@ -1587,7 +1587,7 @@ class AppViewsTests(BaseFinanceTestCase):
         response = self.client.get(reverse("sistema_admin"), follow=True)
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Apenas o superuser tecnico Construtask pode acessar o gerenciamento do sistema.")
+        self.assertContains(response, "Apenas o superuser técnico Construtask pode acessar o gerenciamento do sistema.")
 
     def test_superuser_construtask_nao_acessa_empresa_admin_sem_vinculo(self):
         user_model = get_user_model()
@@ -1601,7 +1601,7 @@ class AppViewsTests(BaseFinanceTestCase):
         response = self.client.get(reverse("empresa_admin"), follow=True)
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Apenas a administracao da empresa pode acessar esta pagina.")
+        self.assertContains(response, "Apenas a administracao da empresa pode acessar esta página.")
 
     def test_sistema_admin_cria_admin_da_empresa(self):
         user_model = get_user_model()
@@ -1699,9 +1699,9 @@ class AppViewsTests(BaseFinanceTestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.context["is_paginated"])
-        self.assertContains(response, "Pagina 1 de 2")
+        self.assertContains(response, "Página 1 de 2")
         self.assertContains(response, "page=2")
-        self.assertContains(response, "Proxima")
+        self.assertContains(response, "Próxima")
 
     def test_documento_list_exibe_controles_de_paginacao(self):
         for indice in range(21):
@@ -1720,9 +1720,9 @@ class AppViewsTests(BaseFinanceTestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.context["is_paginated"])
-        self.assertContains(response, "Pagina 1 de 2")
+        self.assertContains(response, "Página 1 de 2")
         self.assertContains(response, "page=2")
-        self.assertContains(response, "Proxima")
+        self.assertContains(response, "Próxima")
 
     def test_lgpd_governanca_exibe_inventario_e_trilha(self):
         RegistroAcessoDadoPessoal.objects.create(
@@ -1743,7 +1743,7 @@ class AppViewsTests(BaseFinanceTestCase):
     def test_politica_privacidade_publica_exibe_conteudo(self):
         response = self.client.get(reverse("politica_privacidade"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Politica de Privacidade")
+        self.assertContains(response, "Política de Privacidade")
         self.assertContains(response, "Inventario de Dados Pessoais")
 
     def test_termos_de_uso_publico_exibe_conteudo(self):
@@ -1805,7 +1805,7 @@ class AppViewsTests(BaseFinanceTestCase):
     def test_compromisso_contrato_exibe_valor_executado_por_medicoes(self):
         Medicao.objects.create(
             contrato=self.contrato,
-            descricao="Medicao executada",
+            descricao="Medição executada",
             valor_medido=Decimal("35.00"),
             data_medicao="2026-03-12",
         )
@@ -1833,7 +1833,7 @@ class AppViewsTests(BaseFinanceTestCase):
     def test_busca_em_medicoes_por_numero(self):
         medicao = Medicao.objects.create(
             contrato=self.contrato,
-            descricao="Medicao busca",
+            descricao="Medição busca",
             data_medicao="2026-03-12",
         )
         response = self.client.get(reverse("medicao_list"), {"q": medicao.numero_da_medicao})
@@ -1843,7 +1843,7 @@ class AppViewsTests(BaseFinanceTestCase):
     def test_busca_em_medicoes_por_cnpj(self):
         medicao = Medicao.objects.create(
             contrato=self.contrato,
-            descricao="Medicao por cnpj",
+            descricao="Medição por cnpj",
             data_medicao="2026-03-12",
         )
         response = self.client.get(reverse("medicao_list"), {"q": self.contrato.cnpj})
@@ -1868,7 +1868,7 @@ class AppViewsTests(BaseFinanceTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.context["is_paginated"])
         self.assertEqual(len(response.context["compromissos"]), 20)
-        self.assertContains(response, "Pagina 1 de 2")
+        self.assertContains(response, "Página 1 de 2")
         self.assertContains(response, "fornecedor=Fornecedor+A")
         self.assertContains(response, "page=2")
 
@@ -1876,7 +1876,7 @@ class AppViewsTests(BaseFinanceTestCase):
         for indice in range(24):
             Medicao.objects.create(
                 contrato=self.contrato,
-                descricao=f"Medicao paginada {indice}",
+                descricao=f"Medição paginada {indice}",
                 valor_medido=Decimal("10.00"),
                 data_medicao="2026-03-12",
             )
@@ -1885,7 +1885,7 @@ class AppViewsTests(BaseFinanceTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.context["is_paginated"])
         self.assertEqual(len(response.context["medicoes"]), 20)
-        self.assertContains(response, "Pagina 1 de 2")
+        self.assertContains(response, "Página 1 de 2")
         self.assertContains(response, "page=2")
 
     def test_nota_fiscal_list_pagina_resultados(self):
@@ -1905,7 +1905,7 @@ class AppViewsTests(BaseFinanceTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.context["is_paginated"])
         self.assertEqual(len(response.context["notas_fiscais"]), 20)
-        self.assertContains(response, "Pagina 1 de 2")
+        self.assertContains(response, "Página 1 de 2")
         self.assertContains(response, "page=2")
 
     def test_fluxo_financeiro_contratual_considera_medicao_deslocada_por_aditivo_de_prazo(self):
@@ -1928,7 +1928,7 @@ class AppViewsTests(BaseFinanceTestCase):
         )
         Medicao.objects.create(
             contrato=contrato,
-            descricao="Medicao deslocada para abril",
+            descricao="Medição deslocada para abril",
             valor_medido=Decimal("90.00"),
             data_medicao="2026-02-15",
             data_prevista_inicio="2026-02-20",
@@ -1936,7 +1936,7 @@ class AppViewsTests(BaseFinanceTestCase):
         )
         Medicao.objects.create(
             contrato=self.contrato,
-            descricao="Medicao fora da janela",
+            descricao="Medição fora da janela",
             valor_medido=Decimal("55.00"),
             data_medicao="2025-01-10",
             data_prevista_inicio="2025-01-10",
@@ -1958,16 +1958,16 @@ class AppViewsTests(BaseFinanceTestCase):
     def test_cria_baseline_de_orcamento_pela_interface(self):
         response = self.client.post(
             reverse("plano_contas_criar_baseline"),
-            {"descricao_baseline": "Orcamento Aprovado v1"},
+            {"descricao_baseline": "Orçamento Aprovado v1"},
             follow=True,
         )
 
         self.assertEqual(response.status_code, 200)
-        baseline = OrcamentoBaseline.objects.get(descricao="Orcamento Aprovado v1")
+        baseline = OrcamentoBaseline.objects.get(descricao="Orçamento Aprovado v1")
         self.assertEqual(baseline.obra, self.obra)
         self.assertEqual(baseline.criado_por, self.user)
         self.assertTrue(OrcamentoBaselineItem.objects.filter(baseline=baseline, codigo=self.analitico.codigo).exists())
-        self.assertContains(response, "Orcamento Aprovado v1")
+        self.assertContains(response, "Orçamento Aprovado v1")
 
     def test_baseline_de_orcamento_mantem_snapshot_apos_edicao_do_plano(self):
         self.client.post(
@@ -2009,7 +2009,7 @@ class AppViewsTests(BaseFinanceTestCase):
 
         response_aprovacao = self.client.post(
             reverse("plano_contas_baseline_workflow", args=[baseline.pk]),
-            {"acao": "aprovar", "parecer_aprovacao": "Orcamento aprovado para execucao."},
+            {"acao": "aprovar", "parecer_aprovacao": "Orçamento aprovado para execução."},
             follow=True,
         )
 
@@ -2018,13 +2018,13 @@ class AppViewsTests(BaseFinanceTestCase):
         self.assertEqual(baseline.status, "APROVADA")
         self.assertTrue(baseline.is_ativa)
         self.assertEqual(baseline.aprovado_por, gerente)
-        self.assertEqual(baseline.parecer_aprovacao, "Orcamento aprovado para execucao.")
+        self.assertEqual(baseline.parecer_aprovacao, "Orçamento aprovado para execução.")
 
     def test_retorno_de_baseline_para_ajuste_exige_parecer(self):
         gerente = self._criar_usuario_operacional("gerente_baseline_ajuste", "GERENTE_OBRAS")
         baseline = OrcamentoBaseline.objects.create(
             obra=self.obra,
-            descricao="Baseline em analise",
+            descricao="Baseline em análise",
             criado_por=self.user,
             status="EM_APROVACAO",
         )
@@ -2054,13 +2054,13 @@ class AppViewsTests(BaseFinanceTestCase):
 
         medicao = Medicao.objects.create(
             contrato=self.contrato,
-            descricao="Medicao probatoria",
+            descricao="Medição probatoria",
             data_medicao="2026-03-12",
             valor_medido=Decimal("2500.00"),
             status="APROVADA",
             enviado_para_aprovacao_por=self.user,
             aprovado_por=self.user,
-            parecer_aprovacao="Medicao aprovada.",
+            parecer_aprovacao="Medição aprovada.",
         )
         baseline = OrcamentoBaseline.objects.create(
             obra=self.obra,
@@ -2125,7 +2125,7 @@ class AppViewsTests(BaseFinanceTestCase):
         aditivo = AditivoContrato.objects.create(
             contrato=self.contrato,
             tipo="VALOR",
-            descricao="Aditivo para historico",
+            descricao="Aditivo para histórico",
             status="EM_APROVACAO",
         )
         AditivoContratoItem.objects.create(
@@ -2160,13 +2160,13 @@ class AppViewsTests(BaseFinanceTestCase):
 
         medicao = Medicao.objects.create(
             contrato=self.contrato,
-            descricao="Medicao probatoria excel",
+            descricao="Medição probatoria excel",
             data_medicao="2026-03-12",
             valor_medido=Decimal("1800.00"),
             status="APROVADA",
             enviado_para_aprovacao_por=self.user,
             aprovado_por=self.user,
-            parecer_aprovacao="Medicao aprovada.",
+            parecer_aprovacao="Medição aprovada.",
         )
         baseline = OrcamentoBaseline.objects.create(
             obra=self.obra,
@@ -2212,17 +2212,17 @@ class AppViewsTests(BaseFinanceTestCase):
 
         medicao = Medicao.objects.create(
             contrato=self.contrato,
-            descricao="Medicao central evidencias",
+            descricao="Medição central evidências",
             data_medicao="2026-03-12",
             valor_medido=Decimal("900.00"),
             status="APROVADA",
             enviado_para_aprovacao_por=self.user,
             aprovado_por=self.user,
-            parecer_aprovacao="Medicao aprovada.",
+            parecer_aprovacao="Medição aprovada.",
         )
         baseline = OrcamentoBaseline.objects.create(
             obra=self.obra,
-            descricao="Baseline central evidencias",
+            descricao="Baseline central evidências",
             criado_por=self.user,
             status="APROVADA",
             enviado_para_aprovacao_por=self.user,
@@ -2246,10 +2246,10 @@ class AppViewsTests(BaseFinanceTestCase):
         response = self.client.get(reverse("central_evidencias"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Central de Evidencias")
+        self.assertContains(response, "Central de Evidências")
         self.assertContains(response, self.contrato.numero)
         self.assertContains(response, medicao.numero_da_medicao)
-        self.assertContains(response, "Baseline central evidencias")
+        self.assertContains(response, "Baseline central evidências")
         self.assertContains(response, "EVD-COMPROMISSO")
         self.assertContains(response, "EVD-MEDICAO")
         self.assertContains(response, "EVD-BASELINE")
@@ -2258,27 +2258,27 @@ class AppViewsTests(BaseFinanceTestCase):
         self.contrato.status = "APROVADO"
         self.contrato.enviado_para_aprovacao_por = self.user
         self.contrato.aprovado_por = self.user
-        self.contrato.parecer_aprovacao = "Contrato aprovado para compor o dossie."
+        self.contrato.parecer_aprovacao = "Contrato aprovado para compor o dossiê."
         self.contrato.save()
 
         medicao = Medicao.objects.create(
             contrato=self.contrato,
-            descricao="Medicao dossie obra",
+            descricao="Medição dossiê obra",
             data_medicao="2026-03-12",
             valor_medido=Decimal("900.00"),
             status="APROVADA",
             enviado_para_aprovacao_por=self.user,
             aprovado_por=self.user,
-            parecer_aprovacao="Medicao aprovada no dossie.",
+            parecer_aprovacao="Medição aprovada no dossiê.",
         )
         baseline = OrcamentoBaseline.objects.create(
             obra=self.obra,
-            descricao="Baseline dossie obra",
+            descricao="Baseline dossiê obra",
             criado_por=self.user,
             status="APROVADA",
             enviado_para_aprovacao_por=self.user,
             aprovado_por=self.user,
-            parecer_aprovacao="Baseline aprovada no dossie.",
+            parecer_aprovacao="Baseline aprovada no dossiê.",
             is_ativa=True,
         )
         OrcamentoBaselineItem.objects.create(
@@ -2304,7 +2304,7 @@ class AppViewsTests(BaseFinanceTestCase):
         self.assertContains(response, self.obra.nome)
         self.assertContains(response, self.contrato.numero)
         self.assertContains(response, medicao.numero_da_medicao)
-        self.assertContains(response, "Baseline dossie obra")
+        self.assertContains(response, "Baseline dossiê obra")
 
     def test_endpoint_de_notas_do_plano_contas(self):
         nota = NotaFiscal.objects.create(
@@ -2392,7 +2392,7 @@ class AppViewsTests(BaseFinanceTestCase):
     def test_endpoint_de_dados_da_medicao(self):
         medicao = Medicao.objects.create(
             contrato=self.contrato,
-            descricao="Medicao endpoint",
+            descricao="Medição endpoint",
             data_medicao="2026-03-12",
         )
         MedicaoItem.objects.create(
@@ -2579,7 +2579,7 @@ class AppViewsTests(BaseFinanceTestCase):
         aditivo = AditivoContrato.objects.create(
             contrato=self.contrato,
             tipo="VALOR",
-            descricao="Aditivo para aprovacao",
+            descricao="Aditivo para aprovação",
             status="EM_APROVACAO",
         )
         AditivoContratoItem.objects.create(
@@ -2672,14 +2672,14 @@ class AppViewsTests(BaseFinanceTestCase):
     def test_exclusao_protegida_de_compromisso_retorna_mensagem(self):
         medicao = Medicao.objects.create(
             contrato=self.contrato,
-            descricao="Medicao vinculada",
+            descricao="Medição vinculada",
             data_medicao="2026-03-20",
         )
         response = self.client.post(reverse("compromisso_delete"), data={"id": self.contrato.pk}, follow=True)
         self.assertEqual(response.status_code, 200)
         self.assertTrue(Compromisso.objects.filter(pk=self.contrato.pk).exists())
         self.assertTrue(Medicao.objects.filter(pk=medicao.pk).exists())
-        self.assertContains(response, "possui vinculos em outras operacoes do sistema")
+        self.assertContains(response, "possui vínculos em outras operacoes do sistema")
 
     def test_cria_medicao_pela_interface_com_itens(self):
         self._aprovar_contrato()
@@ -2696,7 +2696,7 @@ class AppViewsTests(BaseFinanceTestCase):
             data={
                 "contrato": self.contrato.pk,
                 "status": "APROVADA",
-                "descricao": "Medicao via app",
+                "descricao": "Medição via app",
                 "data_medicao": "2026-03-12",
                 "itens-TOTAL_FORMS": "1",
                 "itens-INITIAL_FORMS": "0",
@@ -2718,7 +2718,7 @@ class AppViewsTests(BaseFinanceTestCase):
         gerente = self._criar_usuario_operacional("gerente", "GERENTE_OBRAS")
         medicao = Medicao.objects.create(
             contrato=self.contrato,
-            descricao="Medicao para gerente",
+            descricao="Medição para gerente",
             data_medicao="2026-03-12",
             valor_medido=Decimal("250000.00"),
             status="EM_APROVACAO",
@@ -2743,7 +2743,7 @@ class AppViewsTests(BaseFinanceTestCase):
         gerente = self._criar_usuario_operacional("gerente_ajuste", "GERENTE_OBRAS")
         medicao = Medicao.objects.create(
             contrato=self.contrato,
-            descricao="Medicao para devolver",
+            descricao="Medição para devolver",
             data_medicao="2026-03-12",
             valor_medido=Decimal("2500.00"),
             status="EM_APROVACAO",
@@ -2777,7 +2777,7 @@ class AppViewsTests(BaseFinanceTestCase):
         )
         medicao = Medicao.objects.create(
             contrato=self.contrato,
-            descricao="Medicao para update",
+            descricao="Medição para update",
             data_medicao="2026-03-12",
         )
         MedicaoItem.objects.create(
@@ -2794,7 +2794,7 @@ class AppViewsTests(BaseFinanceTestCase):
             reverse("medicao_update", args=[medicao.pk]),
             data={
                 "contrato": self.contrato.pk,
-                "descricao": "Medicao para update - alterada",
+                "descricao": "Medição para update - alterada",
                 "data_medicao": "2026-03-12",
                 # Formset: 1 item inicial + 1 linha extra vazia
                 "itens-TOTAL_FORMS": "2",
@@ -2841,7 +2841,7 @@ class AppViewsTests(BaseFinanceTestCase):
             reverse("medicao_create"),
             data={
                 "contrato": self.contrato.pk,
-                "descricao": "Medicao travada ao contrato",
+                "descricao": "Medição travada ao contrato",
                 "data_medicao": "2026-03-14",
                 "itens-TOTAL_FORMS": "1",
                 "itens-INITIAL_FORMS": "0",
@@ -3190,7 +3190,7 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
             tipo="CONTRATO",
             obra=self.obra,
             centro_custo=self.analitico,
-            descricao="Contrato para medicao",
+            descricao="Contrato para medição",
             fornecedor="Fornecedor Correto LTDA",
             cnpj="12.345.678/0001-90",
             responsavel="Maria",
@@ -3250,7 +3250,7 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
             reverse("medicao_create"),
             data={
                 "contrato": contrato.pk,
-                "descricao": "Medicao bloqueada",
+                "descricao": "Medição bloqueada",
                 "data_medicao": "2026-03-12",
                 "itens-TOTAL_FORMS": "1",
                 "itens-INITIAL_FORMS": "0",
@@ -3265,7 +3265,7 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Só é possível emitir medição para contratos aprovados.")
-        self.assertFalse(Medicao.objects.filter(descricao="Medicao bloqueada").exists())
+        self.assertFalse(Medicao.objects.filter(descricao="Medição bloqueada").exists())
 
     def test_nota_fiscal_nao_pode_ser_criada_para_origem_nao_aprovada(self):
         pedido = Compromisso.objects.create(
@@ -3317,7 +3317,7 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
         contrato = Compromisso.objects.create(
             tipo="CONTRATO",
             centro_custo=self.analitico,
-            descricao="Contrato servico",
+            descricao="Contrato serviço",
             fornecedor="Fornecedor A",
             cnpj="12.345.678/0001-90",
             responsavel="Maria",
@@ -3329,7 +3329,7 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
         )
         medicao = Medicao.objects.create(
             contrato=contrato,
-            descricao="Medicao de servico",
+            descricao="Medição de serviço",
             data_medicao="2026-03-15",
             status="APROVADA",
             aprovado_por=self.user,
@@ -3350,7 +3350,7 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
                 "data_emissao": "2026-03-15",
                 "fornecedor": "Fornecedor A",
                 "cnpj": "12.345.678/0001-90",
-                "descricao": "Nota de servico",
+                "descricao": "Nota de serviço",
                 "valor_total": "30.00",
                 "pedido_compra": "",
                 "medicao": medicao.pk,
@@ -3481,7 +3481,7 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
         contrato = Compromisso.objects.create(
             tipo="CONTRATO",
             centro_custo=self.analitico,
-            descricao="Contrato sem medicao",
+            descricao="Contrato sem medição",
             fornecedor="Fornecedor Contrato",
             cnpj="12.345.678/0001-90",
             responsavel="Maria",
@@ -3507,8 +3507,8 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
         contrato = Compromisso.objects.create(
             tipo="CONTRATO",
             centro_custo=self.analitico,
-            descricao="Contrato para medicao sem nota",
-            fornecedor="Fornecedor Medicao",
+            descricao="Contrato para medição sem nota",
+            fornecedor="Fornecedor Medição",
             cnpj="12.345.678/0001-90",
             responsavel="Maria",
             telefone="11999999999",
@@ -3522,7 +3522,7 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
             centro_custo=self.analitico,
             numero_da_medicao="MED-2026-9999",
             data_medicao=timezone.localdate() - timedelta(days=10),
-            descricao="Medicao pronta para faturamento",
+            descricao="Medição pronta para faturamento",
             status="APROVADA",
         )
 
@@ -3547,7 +3547,7 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
             tipo="CONTRATO",
             centro_custo=self.analitico,
             descricao="Contrato com gatilho customizado",
-            fornecedor="Fornecedor Medicao",
+            fornecedor="Fornecedor Medição",
             cnpj="12.345.678/0001-90",
             responsavel="Maria",
             telefone="11999999999",
@@ -3561,7 +3561,7 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
             centro_custo=self.analitico,
             numero_da_medicao="MED-2026-1010",
             data_medicao=timezone.localdate() - timedelta(days=8),
-            descricao="Medicao ainda dentro da tolerancia parametrizada",
+            descricao="Medição ainda dentro da tolerância parametrizada",
             status="APROVADA",
         )
 
@@ -3606,7 +3606,7 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
             plano_contas=self.analitico,
             categoria="PRAZO",
             titulo="Atraso na fachada",
-            descricao="Risco sem tratamento concluido.",
+            descricao="Risco sem tratamento concluído.",
             probabilidade=4,
             impacto=4,
             responsavel=self.user,
@@ -3632,7 +3632,7 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
             empresa=self.empresa,
             obra=self.obra,
             plano_contas=self.analitico,
-            descricao="Nao conformidade antiga",
+            descricao="Não conformidade antiga",
             responsavel=self.user,
             criado_por=self.user,
         )
@@ -3658,7 +3658,7 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
         Compromisso.objects.create(
             tipo="CONTRATO",
             centro_custo=self.analitico,
-            descricao="Contrato base sem medicao",
+            descricao="Contrato base sem medição",
             fornecedor="Fornecedor Consolidado",
             cnpj="12.345.678/0001-90",
             responsavel="Equipe",
@@ -3798,7 +3798,7 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
             arquivo=arquivo_upload,
             obra=self.obra,
             responsavel=self.user,
-            titulo="Cronograma com vinculo automatico",
+            titulo="Cronograma com vinculo automático",
             criar_baseline=False,
         )
 
@@ -3831,14 +3831,14 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
             arquivo=arquivo_upload,
             obra=self.obra,
             responsavel=self.user,
-            titulo="Cronograma com EAP invalida",
+            titulo="Cronograma com EAP inválida",
             criar_baseline=False,
         )
 
         item = PlanoFisicoItem.objects.get(plano=plano, codigo_atividade="1.1")
         self.assertEqual(item.codigo_eap_importado, "EAP-INEXISTENTE")
         self.assertIsNone(item.plano_contas)
-        self.assertIn("nao localizado", item.erro_vinculo_eap.lower())
+        self.assertIn("não localizado", item.erro_vinculo_eap.lower())
 
     def test_importacao_cronograma_reconhece_colunas_previstas_e_data_com_hora(self):
         arquivo = BytesIO()
@@ -4448,7 +4448,7 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
         )
         medicao = Medicao.objects.create(
             contrato=contrato,
-            descricao="Medicao integrada",
+            descricao="Medição integrada",
             data_medicao="2026-03-20",
         )
         MedicaoItem.objects.create(
@@ -4527,7 +4527,7 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
         Medicao.objects.create(
             obra=self.obra,
             contrato=contrato,
-            descricao="Medicao desalinhada do fisico",
+            descricao="Medição desalinhada do físico",
             valor_medido=Decimal("80.00"),
             data_medicao="2026-03-15",
         )
@@ -4587,7 +4587,7 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
         risco = Risco.objects.create(
             empresa=self.empresa,
             obra=self.obra,
-            titulo="Risco critico",
+            titulo="Risco crítico",
             categoria="PRAZO",
             descricao="Risco relevante para score",
             probabilidade=5,
@@ -4600,14 +4600,14 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
             empresa=self.empresa,
             obra=self.obra,
             plano_contas=self.analitico,
-            descricao="Nao conformidade para score",
+            descricao="Não conformidade para score",
             responsavel=self.user,
             criado_por=self.user,
         )
         AlertaOperacional.objects.create(
             obra=self.obra,
             codigo_regra="SCORE-TEST-001",
-            titulo="Alerta critico de score",
+            titulo="Alerta crítico de score",
             descricao="Teste do score operacional",
             severidade="CRITICA",
             referencia=risco.codigo,
@@ -4691,7 +4691,7 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
     def test_home_dashboard_exibe_blocos_novos(self):
         response = self.client.get(reverse("home"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Aquisicoes Estruturadas")
+        self.assertContains(response, "Aquisições Estruturadas")
         self.assertContains(response, "Riscos e Qualidade")
         self.assertContains(response, "Integração Físico-Financeira")
         self.assertContains(response, "Score Operacional da Obra")
@@ -4704,7 +4704,7 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
             obra=self.obra,
             codigo_regra="TEST-001",
             titulo="Alerta de teste",
-            descricao="Descricao operacional",
+            descricao="Descrição operacional",
             severidade="ALTA",
             referencia="REF-1",
         )
@@ -4722,7 +4722,7 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
             obra=self.obra,
             codigo_regra="TEST-QUEUE-001",
             titulo="Alerta com fila indisponivel",
-            descricao="Descricao operacional",
+            descricao="Descrição operacional",
             severidade="ALTA",
             referencia="REF-QUEUE-1",
         )
@@ -4741,7 +4741,7 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
             obra=self.obra,
             codigo_regra="TEST-PRAZO-001",
             titulo="Alerta com prazo vencido",
-            descricao="Descricao operacional",
+            descricao="Descrição operacional",
             severidade="ALTA",
             referencia="REF-PRAZO-1",
             status="EM_TRATAMENTO",
@@ -4752,7 +4752,7 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
             obra=self.obra,
             codigo_regra="TEST-PRAZO-002",
             titulo="Alerta em dia",
-            descricao="Descricao operacional",
+            descricao="Descrição operacional",
             severidade="ALTA",
             referencia="REF-PRAZO-2",
             status="EM_TRATAMENTO",
@@ -4771,7 +4771,7 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
             obra=self.obra,
             codigo_regra="TEST-SLA-001",
             titulo="Alerta com SLA estourado",
-            descricao="Descricao operacional",
+            descricao="Descrição operacional",
             severidade="ALTA",
             referencia="REF-SLA-1",
             status="ABERTO",
@@ -4913,10 +4913,10 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Observabilidade")
-        self.assertContains(response, "Metricas Recentes")
+        self.assertContains(response, "Métricas Recentes")
         self.assertContains(response, "Erros Recentes")
         self.assertContains(response, "Latencia por Endpoint")
-        self.assertContains(response, "Retencao: metricas")
+        self.assertContains(response, "Retenção: métricas")
         self.assertContains(response, "Erro sintetico")
 
     def test_operacao_tecnica_dashboard_exibe_alertas_e_checklists(self):
@@ -4939,7 +4939,7 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
             path="/cronogramas/",
             status_code=500,
             classe_erro="RuntimeError",
-            mensagem="Erro tecnico aberto",
+            mensagem="Erro técnico aberto",
             stacktrace="trace",
             resolvido=False,
         )
@@ -4962,7 +4962,7 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
         response = self.client.get(reverse("operacao_tecnica_dashboard"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Operacao Tecnica")
+        self.assertContains(response, "Operação Técnica")
         self.assertContains(response, "Alertas Operacionais")
         self.assertContains(response, "Checklist de Deploy")
         self.assertContains(response, "Checklist de Rollback")
@@ -5131,7 +5131,7 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Ultimo Backup")
-        self.assertContains(response, "Teste de Recuperacao")
+        self.assertContains(response, "Teste de Recuperação")
         self.assertContains(response, "s3")
 
     def test_sincronizacao_alertas_por_job_cria_registro_pendente(self):
@@ -5212,7 +5212,7 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
             solicitado_por=self.user,
             tipo="SINCRONIZAR_ALERTAS_OBRA",
             status="CONCLUIDO",
-            descricao="Sincronizacao concluida",
+            descricao="Sincronização concluida",
             resultado={"alertas_abertos": 2},
         )
 
@@ -5220,14 +5220,14 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Jobs Assincronos")
-        self.assertContains(response, "Sincronizacao concluida")
+        self.assertContains(response, "Sincronização concluida")
 
     def test_detalhe_alerta_operacional_exibe_historico(self):
         alerta = AlertaOperacional.objects.create(
             obra=self.obra,
             codigo_regra="TEST-DET-001",
             titulo="Alerta detalhado",
-            descricao="Descricao operacional",
+            descricao="Descrição operacional",
             severidade="CRITICA",
             referencia="REF-DET",
         )
@@ -5308,7 +5308,7 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Regra Operacional")
-        self.assertContains(response, "Execucao Automatica")
+        self.assertContains(response, "Execução Automática")
         self.assertContains(response, CODIGO_ALERTA_PLANEJAMENTO_SUPRIMENTOS)
 
     def test_catalogo_alertas_empresa_retorna_parametros_da_empresa(self):
@@ -5327,7 +5327,7 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
             obra=self.obra,
             codigo_regra="TEST-WF-001",
             titulo="Alerta workflow",
-            descricao="Descricao operacional",
+            descricao="Descrição operacional",
             severidade="ALTA",
             referencia="REF-WF",
         )
@@ -5359,7 +5359,7 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
             obra=self.obra,
             codigo_regra="TEST-WF-ASSUME-001",
             titulo="Alerta para assumir",
-            descricao="Descricao operacional",
+            descricao="Descrição operacional",
             severidade="ALTA",
             referencia="REF-ASSUME",
         )
@@ -5378,14 +5378,14 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
         alerta.refresh_from_db()
         self.assertEqual(alerta.status, "ABERTO")
         self.assertIsNone(alerta.prazo_solucao_em)
-        self.assertContains(response, "Informe o prazo para solucao ao assumir o alerta.")
+        self.assertContains(response, "Informe o prazo para solução ao assumir o alerta.")
 
     def test_assumir_alerta_grava_prazo_para_solucao(self):
         alerta = AlertaOperacional.objects.create(
             obra=self.obra,
             codigo_regra="TEST-WF-ASSUME-002",
             titulo="Alerta para assumir com prazo",
-            descricao="Descricao operacional",
+            descricao="Descrição operacional",
             severidade="ALTA",
             referencia="REF-ASSUME-OK",
         )
@@ -5438,7 +5438,7 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
             reverse("alerta_operacional_workflow", args=[alerta.pk]),
             {
                 "acao": "justificar",
-                "observacao": "Risco aceito enquanto a contratacao complementar eh concluida.",
+                "observacao": "Risco aceito enquanto a contratação complementar eh concluida.",
                 "next": reverse("alerta_operacional_detail", args=[alerta.pk]),
             },
             follow=True,
@@ -5451,7 +5451,7 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
         self.assertEqual(alerta.status, "JUSTIFICADO")
         self.assertEqual(
             alerta.observacao_status,
-            "Risco aceito enquanto a contratacao complementar eh concluida.",
+            "Risco aceito enquanto a contratação complementar eh concluida.",
         )
 
     def test_tecnico_nao_pode_encerrar_alerta_operacional(self):
@@ -5459,7 +5459,7 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
             obra=self.obra,
             codigo_regra="TEST-WF-TEC-001",
             titulo="Alerta bloqueado por perfil",
-            descricao="Descricao operacional",
+            descricao="Descrição operacional",
             severidade="ALTA",
             referencia="REF-WF-TEC",
         )
@@ -5482,7 +5482,7 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
         self.assertEqual(response.status_code, 200)
         alerta.refresh_from_db()
         self.assertEqual(alerta.status, "ABERTO")
-        self.assertContains(response, "nao pode encerrar alertas operacionais")
+        self.assertContains(response, "não pode encerrar alertas operacionais")
 
     def test_lista_de_nao_conformidades_carrega(self):
         QualidadeWorkflowService.abrir(
@@ -5520,7 +5520,7 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
             obra=self.obra,
             plano_contas=self.analitico,
             titulo="Compra via tela",
-            descricao="Solicitacao para fluxo web",
+            descricao="Solicitação para fluxo web",
             solicitante=self.user,
             data_solicitacao="2026-03-18",
             status="COTANDO",
@@ -5596,8 +5596,8 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
                 empresa=self.empresa,
                 obra=self.obra,
                 plano_contas=self.analitico,
-                titulo="Solicitacao OC",
-                descricao="Solicitacao para workflow",
+                titulo="Solicitação OC",
+                descricao="Solicitação para workflow",
                 solicitante=self.user,
                 data_solicitacao="2026-03-10",
                 status="COTANDO",
@@ -5605,7 +5605,7 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
             cotacao_aprovada=Cotacao.objects.create(
                 empresa=self.empresa,
                 obra=self.obra,
-                solicitacao=SolicitacaoCompra.objects.filter(titulo="Solicitacao OC").first(),
+                solicitacao=SolicitacaoCompra.objects.filter(titulo="Solicitação OC").first(),
                 fornecedor=Fornecedor.objects.create(
                     empresa=self.empresa,
                     razao_social="Fornecedor Workflow LTDA",
@@ -5659,8 +5659,8 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
                 empresa=self.empresa,
                 obra=self.obra,
                 plano_contas=self.analitico,
-                titulo="Solicitacao OC Eng",
-                descricao="Solicitacao para aprovacao",
+                titulo="Solicitação OC Eng",
+                descricao="Solicitação para aprovação",
                 solicitante=self.user,
                 data_solicitacao="2026-03-10",
                 status="COTANDO",
@@ -5668,7 +5668,7 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
             cotacao_aprovada=Cotacao.objects.create(
                 empresa=self.empresa,
                 obra=self.obra,
-                solicitacao=SolicitacaoCompra.objects.filter(titulo="Solicitacao OC Eng").first(),
+                solicitacao=SolicitacaoCompra.objects.filter(titulo="Solicitação OC Eng").first(),
                 fornecedor=Fornecedor.objects.create(
                     empresa=self.empresa,
                     razao_social="Fornecedor Eng LTDA",
@@ -5711,8 +5711,8 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
                 empresa=self.empresa,
                 obra=self.obra,
                 plano_contas=self.analitico,
-                titulo="Solicitacao OC Coord",
-                descricao="Solicitacao para ajuste",
+                titulo="Solicitação OC Coord",
+                descricao="Solicitação para ajuste",
                 solicitante=self.user,
                 data_solicitacao="2026-03-10",
                 status="COTANDO",
@@ -5720,7 +5720,7 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
             cotacao_aprovada=Cotacao.objects.create(
                 empresa=self.empresa,
                 obra=self.obra,
-                solicitacao=SolicitacaoCompra.objects.filter(titulo="Solicitacao OC Coord").first(),
+                solicitacao=SolicitacaoCompra.objects.filter(titulo="Solicitação OC Coord").first(),
                 fornecedor=Fornecedor.objects.create(
                     empresa=self.empresa,
                     razao_social="Fornecedor Coord LTDA",
@@ -5760,7 +5760,7 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
         response = self.client.post(
             reverse("solicitacao_compra_create"),
             {
-                "titulo": "Solicitacao multi item",
+                "titulo": "Solicitação multi item",
                 "descricao": "Compra com varios centros",
                 "status": "RASCUNHO",
                 "data_solicitacao": "2026-03-21",
@@ -5803,7 +5803,7 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
         response = self.client.post(
             reverse("solicitacao_compra_create"),
             {
-                "titulo": "Solicitacao superuser",
+                "titulo": "Solicitação superuser",
                 "descricao": "Criada pelo contexto da obra",
                 "status": "RASCUNHO",
                 "data_solicitacao": "2026-03-21",
@@ -5830,7 +5830,7 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
             empresa=self.empresa,
             obra=self.obra,
             plano_contas=self.analitico,
-            titulo="Solicitacao com anexos",
+            titulo="Solicitação com anexos",
             descricao="Compra com propostas",
             solicitante=self.user,
             data_solicitacao="2026-03-22",
@@ -5912,7 +5912,7 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
         self.assertEqual(cotacao.itens.count(), 1)
         self.assertEqual(cotacao.anexos.count(), 1)
         anexo = cotacao.anexos.first()
-        self.assertIn("/aquisições/cotacoes/", anexo.arquivo.name)
+        self.assertIn("/aquisições/cotações/", anexo.arquivo.name)
         self.assertTrue(anexo.arquivo.name.split("/")[-1].startswith("proposta-fornecedor"))
         self.assertEqual(Cotacao.objects.filter(solicitacao=solicitacao).count(), 2)
         self.assertContains(response, "Concreto usinado fck 30")
@@ -5923,8 +5923,8 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
             empresa=self.empresa,
             obra=self.obra,
             plano_contas=self.analitico,
-            titulo="Solicitacao com erro e arquivo",
-            descricao="Compra com proposta e erro de validacao",
+            titulo="Solicitação com erro e arquivo",
+            descricao="Compra com proposta e erro de validação",
             solicitante=self.user,
             data_solicitacao="2026-03-22",
             status="COTANDO",
@@ -5980,7 +5980,7 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
             empresa=self.empresa,
             obra=self.obra,
             plano_contas=self.analitico,
-            titulo="Solicitacao com duas linhas",
+            titulo="Solicitação com duas linhas",
             descricao="Compra com dois itens",
             solicitante=self.user,
             data_solicitacao="2026-03-24",
@@ -6058,7 +6058,7 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
             empresa=self.empresa,
             obra=self.obra,
             plano_contas=self.analitico,
-            titulo="Solicitacao PDF",
+            titulo="Solicitação PDF",
             descricao="Teste de PDF",
             solicitante=self.user,
             data_solicitacao="2026-03-18",
@@ -6305,7 +6305,7 @@ class LgpdRotinasTests(BaseFinanceTestCase):
             username="inativo_lgpd",
             password="senha12345",
             email="inativo@empresa.com",
-            first_name="Usuario",
+            first_name="Usuário",
             last_name="Inativo",
             is_active=False,
         )
@@ -6322,7 +6322,7 @@ class LgpdRotinasTests(BaseFinanceTestCase):
     def test_comando_lgpd_em_modo_simulacao(self):
         out = StringIO()
         call_command("executar_rotinas_lgpd", stdout=out)
-        self.assertIn("Modo simulacao", out.getvalue())
+        self.assertIn("Modo simulação", out.getvalue())
 
 
 class FasesFechamentoGovernancaTests(BaseFinanceTestCase):
@@ -6573,14 +6573,14 @@ class LgpdGovernancaAvancadaTests(BaseFinanceTestCase):
 
 class TextNormalizationTests(TestCase):
     def test_corrigir_mojibake_recupera_coluna_corrompida(self):
-        original = "MEDIÃ‡ÃƒO"
+        original = "MEDIÇÃO"
         corrigido = corrigir_mojibake(original)
         self.assertIsInstance(corrigido, str)
         self.assertLessEqual(corrigido.count("Ã"), original.count("Ã"))
         self.assertTrue(corrigido)
 
     def test_normalizar_texto_cadastral_corrige_termos_comuns(self):
-        texto = "medicao de blocos ceramicos para revisao do orcamento"
+        texto = "medição de blocos ceramicos para revisão do orçamento"
         self.assertEqual(
             normalizar_texto_cadastral(texto),
             "medição de blocos cerâmicos para revisão do orçamento",
@@ -6596,16 +6596,16 @@ class TextNormalizationTests(TestCase):
             empresa=empresa,
             codigo="OBR-NT",
             nome="obra de ampliacao",
-            cliente="cliente nao informado",
-            responsavel="tecnico de obras",
+            cliente="cliente não informado",
+            responsavel="técnico de obras",
             status="EM_ANDAMENTO",
             data_inicio="2026-01-01",
             data_fim="2026-12-31",
-            descricao="obra com medicao e orcamento",
+            descricao="obra com medição e orçamento",
         )
         baseline = OrcamentoBaseline.objects.create(
             obra=obra,
-            descricao="baseline de orcamento revisao 01",
+            descricao="baseline de orçamento revisão 01",
             status="RASCUNHO",
         )
 
@@ -6636,7 +6636,7 @@ class NumeracaoDocumentalTests(TestCase):
         self.plano = PlanoContas.objects.create(
             obra=self.obra,
             codigo="01.01.01.01.01",
-            descricao="Servico Numerado",
+            descricao="Serviço Numerado",
             unidade="un",
             quantidade=Decimal("1"),
             valor_unitario=Decimal("1"),
@@ -6719,7 +6719,7 @@ class ComunicacoesModuleTests(BaseFinanceTestCase):
         NaoConformidade.objects.create(
             empresa=self.empresa,
             obra=self.obra,
-            descricao="Nao conformidade em campo",
+            descricao="Não conformidade em campo",
             responsavel=self.user,
             criado_por=self.user,
             status="EM_TRATAMENTO",
@@ -6743,7 +6743,7 @@ class ComunicacoesModuleTests(BaseFinanceTestCase):
         Medicao.objects.create(
             contrato=self.contrato,
             obra=self.obra,
-            descricao="Medicao pendente",
+            descricao="Medição pendente",
             valor_medido=Decimal("100.00"),
             data_medicao=self.data_reuniao_base + timedelta(days=5),
             data_prevista_inicio=self.data_reuniao_base + timedelta(days=5),
@@ -6814,16 +6814,16 @@ class ComunicacoesModuleTests(BaseFinanceTestCase):
         response = self.client.get(reverse("empresa_admin"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Frequencia padrao das reunioes de curto prazo da empresa.")
-        self.assertContains(response, "Frequencia padrao das reunioes de médio prazo da empresa.")
-        self.assertContains(response, "Frequencia padrao das reunioes de longo prazo da empresa.")
+        self.assertContains(response, "Frequência padrão das reunioes de curto prazo da empresa.")
+        self.assertContains(response, "Frequência padrão das reuniões de médio prazo da empresa.")
+        self.assertContains(response, "Frequência padrão das reunioes de longo prazo da empresa.")
 
     def test_criacao_de_reuniao_gera_pauta_automatica(self):
         response = self.client.post(
             reverse("reuniao_comunicacao_create"),
             {
                 "tipo_reuniao": "CURTO_PRAZO",
-                "titulo": "Reuniao operacional da semana",
+                "titulo": "Reunião operacional da semana",
                 "data_prevista": "2026-04-20",
                 "data_realizada": "",
             },
@@ -6845,7 +6845,7 @@ class ComunicacoesModuleTests(BaseFinanceTestCase):
             reverse("reuniao_comunicacao_create"),
             {
                 "tipo_reuniao": "CURTO_PRAZO",
-                "titulo": "Reuniao curta",
+                "titulo": "Reunião curta",
                 "data_prevista": "2026-04-20",
                 "data_realizada": "",
             },
@@ -6867,7 +6867,7 @@ class ComunicacoesModuleTests(BaseFinanceTestCase):
             reverse("reuniao_comunicacao_create"),
             {
                 "tipo_reuniao": "CURTO_PRAZO",
-                "titulo": "Reuniao curta",
+                "titulo": "Reunião curta",
                 "data_prevista": "2026-04-20",
                 "data_realizada": "",
             },
@@ -6892,7 +6892,7 @@ class ComunicacoesModuleTests(BaseFinanceTestCase):
             obra=self.obra,
             codigo_regra="ALERTA-COM-002",
             titulo="Alerta fora da janela",
-            descricao="Nao deve entrar na pauta curta",
+            descricao="Não deve entrar na pauta curta",
             referencia="ALERTA-002",
             severidade="MEDIA",
             status="ABERTO",
@@ -6914,7 +6914,7 @@ class ComunicacoesModuleTests(BaseFinanceTestCase):
             reverse("reuniao_comunicacao_create"),
             {
                 "tipo_reuniao": "CURTO_PRAZO",
-                "titulo": "Reuniao curta com janela",
+                "titulo": "Reunião curta com janela",
                 "data_prevista": "2026-04-20",
                 "data_realizada": "",
             },
@@ -6930,7 +6930,7 @@ class ComunicacoesModuleTests(BaseFinanceTestCase):
             reverse("reuniao_comunicacao_create"),
             {
                 "tipo_reuniao": "CURTO_PRAZO",
-                "titulo": "Reuniao por secao",
+                "titulo": "Reunião por secao",
                 "data_prevista": "2026-04-20",
                 "data_realizada": "",
             },
@@ -6943,14 +6943,14 @@ class ComunicacoesModuleTests(BaseFinanceTestCase):
         self.assertContains(response, "Cronograma")
         self.assertContains(response, "Alertas")
         self.assertContains(response, "Riscos")
-        self.assertContains(response, "Nao Conformidades")
+        self.assertContains(response, "Não Conformidades")
 
     def test_pauta_validada_bloqueia_estrutura_mas_permite_respostas(self):
         self.client.post(
             reverse("reuniao_comunicacao_create"),
             {
                 "tipo_reuniao": "CURTO_PRAZO",
-                "titulo": "Reuniao bloqueada",
+                "titulo": "Reunião bloqueada",
                 "data_prevista": "2026-04-20",
                 "data_realizada": "",
             },
@@ -6963,9 +6963,9 @@ class ComunicacoesModuleTests(BaseFinanceTestCase):
         payload = self._montar_payload_pauta(reuniao)
         indice_item = list(reuniao.itens_pauta.filter(ativo=True).order_by("ordem", "id")).index(item)
         payload["acao"] = "salvar_pauta"
-        payload[f"itens-{indice_item}-titulo"] = "Titulo alterado indevidamente"
-        payload[f"itens-{indice_item}-descricao"] = "Descricao alterada indevidamente"
-        payload[f"itens-{indice_item}-resposta_o_que"] = "Novo plano de acao"
+        payload[f"itens-{indice_item}-titulo"] = "Título alterado indevidamente"
+        payload[f"itens-{indice_item}-descricao"] = "Descrição alterada indevidamente"
+        payload[f"itens-{indice_item}-resposta_o_que"] = "Novo plano de ação"
         payload["manual-titulo"] = "Novo item manual bloqueado"
 
         response = self.client.post(reverse("reuniao_comunicacao_detail", args=[reuniao.pk]), payload, follow=True)
@@ -6974,8 +6974,8 @@ class ComunicacoesModuleTests(BaseFinanceTestCase):
         item.refresh_from_db()
         reuniao.refresh_from_db()
         self.assertEqual(reuniao.status, "PAUTA_VALIDADA")
-        self.assertNotEqual(item.titulo, "Titulo alterado indevidamente")
-        self.assertNotEqual(item.descricao, "Descricao alterada indevidamente")
+        self.assertNotEqual(item.titulo, "Título alterado indevidamente")
+        self.assertNotEqual(item.descricao, "Descrição alterada indevidamente")
         self.assertEqual(item.resposta_o_que, "Novo plano de ação")
         self.assertFalse(reuniao.itens_pauta.filter(origem_tipo="MANUAL", titulo="Novo item manual bloqueado").exists())
         self.assertContains(response, "Estrutura da pauta bloqueada")
@@ -6985,7 +6985,7 @@ class ComunicacoesModuleTests(BaseFinanceTestCase):
             reverse("reuniao_comunicacao_create"),
             {
                 "tipo_reuniao": "MEDIO_PRAZO",
-                "titulo": "Reuniao exportavel",
+                "titulo": "Reunião exportavel",
                 "data_prevista": "2026-04-20",
                 "data_realizada": "",
             },
@@ -7025,7 +7025,7 @@ class ComunicacoesModuleTests(BaseFinanceTestCase):
             reverse("reuniao_comunicacao_create"),
             {
                 "tipo_reuniao": "MEDIO_PRAZO",
-                "titulo": "Reuniao mensal",
+                "titulo": "Reunião mensal",
                 "data_prevista": "2026-04-20",
                 "data_realizada": "",
             },

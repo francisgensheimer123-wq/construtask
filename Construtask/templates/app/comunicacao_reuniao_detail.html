@@ -1,7 +1,7 @@
 {% extends "app/base.html" %}
 {% load formatters %}
 
-{% block title %}{{ reuniao.numero }} | Comunicacoes{% endblock %}
+{% block title %}{{ reuniao.numero }} | Comunicações{% endblock %}
 
 {% block content %}
 <style>
@@ -41,7 +41,7 @@
 
 <section class="grid-2">
     <div class="panel">
-        <h3>Cabecalho da reuniao</h3>
+        <h3>Cabeçalho da reunião</h3>
         <form method="post">
             {% csrf_token %}
             <input type="hidden" name="acao" value="salvar_reuniao">
@@ -56,7 +56,7 @@
             </div>
             <div class="actions">
                 {% if pode_atualizar %}
-                <button type="submit" class="btn secondary">Salvar cabecalho</button>
+                <button type="submit" class="btn secondary">Salvar cabeçalho</button>
                 {% endif %}
             </div>
         </form>
@@ -65,8 +65,8 @@
                 <tr><th>Obra</th><td>{{ reuniao.obra.codigo }} - {{ reuniao.obra.nome }}</td></tr>
                 <tr><th>Periodicidade</th><td>{{ reuniao.periodicidade_dias }} dia(s)</td></tr>
                 <tr><th>Pauta validada por</th><td>{% if reuniao.pauta_validada_por %}{{ reuniao.pauta_validada_por.username }} em {{ reuniao.pauta_validada_em|date:"d/m/Y H:i" }}{% else %}-{% endif %}</td></tr>
-                <tr><th>Proxima data sugerida</th><td>{{ proxima_data_sugerida|date:"d/m/Y" }}</td></tr>
-                <tr><th>Enviado para aprovacao</th><td>{% if reuniao.enviado_para_aprovacao_por %}{{ reuniao.enviado_para_aprovacao_por.username }} em {{ reuniao.enviado_para_aprovacao_em|date:"d/m/Y H:i" }}{% else %}-{% endif %}</td></tr>
+                <tr><th>Próxima data sugerida</th><td>{{ proxima_data_sugerida|date:"d/m/Y" }}</td></tr>
+                <tr><th>Enviado para aprovação</th><td>{% if reuniao.enviado_para_aprovacao_por %}{{ reuniao.enviado_para_aprovacao_por.username }} em {{ reuniao.enviado_para_aprovacao_em|date:"d/m/Y H:i" }}{% else %}-{% endif %}</td></tr>
                 <tr><th>Aprovado por</th><td>{% if reuniao.aprovado_por %}{{ reuniao.aprovado_por.username }} em {{ reuniao.aprovado_em|date:"d/m/Y H:i" }}{% else %}-{% endif %}</td></tr>
             </tbody>
         </table>
@@ -74,7 +74,7 @@
 
     <div class="panel">
         <h3>Ata compilada</h3>
-        <pre style="white-space:pre-wrap; background:#111827; color:#f9fafb; padding:16px; border-radius:12px; min-height:220px;">{{ reuniao.ata_texto|default:"Ata ainda nao compilada." }}</pre>
+        <pre style="white-space:pre-wrap; background:#111827; color:#f9fafb; padding:16px; border-radius:12px; min-height:220px;">{{ reuniao.ata_texto|default:"Ata ainda não compilada." }}</pre>
         <form method="post" action="{% url 'reuniao_comunicacao_compilar_ata' reuniao.pk %}">
             {% csrf_token %}
             <div class="actions">
@@ -89,12 +89,12 @@
 <section class="panel" style="margin-top:20px;">
     <div class="toolbar">
         <div>
-            <h3>Pauta semi automatica</h3>
+            <h3>Pauta semi automática</h3>
             <p class="muted">
                 {% if estrutura_pauta_bloqueada %}
-                Estrutura da pauta bloqueada apos a validacao. Agora so e possivel atualizar o que sera feito, por quem e quando.
+                Estrutura da pauta bloqueada após a validação. Agora so e possível atualizar o que sera feito, por quem e quando.
                 {% else %}
-                Revise os itens gerados automaticamente, remova os que nao se aplicam e complemente com itens manuais.
+                Revise os itens gerados automaticamente, remova os que não se aplicam e complemente com itens manuais.
                 {% endif %}
             </p>
         </div>
@@ -163,7 +163,7 @@
             {% if not estrutura_pauta_bloqueada %}
             <button type="submit" class="btn" name="acao" value="validar_pauta">Validar pauta</button>
             {% endif %}
-            <button type="submit" class="btn secondary" name="acao" value="enviar_para_aprovacao">Enviar ata para aprovacao</button>
+            <button type="submit" class="btn secondary" name="acao" value="enviar_para_aprovacao">Enviar ata para aprovação</button>
             {% endif %}
         </div>
     </form>
@@ -194,9 +194,9 @@
             <thead>
                 <tr>
                     <th>Data/Hora</th>
-                    <th>Acao</th>
-                    <th>Usuario</th>
-                    <th>Observacao</th>
+                    <th>Ação</th>
+                    <th>Usuário</th>
+                    <th>Observação</th>
                 </tr>
             </thead>
             <tbody>

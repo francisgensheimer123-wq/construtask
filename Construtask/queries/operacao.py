@@ -16,7 +16,7 @@ def construir_alertas_operacionais_tecnicos(*, diagnostico_saas, resumo_jobs, re
                 "severidade": severidade,
                 "titulo": check.get("titulo", chave.title()),
                 "detalhe": check.get("detalhe", ""),
-                "acao": "Revisar configuracao operacional antes do proximo deploy.",
+                "acao": "Revisar configuração operacional antes do proximo deploy.",
             }
         )
 
@@ -27,7 +27,7 @@ def construir_alertas_operacionais_tecnicos(*, diagnostico_saas, resumo_jobs, re
                 "severidade": "critico",
                 "titulo": "Jobs assincronos com falha",
                 "detalhe": f"{resumo_jobs['falharam']} job(s) falharam no contexto atual.",
-                "acao": "Reprocessar os jobs e investigar o erro raiz antes da proxima rotina.",
+                "acao": "Reprocessar os jobs e investigar o erro raiz antes da próxima rotina.",
             }
         )
     if resumo_jobs.get("pendentes", 0) >= 10:

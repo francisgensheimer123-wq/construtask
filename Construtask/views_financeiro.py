@@ -43,7 +43,7 @@ class FechamentoMensalView(TemplateView):
 
         obra = resolver_obra_financeira(request=request, obra_id=request.POST.get("obra"))
         if not obra:
-            messages.error(request, "Voce nao tem acesso a obra selecionada para fechamento.")
+            messages.error(request, "Você não tem acesso a obra selecionada para fechamento.")
             return redirect(reverse_lazy("fechamento_mensal"))
         ano = _parse_int_br(request.POST.get("ano"))
         mes = _parse_int_br(request.POST.get("mes"))
@@ -84,7 +84,7 @@ def fechamento_mensal_pdf_view(request):
     dados = dados_fechamento_mensal_request(request)
     resumo = {
         "Obra": f'{dados["obra_atual"].codigo} - {dados["obra_atual"].nome}' if dados["obra_atual"] else "-",
-        "Periodo": f'{dados["mes"]:02d}/{dados["ano"]}',
+        "Período": f'{dados["mes"]:02d}/{dados["ano"]}',
         "Comprometido": money_br(dados["resumo"]["valor_comprometido"]),
         "Medido": money_br(dados["resumo"]["valor_medido"]),
         "Notas": money_br(dados["resumo"]["valor_notas"]),
@@ -130,20 +130,20 @@ def projecao_financeira_export_view(request):
         identificador="Horizonte financeiro",
         acao="EXPORT",
         finalidade="Exportacao de previsao financeira da obra",
-        detalhes="Exportacao Excel da projecao financeira.",
+        detalhes="Exportacao Excel da projeção financeira.",
     )
     linhas = [
         {"Mes": item["label"], "Executado": item["executado"], "Saidas": item["saida"], "Saldo": item["saldo"]}
         for item in dados["series"]
     ]
-    return _exportar_excel_response("projecao_financeira.xlsx", "Projecao Financeira", linhas)
+    return _exportar_excel_response("projecao_financeira.xlsx", "Projeção Financeira", linhas)
 
 
 @login_required
 def projecao_financeira_pdf_view(request):
     dados = dados_projecao_financeira_request(request)
     resumo = {
-        "Total Orcado": money_br(dados["total_orcado"]),
+        "Total Orçado": money_br(dados["total_orcado"]),
         "Total Executado": money_br(dados["total_executado"]),
         "Total Saidas": money_br(dados["total_saidas"]),
         "Saldo no Horizonte": money_br(dados["total_saldo"]),
@@ -154,11 +154,11 @@ def projecao_financeira_pdf_view(request):
     ]
     return _pdf_relatorio_probatorio_response(
         "projecao_financeira.pdf",
-        "Projecao Financeira",
+        "Projeção Financeira",
         resumo,
         [],
         extras,
-        extras_titulo="Visao Mensal",
+        extras_titulo="Visão Mensal",
         extras_colunas=[("Mes", 80), ("Executado", 135), ("Saidas", 135), ("Saldo", 145)],
         incluir_historico=False,
     )

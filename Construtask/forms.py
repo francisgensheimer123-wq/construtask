@@ -213,13 +213,13 @@ class ParametroComunicacaoEmpresaForm(forms.ModelForm):
         ]
         labels = {
             "frequencia_curto_prazo_dias": "Curto prazo (dias)",
-            "frequencia_medio_prazo_dias": "Medio prazo (dias)",
+            "frequencia_medio_prazo_dias": "Médio prazo (dias)",
             "frequencia_longo_prazo_dias": "Longo prazo (dias)",
         }
         help_texts = {
-            "frequencia_curto_prazo_dias": "Periodicidade padrao das reunioes de curto prazo.",
-            "frequencia_medio_prazo_dias": "Periodicidade padrao das reunioes de medio prazo.",
-            "frequencia_longo_prazo_dias": "Periodicidade padrao das reunioes de longo prazo.",
+            "frequencia_curto_prazo_dias": "Periodicidade padrão das reunioes de curto prazo.",
+            "frequencia_medio_prazo_dias": "Periodicidade padrão das reuniões de médio prazo.",
+            "frequencia_longo_prazo_dias": "Periodicidade padrão das reunioes de longo prazo.",
         }
         widgets = {
             "frequencia_curto_prazo_dias": forms.NumberInput(attrs={"min": "1", "class": "form-control"}),
@@ -504,7 +504,7 @@ class AditivoContratoItemBaseFormSet(BaseInlineFormSet):
                 continue
             valor = form.cleaned_data.get("valor")
             if tipo == "PRAZO":
-                raise forms.ValidationError("Aditivo de prazo nao possui itens.")
+                raise forms.ValidationError("Aditivo de prazo não possui itens.")
             if valor in (None, ""):
                 raise forms.ValidationError("Informe valor para cada centro de custo informado.")
             if valor <= 0:
@@ -660,7 +660,7 @@ class MedicaoItemBaseFormSet(BaseInlineFormSet):
             # Trata a "linha extra" vazia: se não há centro de custo informado,
             # não deve ser salva.
             if not centro:
-                # Forca delecao apenas na "linha extra" para nao tentar salvar incompleto.
+                # Força deleção apenas na "linha extra" para não tentar salvar incompleto.
                 if not getattr(form.instance, "pk", None):
                     form.cleaned_data["DELETE"] = True
                 continue
@@ -694,8 +694,8 @@ class MedicaoItemBaseFormSet(BaseInlineFormSet):
             saldo_disponivel = arredondar_moeda(contrato.valor_contratado - total_ja_medido)
             if total_novos_itens > saldo_disponivel:
                 raise forms.ValidationError(
-                    f"O total dos itens ({total_novos_itens}) excede o saldo disponivel do contrato. "
-                    f"Saldo disponivel: {saldo_disponivel}"
+                    f"O total dos itens ({total_novos_itens}) excede o saldo disponível do contrato. "
+                    f"Saldo disponível: {saldo_disponivel}"
                 )
 
 
@@ -932,7 +932,7 @@ class DocumentoRevisaoForm(NormalizeTextFieldsMixin, forms.ModelForm):
         widgets = {
             'arquivo': forms.FileInput(attrs={'accept': '.pdf,.doc,.docx'}),
             'versao': forms.NumberInput(attrs={'min': '1', 'step': '1'}),
-            'parecer': forms.Textarea(attrs={'rows': '3', 'placeholder': 'Observações sobre esta revisão'}),
+            'parecer': forms.Textarea(attrs={'rows': '3', 'placeholder': 'Observações sobre está revisão'}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -1012,7 +1012,7 @@ class NaoConformidadeForm(NormalizeTextFieldsMixin, forms.ModelForm):
         plano_contas = cleaned_data.get("plano_contas")
         status = cleaned_data.get("status")
         if self.obra_contexto and obra != self.obra_contexto:
-            self.add_error("obra", "A nao conformidade deve pertencer a obra selecionada no contexto.")
+            self.add_error("obra", "A não conformidade deve pertencer a obra selecionada no contexto.")
         if plano_contas and obra and plano_contas.obra_id != obra.id:
             self.add_error("plano_contas", "O centro de custo deve pertencer a obra selecionada.")
         if obra_em_somente_leitura(obra):
@@ -1021,14 +1021,14 @@ class NaoConformidadeForm(NormalizeTextFieldsMixin, forms.ModelForm):
         evidencia_encerramento_anexo = cleaned_data.get("evidencia_encerramento_anexo") or getattr(self.instance, "evidencia_encerramento_anexo", None)
         if status in {"EM_VERIFICACAO", "ENCERRADA"}:
             if not (cleaned_data.get("evidencia_tratamento") or "").strip():
-                self.add_error("evidencia_tratamento", "Informe a evidencia de tratamento antes de enviar para verificacao.")
+                self.add_error("evidencia_tratamento", "Informe a evidência de tratamento antes de enviar para verificacao.")
             if not evidencia_tratamento_anexo:
-                self.add_error("evidencia_tratamento_anexo", "Anexe a comprovacao da evidencia de tratamento.")
+                self.add_error("evidencia_tratamento_anexo", "Anexe a comprovação da evidência de tratamento.")
         if status == "ENCERRADA":
             if not (cleaned_data.get("evidencia_encerramento") or "").strip():
-                self.add_error("evidencia_encerramento", "Informe a evidencia de encerramento antes de encerrar a NC.")
+                self.add_error("evidencia_encerramento", "Informe a evidência de encerramento antes de encerrar a NC.")
             if not evidencia_encerramento_anexo:
-                self.add_error("evidencia_encerramento_anexo", "Anexe a comprovacao da evidencia de encerramento.")
+                self.add_error("evidencia_encerramento_anexo", "Anexe a comprovação da evidência de encerramento.")
         return cleaned_data
 
 
@@ -1128,12 +1128,12 @@ class SolicitacaoCompraItemBaseFormSet(BaseInlineFormSet):
             if not centro:
                 raise forms.ValidationError("Selecione o centro de custo em cada item informado.")
             if not descricao:
-                raise forms.ValidationError("Informe a descricao tecnica em cada item da solicitacao.")
+                raise forms.ValidationError("Informe a descrição técnica em cada item da solicitação.")
             if quantidade in (None, "") or quantidade <= 0:
-                raise forms.ValidationError("Informe quantidade maior que zero em cada item da solicitacao.")
+                raise forms.ValidationError("Informe quantidade maior que zero em cada item da solicitação.")
             itens_validos += 1
         if not itens_validos:
-            raise forms.ValidationError("Informe pelo menos um item na solicitacao de compra.")
+            raise forms.ValidationError("Informe pelo menos um item na solicitação de compra.")
 
 
 SolicitacaoCompraItemFormSet = inlineformset_factory(
@@ -1227,9 +1227,9 @@ class CotacaoItemBaseFormSet(BaseFormSet):
     def clean(self):
         super().clean()
         if not self.solicitacao_itens:
-            raise forms.ValidationError("Selecione uma solicitacao com itens para registrar a cotacao.")
+            raise forms.ValidationError("Selecione uma solicitação com itens para registrar a cotação.")
         if len(self.forms) != len(self.solicitacao_itens):
-            raise forms.ValidationError("A quantidade de itens da cotacao nao corresponde a solicitacao selecionada.")
+            raise forms.ValidationError("A quantidade de itens da cotação não corresponde a solicitação selecionada.")
         ids_esperados = {item.pk for item in self.solicitacao_itens}
         ids_recebidos = set()
         for form in self.forms:
@@ -1238,12 +1238,12 @@ class CotacaoItemBaseFormSet(BaseFormSet):
             item_id = form.cleaned_data.get("item_solicitacao_id")
             valor_unitario = form.cleaned_data.get("valor_unitario")
             if item_id in ids_recebidos:
-                raise forms.ValidationError("Existe item duplicado na cotacao.")
+                raise forms.ValidationError("Existe item duplicado na cotação.")
             ids_recebidos.add(item_id)
             if valor_unitario in (None, ""):
-                raise forms.ValidationError("Informe o valor unitario para todos os itens da cotacao.")
+                raise forms.ValidationError("Informe o valor unitario para todos os itens da cotação.")
         if ids_recebidos != ids_esperados:
-            raise forms.ValidationError("Todos os itens da solicitacao precisam ser cotados.")
+            raise forms.ValidationError("Todos os itens da solicitação precisam ser cotados.")
 
 
 CotacaoItemFormSet = formset_factory(CotacaoItemForm, formset=CotacaoItemBaseFormSet, extra=0)
@@ -1352,13 +1352,13 @@ class CotacaoFornecedorComparativoBaseFormSet(BaseFormSet):
                     houve_erro_coluna = True
             fornecedores_preenchidos.append(coluna)
         if houve_erro_coluna:
-            raise forms.ValidationError("Revise as colunas de fornecedores preenchidas antes de salvar a cotacao.")
+            raise forms.ValidationError("Revise as colunas de fornecedores preenchidas antes de salvar a cotação.")
         if len(fornecedores) < 2:
             raise forms.ValidationError("Informe pelo menos 2 fornecedores para realizar a comparacao.")
         if len(set(fornecedores)) != len(fornecedores):
-            raise forms.ValidationError("Nao repita o mesmo fornecedor na comparacao.")
+            raise forms.ValidationError("Não repita o mesmo fornecedor na comparacao.")
         if escolhidos != 1:
-            raise forms.ValidationError("Selecione exatamente 1 fornecedor vencedor na cotacao.")
+            raise forms.ValidationError("Selecione exatamente 1 fornecedor vencedor na cotação.")
         self._fornecedores_preenchidos = fornecedores_preenchidos
 
     def get_fornecedores_preenchidos(self):

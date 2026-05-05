@@ -12,7 +12,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         if not options["apply"]:
             resumo = obter_resumo_rotinas_lgpd()
-            self.stdout.write(self.style.WARNING("Modo simulacao: nenhuma alteracao foi aplicada."))
+            self.stdout.write(self.style.WARNING("Modo simulação: nenhuma alteração foi aplicada."))
             self.stdout.write(f"Fornecedores inativos elegiveis: {resumo['fornecedores_inativos']}")
             self.stdout.write(f"Usuarios inativos elegiveis: {resumo['usuarios_inativos']}")
             self.stdout.write("Use --apply para executar as rotinas.")

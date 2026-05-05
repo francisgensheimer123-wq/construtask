@@ -61,10 +61,10 @@ def _registrar_historico(acao, objeto, descricao, usuario=None):
 
 def _enviar_documento_para_aprovacao(request, objeto, *, status_em_aprovacao, descricao):
     if not can_submit_for_approval(request.user):
-        messages.error(request, "Seu usuario nao possui funcao operacional para enviar este registro para aprovacao.")
+        messages.error(request, "Seu usuário não possui função operacional para enviar este registro para aprovação.")
         return False
     if objeto.status == status_em_aprovacao:
-        messages.info(request, "Este registro ja esta em aprovacao.")
+        messages.info(request, "Este registro ja está em aprovação.")
         return False
 
     parecer = (request.POST.get("parecer_aprovacao") or "").strip()
@@ -77,13 +77,13 @@ def _enviar_documento_para_aprovacao(request, objeto, *, status_em_aprovacao, de
     objeto.save()
     descricao_historico = descricao if not parecer else f"{descricao} Parecer: {parecer}"
     _registrar_historico("APROVACAO", objeto, descricao_historico, request.user)
-    messages.success(request, "Registro enviado para aprovacao.")
+    messages.success(request, "Registro enviado para aprovação.")
     return True
 
 
 def _aprovar_documento(request, objeto, *, valor, status_aprovado, descricao):
     if not can_approve_value(request.user, valor):
-        messages.error(request, "Sua funcao nao possui alcada suficiente para aprovar este valor.")
+        messages.error(request, "Sua função não possui alçada suficiente para aprovar este valor.")
         return False
     parecer = (request.POST.get("parecer_aprovacao") or "").strip()
     before = AuditService.instance_to_dict(objeto)
@@ -113,7 +113,7 @@ def _retornar_documento_para_ajuste(
     descricao,
 ):
     if not can_approve_value(request.user, valor):
-        messages.error(request, "Sua funcao nao possui alcada suficiente para devolver este valor para ajuste.")
+        messages.error(request, "Sua função não possui alçada suficiente para devolver este valor para ajuste.")
         return False
     parecer = (request.POST.get("parecer_aprovacao") or "").strip()
     if not parecer:

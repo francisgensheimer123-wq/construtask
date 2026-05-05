@@ -161,7 +161,7 @@ class DocumentoCreateView(LoginRequiredMixin, CreateView):
         empresa = _get_empresa_do_request(self.request)
         obra_contexto = _get_obra_contexto(self.request)
         if not empresa:
-            messages.error(self.request, "Usuario nao possui empresa vinculada.")
+            messages.error(self.request, "Usuário não possui empresa vinculada.")
             return redirect("documento_list")
         if not obra_contexto:
             form.add_error("obra", "Selecione uma obra no menu antes de criar documentos.")
@@ -267,7 +267,7 @@ class DocumentoDetailView(LoginRequiredMixin, DetailView):
             messages.error(request, descricao_restricao_obra(documento.obra))
             return redirect("documento_detail", pk=documento.pk)
         if not documento.pode_revisar():
-            messages.error(request, "Este documento nao pode receber novas revisoes neste estagio.")
+            messages.error(request, "Este documento não pode receber novas revisoes neste estagio.")
             return redirect("documento_detail", pk=documento.pk)
 
         form = DocumentoRevisaoForm(request.POST, request.FILES)
@@ -295,7 +295,7 @@ class DocumentoDetailView(LoginRequiredMixin, DetailView):
             "UPLOAD",
             depois={"revisao": _snapshot_revisao(revisao), **_snapshot_documento(documento)},
         )
-        messages.success(request, f"Revisao {revisao.versao} enviada com sucesso.")
+        messages.success(request, f"Revisão {revisao.versao} enviada com sucesso.")
         return redirect("documento_detail", pk=documento.pk)
 
     def _workflow_action(self, request):
@@ -309,7 +309,7 @@ class DocumentoDetailView(LoginRequiredMixin, DetailView):
         parecer = (request.POST.get("parecer") or "").strip()
 
         if not revisao:
-            messages.error(request, "Crie uma revisao antes de executar o workflow do documento.")
+            messages.error(request, "Crie uma revisão antes de executar o workflow do documento.")
             return redirect("documento_detail", pk=documento.pk)
 
         antes_documento = _snapshot_documento(documento)
@@ -317,10 +317,10 @@ class DocumentoDetailView(LoginRequiredMixin, DetailView):
 
         if acao == "ENVIAR_REVISAO":
             if not can_submit_for_approval(request.user):
-                messages.error(request, "Seu perfil nao pode submeter documentos para validacao.")
+                messages.error(request, "Seu perfil não pode submeter documentos para validação.")
                 return redirect("documento_detail", pk=documento.pk)
             if documento.status != "RASCUNHO" or revisao.status != "ELABORACAO":
-                messages.error(request, "A revisao precisa estar em elaboracao para ser enviada.")
+                messages.error(request, "A revisão precisa estar em elaboração para ser enviada.")
                 return redirect("documento_detail", pk=documento.pk)
 
             revisao.status = "REVISAO"
@@ -338,15 +338,15 @@ class DocumentoDetailView(LoginRequiredMixin, DetailView):
                 antes={"documento": antes_documento, "revisao": antes_revisao},
                 depois={"documento": _snapshot_documento(documento), "revisao": _snapshot_revisao(revisao)},
             )
-            messages.success(request, "Documento enviado para validacao.")
+            messages.success(request, "Documento enviado para validação.")
             return redirect("documento_detail", pk=documento.pk)
 
         if acao == "APROVAR":
             if not can_approve_document(request.user):
-                messages.error(request, "Seu perfil nao pode aprovar documentos.")
+                messages.error(request, "Seu perfil não pode aprovar documentos.")
                 return redirect("documento_detail", pk=documento.pk)
             if documento.status != "EM_REVISAO" or revisao.status != "REVISAO":
-                messages.error(request, "A revisao precisa estar em validacao para ser aprovada.")
+                messages.error(request, "A revisão precisa estar em validação para ser aprovada.")
                 return redirect("documento_detail", pk=documento.pk)
 
             revisao.status = "APROVADO"
@@ -370,10 +370,10 @@ class DocumentoDetailView(LoginRequiredMixin, DetailView):
 
         if acao in {"REJEITAR", "DEVOLVER_AJUSTE"}:
             if not can_approve_document(request.user):
-                messages.error(request, "Seu perfil nao pode devolver documentos para ajuste.")
+                messages.error(request, "Seu perfil não pode devolver documentos para ajuste.")
                 return redirect("documento_detail", pk=documento.pk)
             if documento.status != "EM_REVISAO" or revisao.status != "REVISAO":
-                messages.error(request, "Somente revisoes em validacao podem voltar para ajuste.")
+                messages.error(request, "Somente revisoes em validação podem voltar para ajuste.")
                 return redirect("documento_detail", pk=documento.pk)
             if not parecer:
                 messages.error(request, "Informe um parecer para devolver o documento para ajuste.")
@@ -398,10 +398,10 @@ class DocumentoDetailView(LoginRequiredMixin, DetailView):
 
         if acao == "TORNAR_OBSOLETO":
             if not can_approve_document(request.user):
-                messages.error(request, "Seu perfil nao pode tornar documentos obsoletos.")
+                messages.error(request, "Seu perfil não pode tornar documentos obsoletos.")
                 return redirect("documento_detail", pk=documento.pk)
             if not documento.pode_tornar_obsoleto():
-                messages.error(request, "Este documento nao pode ser tornado obsoleto neste estagio.")
+                messages.error(request, "Este documento não pode ser tornado obsoleto neste estagio.")
                 return redirect("documento_detail", pk=documento.pk)
 
             documento.status = "OBSOLETO"
@@ -416,7 +416,7 @@ class DocumentoDetailView(LoginRequiredMixin, DetailView):
             messages.warning(request, "Documento marcado como obsoleto.")
             return redirect("documento_detail", pk=documento.pk)
 
-        messages.error(request, "Acao de workflow invalida.")
+        messages.error(request, "Ação de workflow inválida.")
         return redirect("documento_detail", pk=documento.pk)
 
 
@@ -474,9 +474,9 @@ def documento_delete_view(request, pk):
     documento = get_object_or_404(Documento, pk=pk)
 
     if empresa and documento.empresa_id != empresa.id:
-        raise Http404("Documento nao encontrado.")
+        raise Http404("Documento não encontrado.")
     if obra_contexto and documento.obra_id != obra_contexto.id:
-        raise Http404("Documento nao encontrado.")
+        raise Http404("Documento não encontrado.")
     if obra_em_somente_leitura(documento.obra):
         messages.error(request, descricao_restricao_obra(documento.obra))
         return redirect("documento_detail", pk=documento.pk)
@@ -497,11 +497,11 @@ def documento_download_view(request, pk, revisao_pk=None):
     documento = get_object_or_404(Documento, pk=pk)
 
     if empresa and documento.empresa_id != empresa.id:
-        raise Http404("Documento nao encontrado.")
+        raise Http404("Documento não encontrado.")
     if obra_contexto and documento.obra_id != obra_contexto.id:
-        raise Http404("Documento nao encontrado.")
+        raise Http404("Documento não encontrado.")
     if not _pode_baixar_documento(request.user, documento):
-        raise Http404("Documento nao encontrado.")
+        raise Http404("Documento não encontrado.")
 
     if revisao_pk:
         revisao = get_object_or_404(DocumentoRevisao, pk=revisao_pk, documento=documento)
@@ -511,7 +511,7 @@ def documento_download_view(request, pk, revisao_pk=None):
         if revisao_aprovada:
             arquivo = revisao_aprovada.arquivo_aprovado or revisao_aprovada.arquivo
         else:
-            raise Http404("Nenhum arquivo disponivel para download.")
+            raise Http404("Nenhum arquivo disponível para download.")
 
     response = FileResponse(arquivo)
     response["Content-Disposition"] = f'attachment; filename="{arquivo.name}"'

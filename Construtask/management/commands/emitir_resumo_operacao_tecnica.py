@@ -8,7 +8,7 @@ from Construtask.application.operacao import contexto_operacao_request
 
 
 class Command(BaseCommand):
-    help = "Emite um resumo tecnico consolidado da operacao para acompanhamento."
+    help = "Emite um resumo técnico consolidado da operação para acompanhamento."
 
     def add_arguments(self, parser):
         parser.add_argument("--usuario", help="Username para contextualizar o resumo.")
@@ -17,11 +17,11 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         username = options.get("usuario")
         if not username:
-            raise CommandError("Informe --usuario para montar o contexto tecnico da operacao.")
+            raise CommandError("Informe --usuário para montar o contexto técnico da operação.")
 
         user = get_user_model().objects.filter(username=username).first()
         if not user:
-            raise CommandError(f"Usuario '{username}' nao encontrado.")
+            raise CommandError(f"Usuário '{username}' não encontrado.")
 
         request = RequestFactory().get("/operacao-tecnica/")
         request.user = user
@@ -39,7 +39,7 @@ class Command(BaseCommand):
             self.stdout.write(json.dumps(payload, ensure_ascii=True, indent=2, default=str))
             return
 
-        self.stdout.write(self.style.SUCCESS("Resumo tecnico da operacao"))
+        self.stdout.write(self.style.SUCCESS("Resumo técnico da operação"))
         self.stdout.write(f"Status SaaS: {payload['saas']}")
         self.stdout.write(
             f"Jobs pendentes: {payload['resumo_jobs']['pendentes']} | "
