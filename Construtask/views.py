@@ -1097,7 +1097,7 @@ def _dados_relatorio_aprovacao_compromisso(compromisso):
             }
         )
     linhas_pdf = [f"{campo}: {valor}" for campo, valor in resumo.items()] + ["", "Hist\u00f3rico recente:"] + [
-        f"- {linha['Data']} | {linha['Acao']} | {linha['Usuario']} | {linha['Descricao']}" for linha in historico
+        f"- {linha['Data']} | {linha['Ação']} | {linha['Usuário']} | {linha['Descrição']}" for linha in historico
     ]
     return evidencia_id, resumo, historico, extras, linhas_pdf, secoes_extras
 
@@ -1133,7 +1133,7 @@ def _dados_relatorio_aprovacao_medicao(medicao):
         for item in medicao.itens.all()
     ]
     linhas_pdf = [f"{campo}: {valor}" for campo, valor in resumo.items()] + ["", "Histórico recente:"] + [
-        f"- {linha['Data']} | {linha['Acao']} | {linha['Usuario']} | {linha['Descricao']}" for linha in historico
+        f"- {linha['Data']} | {linha['Ação']} | {linha['Usuário']} | {linha['Descrição']}" for linha in historico
     ]
     return evidencia_id, resumo, historico, extras, linhas_pdf
 
@@ -1168,7 +1168,7 @@ def _dados_relatorio_aprovacao_baseline(baseline):
         for item in baseline.itens.filter(level__lte=2)[:200]
     ]
     linhas_pdf = [f"{campo}: {valor}" for campo, valor in resumo.items()] + ["", "Resumo de itens snapshot:"] + [
-        f"- {item['Codigo']} | {item['Descricao']} | {item['Valor Consolidado']}" for item in extras[:20]
+        f"- {item['Código']} | {item['Descrição']} | {item['Valor Consolidado']}" for item in extras[:20]
     ]
     return evidencia_id, resumo, historico, extras, linhas_pdf
 
