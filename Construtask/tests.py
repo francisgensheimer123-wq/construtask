@@ -102,6 +102,7 @@ from .services_lgpd import (
     excluir_logicamente_fornecedor,
 )
 from .services_alertas import (
+    CODIGO_ALERTA_COMPROMISSO_ACIMA_ORCADO,
     CODIGO_ALERTA_CONTRATO_SEM_MEDICAO,
     CODIGO_ALERTA_MEDICAO_SEM_NOTA,
     CODIGO_ALERTA_NC_SEM_EVOLUCAO,
@@ -109,6 +110,7 @@ from .services_alertas import (
     CODIGO_ALERTA_PLANEJAMENTO_SUPRIMENTOS,
     CODIGO_ALERTA_RISCO_VENCIDO,
     catalogo_alertas_empresa,
+    sincronizar_alertas_compromissos_acima_orcado,
     sincronizar_alertas_contrato_sem_medicao,
     sincronizar_alertas_medicao_sem_nota,
     sincronizar_alertas_nc_sem_evolucao,
@@ -3608,6 +3610,53 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
                 codigo_regra=CODIGO_ALERTA_NOTA_SEM_RATEIO,
                 entidade_id=nota.pk,
                 status="ABERTO",
+            ).exists()
+        )
+
+    def test_regra_compromisso_acima_orcado_inclui_descricao_eap_e_nao_reabre_encerrado(self):
+        compromisso = Compromisso.objects.create(
+            tipo="CONTRATO",
+            centro_custo=self.analitico,
+            descricao="Contrato acima do orçamento",
+            fornecedor="Fornecedor Orçamento",
+            cnpj="12.345.678/0001-90",
+            responsavel="Maria",
+            telefone="11999999999",
+            data_assinatura=timezone.localdate(),
+            status="APROVADO",
+        )
+        item = CompromissoItem.objects.create(
+            compromisso=compromisso,
+            centro_custo=self.analitico,
+            descricao_tecnica="Serviço acima do orçamento",
+            quantidade=Decimal("1.00"),
+            valor_unitario=Decimal("2000.00"),
+        )
+
+        sincronizar_alertas_compromissos_acima_orcado(self.obra)
+
+        alerta = AlertaOperacional.objects.get(
+            obra=self.obra,
+            codigo_regra=CODIGO_ALERTA_COMPROMISSO_ACIMA_ORCADO,
+            referencia=f"{compromisso.pk}:{item.pk}",
+        )
+        self.assertIn(self.analitico.codigo, alerta.descricao)
+        self.assertIn(self.analitico.descricao, alerta.descricao)
+
+        AlertaOperacional.objects.filter(pk=alerta.pk).update(
+            status="ENCERRADO",
+            encerrado_em=timezone.now(),
+        )
+
+        alertas = sincronizar_alertas_compromissos_acima_orcado(self.obra)
+
+        alerta.refresh_from_db()
+        self.assertEqual(alerta.status, "ENCERRADO")
+        self.assertEqual(alertas, [])
+        self.assertFalse(
+            AlertaOperacionalHistorico.objects.filter(
+                alerta=alerta,
+                acao="REABERTURA",
             ).exists()
         )
 

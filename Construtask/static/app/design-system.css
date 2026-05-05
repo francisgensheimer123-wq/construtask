@@ -102,6 +102,11 @@ header {
     font-size: 0.86rem;
 }
 
+.nav-context .btn,
+.nav-context .btn.secondary {
+    min-height: 34px;
+}
+
 .nav-link,
 .nav-link.group,
 .nav-link.utility,
@@ -239,8 +244,8 @@ a.btn-primary {
     font-weight: 800;
     gap: 8px;
     justify-content: center;
-    min-height: 38px;
-    padding: 9px 15px;
+    min-height: 56px;
+    padding: 0 18px;
     text-decoration: none;
     transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease, filter 0.16s ease, transform 0.16s ease;
 }

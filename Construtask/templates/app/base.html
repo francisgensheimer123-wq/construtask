@@ -210,8 +210,9 @@
             gap: 8px;
             background: linear-gradient(180deg, rgba(61,61,61,.96) 0%, rgba(33,33,33,.98) 100%);
             color: var(--white);
-            padding: 10px 16px;
-            border-radius: 999px;
+            min-height: 56px;
+            padding: 0 18px;
+            border-radius: 9px;
             text-decoration: none;
             border: 1px solid rgba(192,57,43,.46);
             cursor: pointer;
@@ -222,6 +223,10 @@
             background: linear-gradient(180deg, rgba(74,74,74,.96) 0%, rgba(44,44,44,.98) 100%);
             color: var(--white);
             border-color: rgba(255,255,255,.14);
+        }
+        .nav-context .btn,
+        .nav-context .btn.secondary {
+            min-height: 34px;
         }
         .btn:hover { filter: brightness(1.08); border-color: rgba(255,255,255,.22); }
         table { width: 100%; border-collapse: collapse; background: transparent; border-radius: 14px; overflow: hidden; table-layout: auto; color: var(--white); }
@@ -353,7 +358,7 @@
         .bg-info { background: #3498db !important; color: var(--white) !important; }
         .btn-primary { background: var(--red-dark); color: var(--white); border: 0; }
         .btn-secondary { background: var(--graphite); color: var(--white); border: 0; }
-        .btn-sm { padding: 7px 10px; font-size: 0.86rem; border-radius: 9px; }
+        .btn-sm { min-height: 31px; padding: 6px 10px; font-size: 0.86rem; border-radius: 9px; }
         .btn-outline-secondary,
         .btn-outline-primary,
         .btn-outline-danger,

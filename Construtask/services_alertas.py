@@ -66,6 +66,9 @@ TITULO_ALERTA_DESVIO_COMBINADO = "Desvio simultâneo de prazo e custo na ativida
 
 
 SEVERIDADE_ORDEM = {"CRITICA": 4, "ALTA": 3, "MEDIA": 2, "BAIXA": 1}
+REGRAS_SEM_REABERTURA_AUTOMATICA = {
+    CODIGO_ALERTA_COMPROMISSO_ACIMA_ORCADO,
+}
 
 
 def _formatar_parametro_alerta(valor, tipo):
@@ -413,6 +416,19 @@ def _sync_registros_alerta(obra, codigo_regra, referencias_ativas, registros):
                 contexto=payload_aplicado,
             )
         else:
+            if status_anterior == "ENCERRADO" and codigo_regra in REGRAS_SEM_REABERTURA_AUTOMATICA:
+                _registrar_execucao_regra(
+                    alerta,
+                    obra=obra,
+                    codigo_regra=codigo_regra,
+                    referencia=referencia_str,
+                    resultado="ATUALIZADO",
+                    contexto={
+                        **payload_aplicado,
+                        "motivo": "regra_encerrada_sem_reabertura_automatica",
+                    },
+                )
+                continue
             if status_anterior == "JUSTIFICADO" and payload_aplicado.get("status") == "ABERTO":
                 payload_aplicado["status"] = "JUSTIFICADO"
             campos_alterados = []
@@ -1069,7 +1085,7 @@ def sincronizar_alertas_compromissos_acima_orcado(obra):
                     referencia = f"{compromisso.pk}:{item.pk}"
                     registros[referencia] = {
                         "titulo": TITULO_ALERTA_COMPROMISSO_ACIMA_ORCADO,
-                        "descricao": f"O item {item.centro_custo.codigo} do compromisso {compromisso.numero} supera o valor orçado da EAP vinculada.",
+                        "descricao": f"O item {item.centro_custo.codigo} - {item.centro_custo.descricao} do compromisso {compromisso.numero} supera o valor orçado da EAP vinculada.",
                         "severidade": "CRITICA",
                         "status": "ABERTO",
                         "entidade_tipo": "CompromissoItem",
