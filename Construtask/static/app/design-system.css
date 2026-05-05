@@ -244,7 +244,7 @@ a.btn-primary {
     font-weight: 800;
     gap: 8px;
     justify-content: center;
-    min-height: 45px;
+    min-height: 32px;
     padding: 0 12px;
     text-decoration: none;
     transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease, filter 0.16s ease, transform 0.16s ease;
@@ -306,8 +306,8 @@ a.btn-primary {
 }
 
 .btn-sm {
-    min-height: 25px;
-    padding: 4px 7px;
+    min-height: 18px;
+    padding: 6px 10px;
     font-size: 0.86rem;
 }
 
