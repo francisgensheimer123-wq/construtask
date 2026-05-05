@@ -2300,11 +2300,23 @@ class AppViewsTests(BaseFinanceTestCase):
         self.assertContains(response, "Relatórios de Acompanhamento de Obra")
         self.assertContains(response, "Relatório 01 - Gerencial")
         self.assertContains(response, "Relatório 03 - Análise de Plano de Contas")
-        self.assertContains(response, "Relatório 04 - Evidências de Aprovação")
+        self.assertContains(response, "Painel Operacional")
+        self.assertContains(response, "Planejamento")
+        self.assertContains(response, "Qualidade")
+        self.assertContains(response, "Aquisições")
+        self.assertContains(response, "Comunicações")
+        self.assertContains(response, "Financeiro")
+        self.assertContains(response, "Relatórios Executivos")
+        self.assertNotContains(response, "Observabilidade")
+        self.assertNotContains(response, "Relatório 04 - Evidências de Aprovação")
         self.assertContains(response, self.obra.nome)
-        self.assertContains(response, self.contrato.numero)
-        self.assertContains(response, medicao.numero_da_medicao)
-        self.assertContains(response, "Baseline dossiê obra")
+        self.assertContains(response, "Contratos e pedidos")
+        self.assertContains(response, "Medições")
+        self.assertContains(response, "Itens de orçamento")
+
+        pdf_response = self.client.get(reverse("dossie_obra_pdf"))
+        self.assertEqual(pdf_response.status_code, 200)
+        self.assertEqual(pdf_response["Content-Type"], "application/pdf")
 
     def test_endpoint_de_notas_do_plano_contas(self):
         nota = NotaFiscal.objects.create(

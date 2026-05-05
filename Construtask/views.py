@@ -36,8 +36,10 @@ from .forms import (
     obter_centros_da_origem_nota,
     obter_centros_do_contrato,
 )
-from .models import AditivoContrato, AlertaOperacional, PlanoEmpresa, AnexoOperacional, Compromisso, CompromissoItem, FechamentoMensal, HistoricoOperacional, Medicao, MedicaoItem, NotaFiscal, NotaFiscalCentroCusto, Obra, OrcamentoBaseline, OrcamentoBaselineItem, PlanoContas
-from .models_aquisicoes import Cotacao, OrdemCompra, SolicitacaoCompra
+from .models import AditivoContrato, AlertaOperacional, Documento, PlanoEmpresa, AnexoOperacional, Compromisso, CompromissoItem, FechamentoMensal, HistoricoOperacional, Medicao, MedicaoItem, NotaFiscal, NotaFiscalCentroCusto, Obra, OrcamentoBaseline, OrcamentoBaselineItem, PlanoContas
+from .models_aquisicoes import Cotacao, Fornecedor, OrdemCompra, SolicitacaoCompra
+from .models_comunicacoes import ItemPautaReuniao, ReuniaoComunicacao
+from .models_planejamento import MapaCorrespondencia, PlanoFisico, PlanoFisicoItem
 from .models_qualidade import NaoConformidade
 from .models_risco import Risco
 from .permissions import (
@@ -1260,6 +1262,226 @@ def _listar_evidencias_obra(request, obra_contexto, *, tipo=""):
     return evidencias
 
 
+def _status_count_map(queryset):
+    return {
+        item["status"]: item["total"]
+        for item in queryset.values("status").annotate(total=Count("id"))
+    }
+
+
+def _status_metricas(queryset, choices):
+    contagens = _status_count_map(queryset)
+    return [
+        {
+            "label": label,
+            "valor": contagens.get(valor, 0),
+        }
+        for valor, label in choices
+    ]
+
+
+def _formatar_decimal_dossie(valor):
+    if valor in (None, ""):
+        valor = Decimal("0.00")
+    try:
+        valor = Decimal(str(valor))
+    except Exception:
+        return valor
+    return valor.quantize(Decimal("0.01"))
+
+
+def _item_metricas(titulo, valor, detalhe=""):
+    return {
+        "titulo": titulo,
+        "valor": valor,
+        "detalhe": detalhe,
+    }
+
+
+def _dados_modulos_dossie(request, obra_contexto, relatorio_gerencial, analise_plano):
+    if not obra_contexto:
+        return []
+
+    empresa = obra_contexto.empresa
+    hoje = timezone.localdate()
+    consolidado = _cache_get_or_set_local(
+        f"dossie:consolidado:{obra_contexto.pk}",
+        lambda: IntegracaoService.consolidar_obra(obra_contexto),
+        request=request,
+    )
+    eva = _cache_get_or_set_local(
+        f"dossie:eva:{obra_contexto.pk}",
+        lambda: EVAService.calcular(obra_contexto),
+        request=request,
+    )
+    indicadores_dashboard = IndicadoresService.resumo_obra(
+        obra_contexto,
+        include_curva_s=False,
+        consolidado=consolidado,
+        eva=eva,
+    )
+    score_operacional = indicadores_dashboard["score_operacional"]
+
+    riscos_qs = Risco.objects.filter(obra=obra_contexto)
+    riscos_abertos_qs = riscos_qs.exclude(status__in=["FECHADO", "CANCELADO"])
+    alertas_qs = AlertaOperacional.objects.filter(obra=obra_contexto)
+    alertas_ativos_qs = alertas_qs.exclude(status__in=["ENCERRADO", "CANCELADO"])
+
+    planos_fisicos_qs = PlanoFisico.objects.filter(obra=obra_contexto)
+    plano_referencia = IntegracaoService.obter_plano_referencia(obra_contexto)
+    atividades_qs = PlanoFisicoItem.objects.filter(plano__obra=obra_contexto)
+    atividades_referencia_qs = plano_referencia.itens.all() if plano_referencia else PlanoFisicoItem.objects.none()
+    mapeamentos_qs = MapaCorrespondencia.objects.filter(obra=obra_contexto, status="ATIVO")
+
+    documentos_qs = Documento.objects.filter(empresa=empresa).filter(Q(obra=obra_contexto) | Q(obra__isnull=True))
+    ncs_qs = NaoConformidade.objects.filter(obra=obra_contexto)
+
+    solicitacoes_qs = SolicitacaoCompra.objects.filter(obra=obra_contexto)
+    cotacoes_qs = Cotacao.objects.filter(obra=obra_contexto)
+    ordens_qs = OrdemCompra.objects.filter(obra=obra_contexto)
+    fornecedores_qs = Fornecedor.objects.filter(empresa=empresa)
+
+    compromissos_qs = Compromisso.objects.filter(obra=obra_contexto)
+    medicoes_qs = Medicao.objects.filter(obra=obra_contexto)
+    notas_qs = NotaFiscal.objects.filter(obra=obra_contexto)
+    fechamentos_qs = FechamentoMensal.objects.filter(obra=obra_contexto)
+
+    reunioes_qs = ReuniaoComunicacao.objects.filter(obra=obra_contexto)
+    pautas_qs = ItemPautaReuniao.objects.filter(reuniao__obra=obra_contexto, ativo=True)
+
+    risco_critico = riscos_abertos_qs.filter(nivel__gt=15).count()
+    risco_alto = riscos_abertos_qs.filter(nivel__gte=10, nivel__lte=15).count()
+    risco_medio = riscos_abertos_qs.filter(nivel__gte=5, nivel__lte=9).count()
+    risco_baixo = riscos_abertos_qs.filter(nivel__lte=4).count()
+
+    top_orcamento = [
+        {
+            "item": item["descricao"],
+            "valor": money_br(item["valor_orcado"]),
+            "status": f"Contratado {money_br(item['valor_contratado'])}",
+        }
+        for item in analise_plano[:5]
+    ]
+
+    ultimas_reunioes = [
+        {
+            "item": reuniao.numero or reuniao.titulo,
+            "valor": reuniao.get_status_display(),
+            "status": reuniao.data_prevista.strftime("%d/%m/%Y") if reuniao.data_prevista else "-",
+        }
+        for reuniao in reunioes_qs.order_by("-data_prevista", "-criado_em")[:5]
+    ]
+
+    ultimas_aquisicoes = [
+        {
+            "item": solicitacao.numero,
+            "valor": solicitacao.get_status_display(),
+            "status": solicitacao.titulo,
+        }
+        for solicitacao in solicitacoes_qs.order_by("-data_solicitacao", "-id")[:5]
+    ]
+
+    return [
+        {
+            "titulo": "Painel Operacional",
+            "descricao": "Síntese executiva do score, dos indicadores EVA e da pressão operacional da obra.",
+            "metricas": [
+                _item_metricas("Score operacional", f"{score_operacional['pontuacao']}", score_operacional["faixa"]),
+                _item_metricas("CPI", _formatar_decimal_dossie(eva.get("CPI")), "Eficiência de custo"),
+                _item_metricas("SPI", _formatar_decimal_dossie(eva.get("SPI")), "Eficiência de prazo"),
+                _item_metricas("Alertas ativos", alertas_ativos_qs.count(), f"{score_operacional['total_alertas_pendentes_score']} impactam o score"),
+            ],
+            "detalhes": [
+                {"item": comp["nome"], "valor": f"{comp['pontuacao']} / {comp['maximo']}", "status": (comp.get("nivel") or "-").title()}
+                for comp in score_operacional.get("componentes", [])
+            ],
+        },
+        {
+            "titulo": "Planejamento",
+            "descricao": "Orçamento, cronograma físico, vínculos EAP e riscos ativos que sustentam a execução planejada.",
+            "metricas": [
+                _item_metricas("Itens de orçamento", PlanoContas.objects.filter(obra=obra_contexto).count(), "Estrutura EAP completa"),
+                _item_metricas("Cronogramas", planos_fisicos_qs.count(), f"Referência: {plano_referencia.numero if plano_referencia else 'Não definida'}"),
+                _item_metricas("Atividades", atividades_qs.count(), f"{atividades_referencia_qs.count()} no plano referência"),
+                _item_metricas("Riscos ativos", riscos_abertos_qs.count(), f"{risco_critico} críticos e {risco_alto} altos"),
+            ],
+            "detalhes": [
+                {"item": "Riscos críticos", "valor": risco_critico, "status": "Crítico"},
+                {"item": "Riscos altos", "valor": risco_alto, "status": "Alto"},
+                {"item": "Riscos médios", "valor": risco_medio, "status": "Médio"},
+                {"item": "Riscos baixos", "valor": risco_baixo, "status": "Baixo"},
+                {"item": "Mapeamentos EAP ativos", "valor": mapeamentos_qs.count(), "status": "Integração"},
+            ],
+        },
+        {
+            "titulo": "Qualidade",
+            "descricao": "Controle documental e tratamento das não conformidades vinculadas à obra.",
+            "metricas": [
+                _item_metricas("Documentos controlados", documentos_qs.count(), f"{documentos_qs.filter(status='APROVADO').count()} aprovados"),
+                _item_metricas("Revisões documentais", Documento.objects.filter(pk__in=documentos_qs.values("pk"), revisoes__isnull=False).distinct().count(), "Documentos com revisão"),
+                _item_metricas("NCs abertas", ncs_qs.exclude(status__in=["ENCERRADA", "CANCELADA"]).count(), "Pendências de qualidade"),
+                _item_metricas("NCs encerradas", ncs_qs.filter(status="ENCERRADA").count(), "Tratativas concluídas"),
+            ],
+            "detalhes": [
+                {"item": status["label"], "valor": status["valor"], "status": "Documentos"}
+                for status in _status_metricas(documentos_qs, Documento.STATUS_CHOICES)
+            ] + [
+                {"item": status["label"], "valor": status["valor"], "status": "Não conformidades"}
+                for status in _status_metricas(ncs_qs, NaoConformidade.STATUS_CHOICES)
+            ],
+        },
+        {
+            "titulo": "Aquisições",
+            "descricao": "Jornada de fornecedores, solicitações, cotações e ordens de compra da obra.",
+            "metricas": [
+                _item_metricas("Fornecedores ativos", fornecedores_qs.filter(ativo=True).count(), "Base disponível para contratação"),
+                _item_metricas("Solicitações", solicitacoes_qs.count(), f"{solicitacoes_qs.filter(status='APROVADA').count()} aprovadas"),
+                _item_metricas("Cotações", cotacoes_qs.count(), f"{cotacoes_qs.filter(status='APROVADA').count()} aprovadas"),
+                _item_metricas("Ordens de compra", ordens_qs.count(), money_br(ordens_qs.aggregate(total=Sum("valor_total"))["total"] or Decimal("0.00"))),
+            ],
+            "detalhes": ultimas_aquisicoes or [{"item": "Sem solicitações recentes", "valor": "-", "status": "-"}],
+        },
+        {
+            "titulo": "Comunicações",
+            "descricao": "Reuniões de acompanhamento, pautas ativas e pendências de resposta do time da obra.",
+            "metricas": [
+                _item_metricas("Reuniões", reunioes_qs.count(), f"{reunioes_qs.filter(status='APROVADA').count()} aprovadas"),
+                _item_metricas("Pautas ativas", pautas_qs.count(), "Itens de acompanhamento"),
+                _item_metricas("Pautas sem resposta", pautas_qs.filter(resposta_o_que="").count(), "Exigem atualização"),
+                _item_metricas("Próximas reuniões", reunioes_qs.filter(data_prevista__gte=hoje).count(), "Agenda futura"),
+            ],
+            "detalhes": ultimas_reunioes or [{"item": "Sem reuniões recentes", "valor": "-", "status": "-"}],
+        },
+        {
+            "titulo": "Financeiro",
+            "descricao": "Contratos, medições, notas fiscais, fechamento e posição financeira da obra.",
+            "metricas": [
+                _item_metricas("Contratos e pedidos", compromissos_qs.count(), money_br(relatorio_gerencial["valor_comprometido"])),
+                _item_metricas("Medições", medicoes_qs.count(), money_br(relatorio_gerencial["valor_medido"])),
+                _item_metricas("Notas fiscais", notas_qs.count(), money_br(relatorio_gerencial["valor_executado"])),
+                _item_metricas("Fechamentos", fechamentos_qs.count(), "Governança mensal"),
+            ],
+            "detalhes": [
+                {"item": "Saldo a comprometer", "valor": money_br(relatorio_gerencial["saldo_a_comprometer"]), "status": "Orçamento"},
+                {"item": "Saldo a executar", "valor": money_br(relatorio_gerencial["saldo_a_executar"]), "status": "Execução"},
+                {"item": "Contratos aprovados", "valor": compromissos_qs.filter(status="APROVADO").count(), "status": "Aprovação"},
+                {"item": "Medições aprovadas", "valor": medicoes_qs.filter(status="APROVADA").count(), "status": "Aprovação"},
+            ],
+        },
+        {
+            "titulo": "Relatórios Executivos",
+            "descricao": "Consolidadores de leitura gerencial usados para acompanhamento e priorização da obra.",
+            "metricas": [
+                _item_metricas("Itens na Curva ABC", len(analise_plano), "Base do ranking financeiro"),
+                _item_metricas("Top 5 orçamento", len(top_orcamento), "Maiores centros de custo"),
+                _item_metricas("Dashboard de alertas", alertas_qs.count(), "Histórico de alertas da obra"),
+                _item_metricas("Alertas fora do SLA", alertas_ativos_qs.filter(prazo_solucao_em__lt=timezone.now()).count(), "Pendências críticas"),
+            ],
+            "detalhes": top_orcamento or [{"item": "Sem itens orçamentários", "valor": "-", "status": "-"}],
+        },
+    ]
+
+
 class CentralEvidenciasView(TemplateView):
     template_name = "app/central_evidencias.html"
 
@@ -1279,7 +1501,7 @@ def _dados_dossie_obra(request):
     dados = {
         "obra_contexto": obra_contexto,
         "analise_plano": [],
-        "evidencias": [],
+        "modulos_dossie": [],
         "dados_cabecalho": {
             "cliente": "-",
             "obra": "-",
@@ -1334,7 +1556,7 @@ def _dados_dossie_obra(request):
         }
         for indice, plano in enumerate(planos[:14], start=1)
     ]
-    dados["evidencias"] = _listar_evidencias_obra(request, obra_contexto)[:12]
+    dados["modulos_dossie"] = _dados_modulos_dossie(request, obra_contexto, dados["relatorio_gerencial"], dados["analise_plano"])
     dados["dados_cabecalho"] = {
         "cliente": obra_contexto.cliente or "-",
         "obra": obra_contexto.nome or "-",
@@ -1391,29 +1613,31 @@ def dossie_obra_pdf_view(request):
                 for item in dados["analise_plano"]
             ] or [{"Índice": "-", "Código": "-", "Descrição": "-", "Valor Orçado": "-", "Valor Contratado": "-", "Valor Pago": "-"}],
         },
-        {
-            "titulo": "Evidências de Aprovação",
-            "colunas": [
-                ("Tipo", 60),
-                ("Identificador", 110),
-                ("Referência", 120),
-                ("Status", 70),
-                ("Valor", 60),
-                ("Responsável", 75),
-            ],
-            "linhas": [
-                {
-                    "Tipo": evidencia["tipo"],
-                    "Identificador": evidencia["identificador"],
-                    "Referência": evidencia["referencia"],
-                    "Status": evidencia["status"],
-                    "Valor": evidencia["valor"] or "-",
-                    "Responsável": evidencia["responsavel"] or "-",
-                }
-                for evidencia in dados["evidencias"]
-            ] or [{"Tipo": "-", "Identificador": "-", "Referência": "-", "Status": "-", "Valor": "-", "Responsável": "-"}],
-        },
     ]
+    for modulo in dados["modulos_dossie"]:
+        linhas_metricas = [
+            {
+                "Item": metrica["titulo"],
+                "Valor": metrica["valor"],
+                "Status": metrica["detalhe"] or "-",
+            }
+            for metrica in modulo["metricas"]
+        ]
+        linhas_detalhes = [
+            {
+                "Item": detalhe["item"],
+                "Valor": detalhe["valor"],
+                "Status": detalhe["status"] or "-",
+            }
+            for detalhe in modulo.get("detalhes", [])
+        ]
+        secoes.append(
+            {
+                "titulo": modulo["titulo"],
+                "colunas": [("Item", 210), ("Valor", 120), ("Status", 160)],
+                "linhas": linhas_metricas + linhas_detalhes or [{"Item": "-", "Valor": "-", "Status": "-"}],
+            }
+        )
     nome_arquivo = f"dossie_obra_{obra_contexto.codigo if obra_contexto else 'sem_obra'}.pdf"
     titulo = f"Dossiê da Obra - {obra_contexto.codigo if obra_contexto else 'Sem Obra'}"
     return _pdf_relatorio_tabelas_response(nome_arquivo, titulo, resumo, secoes)

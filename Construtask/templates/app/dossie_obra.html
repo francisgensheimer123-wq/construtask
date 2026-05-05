@@ -106,6 +106,77 @@
         color: var(--text-soft);
         margin: 6px 0 0;
     }
+    .dossier-module-list {
+        display: grid;
+        gap: 18px;
+    }
+    .dossier-module-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 14px;
+        margin-bottom: 14px;
+    }
+    .dossier-module-header p {
+        color: var(--text-soft);
+        margin: 6px 0 0;
+        max-width: 960px;
+    }
+    .dossier-module-kpis {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+    }
+    .dossier-module-kpi {
+        background: rgba(255, 255, 255, 0.045);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 10px;
+        min-height: 78px;
+        padding: 12px 14px;
+    }
+    .dossier-module-kpi span {
+        color: var(--text-soft);
+        display: block;
+        font-size: 0.72rem;
+        font-weight: 900;
+        line-height: 1.28;
+        text-transform: uppercase;
+    }
+    .dossier-module-kpi strong {
+        color: var(--white);
+        display: block;
+        font-size: 1.18rem;
+        line-height: 1.2;
+        margin-top: 8px;
+        overflow-wrap: anywhere;
+    }
+    .dossier-module-kpi small {
+        color: var(--muted);
+        display: block;
+        font-size: 0.78rem;
+        margin-top: 4px;
+    }
+    .dossier-detail-table {
+        border-collapse: collapse;
+        margin-top: 14px;
+        width: 100%;
+    }
+    .dossier-detail-table th,
+    .dossier-detail-table td {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+        padding: 10px 8px;
+        text-align: left;
+        vertical-align: top;
+    }
+    .dossier-detail-table th {
+        color: var(--text-soft);
+        font-size: 0.74rem;
+        font-weight: 900;
+        text-transform: uppercase;
+    }
+    .dossier-detail-table td {
+        color: var(--text);
+    }
     .dossier-table-wrap {
         margin-top: 14px;
         overflow-x: auto;
@@ -185,7 +256,8 @@
     @media (max-width: 1180px) {
         .dossier-meta,
         .dossier-kpis,
-        .dossier-kpis.secondary {
+        .dossier-kpis.secondary,
+        .dossier-module-kpis {
             grid-template-columns: repeat(2, minmax(0, 1fr));
         }
     }
@@ -198,7 +270,8 @@
         }
         .dossier-meta,
         .dossier-kpis,
-        .dossier-kpis.secondary {
+        .dossier-kpis.secondary,
+        .dossier-module-kpis {
             grid-template-columns: 1fr;
         }
         .dossier-kpi strong {
@@ -210,7 +283,7 @@
 <div class="toolbar dossier-toolbar">
     <div>
         <h2>Dossiê da Obra</h2>
-        <p>Consolida o histórico gerencial, financeiro e probatório da obra em uma visão executiva para acompanhamento, auditoria e tomada de decisão.</p>
+        <p>Consolida a leitura executiva da obra por módulo, reunindo planejamento, qualidade, aquisições, comunicações, financeiro e relatórios para acompanhamento e tomada de decisão.</p>
     </div>
     <a class="btn" href="{% url 'dossie_obra_pdf' %}">Exportar PDF</a>
 </div>
@@ -220,7 +293,7 @@
         <div class="dossier-header">
             <div>
                 <h1>Relatórios de Acompanhamento de Obra</h1>
-                <p>Padrão gerencial e probatório consolidado da obra selecionada.</p>
+                <p>Leitura gerencial consolidada da obra selecionada.</p>
             </div>
             <img class="dossier-logo" src="{% static 'app/logo-construtask.png' %}" alt="Construtask">
         </div>
@@ -322,45 +395,48 @@
         </div>
     </section>
 
-    <section class="panel dossier-section">
-        <div>
-            <h2>Relatório 04 - Evidências de Aprovação</h2>
-            <p class="section-copy">Registros formais que comprovam aprovações, responsáveis, status e pareceres vinculados à obra.</p>
-        </div>
-
-        <div class="dossier-table-wrap">
-            <table class="dossier-table">
-                <thead>
-                    <tr>
-                        <th style="width: 120px;">Tipo</th>
-                        <th style="width: 180px;">Identificador</th>
-                        <th>Referência</th>
-                        <th style="width: 130px;">Status</th>
-                        <th style="width: 140px;">Valor</th>
-                        <th style="width: 180px;">Responsável</th>
-                        <th>Parecer</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for evidencia in evidencias %}
-                    <tr>
-                        <td>{{ evidencia.tipo }}</td>
-                        <td>{{ evidencia.identificador }}</td>
-                        <td>{{ evidencia.referencia }}</td>
-                        <td>{{ evidencia.status }}</td>
-                        <td class="money">{{ evidencia.valor|default:"-" }}</td>
-                        <td>{{ evidencia.responsavel|default:"-" }}</td>
-                        <td>{{ evidencia.parecer|default:"-" }}</td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="7">Nenhuma evidência formal encontrada para a obra selecionada.</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        <p class="dossier-note">Este dossiê consolida indicadores gerenciais e evidências formais de aprovação para uso operacional, executivo e probatório.</p>
+    <section class="dossier-module-list">
+        {% for modulo in modulos_dossie %}
+        <article class="panel dossier-section">
+            <div class="dossier-module-header">
+                <div>
+                    <h2>{{ modulo.titulo }}</h2>
+                    <p>{{ modulo.descricao }}</p>
+                </div>
+            </div>
+            <div class="dossier-module-kpis">
+                {% for metrica in modulo.metricas %}
+                <div class="dossier-module-kpi">
+                    <span>{{ metrica.titulo }}</span>
+                    <strong>{{ metrica.valor }}</strong>
+                    {% if metrica.detalhe %}<small>{{ metrica.detalhe }}</small>{% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% if modulo.detalhes %}
+            <div class="dossier-table-wrap">
+                <table class="dossier-detail-table">
+                    <thead>
+                        <tr>
+                            <th>Indicador</th>
+                            <th>Valor</th>
+                            <th>Situação</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for detalhe in modulo.detalhes %}
+                        <tr>
+                            <td>{{ detalhe.item }}</td>
+                            <td>{{ detalhe.valor }}</td>
+                            <td>{{ detalhe.status }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+        </article>
+        {% endfor %}
     </section>
 </section>
 {% endblock %}
