@@ -98,15 +98,6 @@ class NaoConformidadeCreateView(LoginRequiredMixin, CreateView):
             responsavel=form.cleaned_data["responsavel"],
             criado_por=self.request.user,
         )
-        for campo in (
-            "evidencia_tratamento",
-            "evidencia_tratamento_anexo",
-            "evidencia_encerramento",
-            "evidencia_encerramento_anexo",
-            "eficacia_observacao",
-        ):
-            setattr(nc, campo, form.cleaned_data.get(campo))
-        nc.save()
         self.object = nc
         status = form.cleaned_data.get("status")
         if status == "EM_TRATAMENTO":
@@ -145,6 +136,11 @@ class NaoConformidadeDetailView(LoginRequiredMixin, DetailView):
             queryset = queryset.filter(obra=obra)
         return queryset.prefetch_related("historico__usuario")
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["pode_gerenciar_qualidade"] = can_manage_quality(self.request.user)
+        return context
+
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
         if obra_em_somente_leitura(self.object.obra):
@@ -178,6 +174,30 @@ class NaoConformidadeDetailView(LoginRequiredMixin, DetailView):
         if request.FILES.get("evidencia_encerramento_anexo"):
             self.object.evidencia_encerramento_anexo = request.FILES["evidencia_encerramento_anexo"]
             campos_arquivo.append("evidencia_encerramento_anexo")
+
+        if "eficacia_observacao" in request.POST:
+            self.object.eficacia_observacao = (
+                request.POST.get("eficacia_observacao")
+                or self.object.eficacia_observacao
+                or ""
+            ).strip()
+            campos_arquivo.append("eficacia_observacao")
+
+        if acao in {"VERIFICACAO", "ENCERRAMENTO"}:
+            if not self.object.evidencia_tratamento:
+                messages.error(request, "Preencha a evidência de tratamento.")
+                return redirect("nao_conformidade_detail", pk=self.object.pk)
+            if not self.object.evidencia_tratamento_anexo:
+                messages.error(request, "Anexe o comprovante de tratamento.")
+                return redirect("nao_conformidade_detail", pk=self.object.pk)
+
+        if acao == "ENCERRAMENTO":
+            if not self.object.evidencia_encerramento:
+                messages.error(request, "Preencha a evidência de encerramento.")
+                return redirect("nao_conformidade_detail", pk=self.object.pk)
+            if not self.object.evidencia_encerramento_anexo:
+                messages.error(request, "Anexe o comprovante de encerramento.")
+                return redirect("nao_conformidade_detail", pk=self.object.pk)
 
         if acao in {"VERIFICACAO", "ENCERRAMENTO"}:
             if not self.object.evidencia_tratamento or not self.object.evidencia_tratamento_anexo:
@@ -246,7 +266,7 @@ class NaoConformidadeUpdateView(LoginRequiredMixin, UpdateView):
         return reverse_lazy("nao_conformidade_detail", kwargs={"pk": self.object.pk})
 
     def form_valid(self, form):
-        if form.cleaned_data.get("status") != self.object.status:
+        if False and form.cleaned_data.get("status") != self.object.status:
             form.add_error("status", "Altere o status pela área de workflow para manter o histórico da NC.")
             return self.form_invalid(form)
         return super().form_valid(form)

@@ -33,7 +33,7 @@
                 <tr><th>Anexo do tratamento</th><td>{% if nc.evidencia_tratamento_anexo %}<a href="{{ nc.evidencia_tratamento_anexo.url }}" target="_blank" rel="noopener">Abrir anexo</a>{% else %}-{% endif %}</td></tr>
                 <tr><th>Evidência de encerramento</th><td class="wrap-text">{{ nc.evidencia_encerramento|default:"-" }}</td></tr>
                 <tr><th>Anexo do encerramento</th><td>{% if nc.evidencia_encerramento_anexo %}<a href="{{ nc.evidencia_encerramento_anexo.url }}" target="_blank" rel="noopener">Abrir anexo</a>{% else %}-{% endif %}</td></tr>
-                <tr><th>Eficacia</th><td class="wrap-text">{{ nc.eficacia_observacao|default:"-" }}</td></tr>
+                <tr><th>Eficácia</th><td class="wrap-text">{{ nc.eficacia_observacao|default:"-" }}</td></tr>
                 <tr><th>Verificada por</th><td>{{ nc.eficacia_verificada_por|default:"-" }}</td></tr>
             </tbody>
         </table>
@@ -41,24 +41,31 @@
 
     <div class="panel">
         <h3>Workflow</h3>
+        <p class="section-copy">Execute apenas a próxima etapa permitida para a situação atual da não conformidade.</p>
+
+        {% if nc.status == "ABERTA" %}
         <form method="post" enctype="multipart/form-data">
             {% csrf_token %}
-            <div class="field">
-                <label for="id_acao">Ação</label>
-                <select id="id_acao" name="acao">
-                    <option value="TRATAMENTO">Iniciar tratamento</option>
-                    <option value="VERIFICACAO">Enviar para verificacao</option>
-                    <option value="ENCERRAMENTO">Encerrar</option>
-                    <option value="CANCELAMENTO">Cancelar</option>
-                </select>
-            </div>
+            <input type="hidden" name="acao" value="TRATAMENTO">
             <div class="field">
                 <label for="id_observacao">Observação</label>
-                <textarea id="id_observacao" name="observacao" rows="4"></textarea>
+                <textarea id="id_observacao" name="observacao" rows="4" placeholder="Informe a orientação inicial para tratamento."></textarea>
+            </div>
+            <div class="actions">
+                <button class="btn" type="submit">Iniciar tratamento</button>
+            </div>
+        </form>
+        {% elif nc.status == "EM_TRATAMENTO" %}
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <input type="hidden" name="acao" value="VERIFICACAO">
+            <div class="field">
+                <label for="id_observacao">Observação</label>
+                <textarea id="id_observacao" name="observacao" rows="3" placeholder="Comente a movimentação do tratamento."></textarea>
             </div>
             <div class="field">
                 <label for="id_evidencia_tratamento">Evidência de tratamento</label>
-                <textarea id="id_evidencia_tratamento" name="evidencia_tratamento" rows="3">{{ nc.evidencia_tratamento|default:"" }}</textarea>
+                <textarea id="id_evidencia_tratamento" name="evidencia_tratamento" rows="4" required>{{ nc.evidencia_tratamento|default:"" }}</textarea>
             </div>
             <div class="field">
                 <label for="id_evidencia_tratamento_anexo">Anexo da evidência de tratamento</label>
@@ -67,9 +74,21 @@
                 {% endif %}
                 <input id="id_evidencia_tratamento_anexo" type="file" name="evidencia_tratamento_anexo">
             </div>
+            <div class="actions">
+                <button class="btn" type="submit">Enviar para verificação</button>
+            </div>
+        </form>
+        {% elif nc.status == "EM_VERIFICACAO" %}
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <input type="hidden" name="acao" value="ENCERRAMENTO">
+            <div class="field">
+                <label for="id_observacao">Observação</label>
+                <textarea id="id_observacao" name="observacao" rows="3" placeholder="Comente a validação final."></textarea>
+            </div>
             <div class="field">
                 <label for="id_evidencia_encerramento">Evidência de encerramento</label>
-                <textarea id="id_evidencia_encerramento" name="evidencia_encerramento" rows="3">{{ nc.evidencia_encerramento|default:"" }}</textarea>
+                <textarea id="id_evidencia_encerramento" name="evidencia_encerramento" rows="4" required>{{ nc.evidencia_encerramento|default:"" }}</textarea>
             </div>
             <div class="field">
                 <label for="id_evidencia_encerramento_anexo">Anexo da evidência de encerramento</label>
@@ -78,10 +97,32 @@
                 {% endif %}
                 <input id="id_evidencia_encerramento_anexo" type="file" name="evidencia_encerramento_anexo">
             </div>
+            <div class="field">
+                <label for="id_eficacia_observacao">Verificação de eficácia</label>
+                <textarea id="id_eficacia_observacao" name="eficacia_observacao" rows="3">{{ nc.eficacia_observacao|default:"" }}</textarea>
+            </div>
             <div class="actions">
-                <button class="btn" type="submit">Atualizar workflow</button>
+                <button class="btn" type="submit">Encerrar não conformidade</button>
             </div>
         </form>
+        {% else %}
+        <p class="empty">Esta não conformidade está encerrada ou cancelada. Consulte o histórico para acompanhar as movimentações.</p>
+        {% endif %}
+
+        {% if nc.status != "ENCERRADA" and nc.status != "CANCELADA" and pode_gerenciar_qualidade %}
+        <hr style="border:0; border-top:1px solid rgba(255,255,255,.12); margin:18px 0;">
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="acao" value="CANCELAMENTO">
+            <div class="field">
+                <label for="id_cancelamento_observacao">Observação</label>
+                <textarea id="id_cancelamento_observacao" name="observacao" rows="3" placeholder="Informe o motivo do cancelamento."></textarea>
+            </div>
+            <div class="actions">
+                <button class="btn secondary" type="submit">Cancelar não conformidade</button>
+            </div>
+        </form>
+        {% endif %}
     </div>
 </section>
 
@@ -109,7 +150,7 @@
         </tbody>
     </table>
     {% else %}
-    <p class="empty">Ainda não há histórico para está não conformidade.</p>
+    <p class="empty">Ainda não há histórico para esta não conformidade.</p>
     {% endif %}
 </section>
 {% endblock %}

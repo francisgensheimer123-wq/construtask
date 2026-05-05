@@ -1405,7 +1405,7 @@ class AppViewsTests(BaseFinanceTestCase):
         self.assertEqual(response.status_code, 200)
         nc.refresh_from_db()
         self.assertEqual(nc.status, "ABERTA")
-        self.assertContains(response, "A comprovação de tratamento exige descrição e anexo.")
+        self.assertContains(response, "Anexe o comprovante de tratamento.")
 
     def test_nao_conformidade_encerramento_exige_anexo_de_encerramento(self):
         nc = QualidadeWorkflowService.abrir(
@@ -1438,7 +1438,7 @@ class AppViewsTests(BaseFinanceTestCase):
         self.assertEqual(response.status_code, 200)
         nc.refresh_from_db()
         self.assertEqual(nc.status, "EM_VERIFICACAO")
-        self.assertContains(response, "A comprovação de encerramento exige descrição e anexo.")
+        self.assertContains(response, "Anexe o comprovante de encerramento.")
 
     def test_obra_concluida_bloqueia_telas_de_lancamento(self):
         self.obra.status = "CONCLUIDA"

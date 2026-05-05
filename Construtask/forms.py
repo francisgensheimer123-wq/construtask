@@ -960,9 +960,6 @@ class NaoConformidadeForm(NormalizeTextFieldsMixin, forms.ModelForm):
         "descricao",
         "causa",
         "acao_corretiva",
-        "evidencia_tratamento",
-        "evidencia_encerramento",
-        "eficacia_observacao",
     )
 
     class Meta:
@@ -973,18 +970,8 @@ class NaoConformidadeForm(NormalizeTextFieldsMixin, forms.ModelForm):
             "descricao",
             "causa",
             "acao_corretiva",
-            "evidencia_tratamento",
-            "evidencia_encerramento",
-            "eficacia_observacao",
             "responsavel",
-            "status",
-            "evidencia_tratamento_anexo",
-            "evidencia_encerramento_anexo",
         ]
-        widgets = {
-            "evidencia_tratamento_anexo": forms.FileInput(),
-            "evidencia_encerramento_anexo": forms.FileInput(),
-        }
 
     def __init__(self, *args, **kwargs):
         empresa = kwargs.pop("empresa", None)
