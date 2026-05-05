@@ -18,6 +18,15 @@
         min-height: 78px;
         padding: 13px 14px;
     }
+    .dashboard-cards .card span,
+    .dashboard-cards .card strong,
+    .dashboard-cards .card small {
+        max-width: 100%;
+        min-width: 0;
+        overflow-wrap: anywhere;
+        white-space: normal;
+        word-break: break-word;
+    }
     .dashboard-cards > .score-summary-card {
         border-left: 5px solid #ef4444;
         padding-left: 16px;
@@ -42,7 +51,8 @@
         font-size: 1.85rem;
     }
     .dashboard-cards .card strong {
-        font-size: 1.28rem;
+        font-size: clamp(1rem, 1.15vw, 1.28rem);
+        line-height: 1.12;
         margin-top: 8px;
     }
     .dashboard-cards .card span {
@@ -64,6 +74,29 @@
         .dashboard-cards .card {
             min-height: 92px;
             padding: 15px;
+        }
+    }
+    @media (max-width: 1320px) {
+        .dashboard-cards {
+            grid-template-columns: minmax(190px, 1.35fr) repeat(7, minmax(0, 1fr));
+            gap: 10px;
+        }
+        .dashboard-cards .card {
+            padding: 12px;
+        }
+        .dashboard-cards > .score-summary-card {
+            padding-left: 14px;
+        }
+        .dashboard-cards > .score-summary-card strong {
+            font-size: clamp(1.45rem, 2.1vw, 1.85rem);
+        }
+    }
+    @media (max-width: 1180px) {
+        .dashboard-cards {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+        .dashboard-cards > .score-summary-card {
+            grid-column: span 2;
         }
     }
     .score-donut-wrap {
