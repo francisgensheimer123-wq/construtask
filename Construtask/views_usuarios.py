@@ -209,12 +209,12 @@ class SistemaEmpresaCreateForm(forms.ModelForm):
             "endereco": forms.Textarea(attrs={"rows": 3}),
         }
         labels = {
-            "nome": "Razao social",
+            "nome": "Razão social",
             "nome_fantasia": "Nome fantasia",
             "cnpj": "CNPJ",
             "telefone": "Telefone",
             "email": "Email principal",
-            "endereco": "Endereco",
+            "endereco": "Endereço",
             "ativo": "Empresa ativa",
         }
 
@@ -383,8 +383,8 @@ class UsuarioEmpresaListView(View):
             entidade="UsuarioEmpresa",
             identificador=f"Empresa {empresa.nome}",
             acao="ADMIN_LIST",
-            finalidade="Gestao administrativa de usuarios e permissões por empresa",
-            detalhes="Consulta administrativa da área de usuarios da empresa.",
+            finalidade="Gestão administrativa de usuários e permissões por empresa",
+            detalhes="Consulta administrativa da área de usuários da empresa.",
         )
         
         status_plano = TenantService.status_plano(empresa)
@@ -555,11 +555,11 @@ class UsuarioEmpresaListView(View):
         papel_aprovacao = request.POST.get("papel_aprovacao") or "TECNICO_OBRAS"
         
         if not username or not password:
-            messages.error(request, "Username e senha sao obrigatorios.")
+            messages.error(request, "Username e senha são obrigatórios.")
             return redirect("empresa_admin")
         
         if User.objects.filter(username=username).exists():
-            messages.error(request, "Ja existe um usuário com este username.")
+            messages.error(request, "Já existe um usuário com este username.")
             return redirect("empresa_admin")
             
         try:
@@ -689,7 +689,7 @@ class UsuarioEmpresaCreateView(View):
         empresa_id = request.POST.get("empresa_id")
         
         if not username or not password:
-            messages.error(request, "Username e senha sao obrigatorios.")
+            messages.error(request, "Username e senha são obrigatórios.")
             return redirect("usuario_empresa_create")
         
         empresa = get_empresa_do_usuario(request.user)
@@ -705,7 +705,7 @@ class UsuarioEmpresaCreateView(View):
         
         # Verificar se username ja existe
         if User.objects.filter(username=username).exists():
-            messages.error(request, "Ja existe um usuário com este username.")
+            messages.error(request, "Já existe um usuário com este username.")
             return redirect("usuario_empresa_create")
         
         # Criar usuario
@@ -754,7 +754,7 @@ class SistemaAdminView(View):
 
         empresa = self._resolver_empresa(request, source="post")
         if not empresa:
-            messages.error(request, "Selecione uma empresa valida para gerenciar o sistema.")
+            messages.error(request, "Selecione uma empresa válida para gerenciar o sistema.")
             return redirect("sistema_admin")
 
         if acao == "criar_admin_empresa":
@@ -900,11 +900,11 @@ class SistemaAdminView(View):
         password = (request.POST.get("password") or "").strip()
 
         if not username or not password:
-            messages.error(request, "Username e senha sao obrigatorios para criar o admin da empresa.")
+            messages.error(request, "Username e senha são obrigatórios para criar o admin da empresa.")
             return redirect(f"{reverse_lazy('sistema_admin')}?empresa={empresa.pk}")
 
         if User.objects.filter(username=username).exists():
-            messages.error(request, "Ja existe um usuário com este username.")
+            messages.error(request, "Já existe um usuário com este username.")
             return redirect(f"{reverse_lazy('sistema_admin')}?empresa={empresa.pk}")
 
         if UsuarioEmpresa.objects.filter(empresa=empresa, is_admin_empresa=True).exists():
