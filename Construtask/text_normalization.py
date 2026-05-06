@@ -2,7 +2,10 @@ import re
 import unicodedata
 
 
-MOJIBAKE_MARKERS = ("Ã", "Â", "â", "�")
+MOJIBAKE_MARKERS = (
+    "Ãƒ", "Ã‚", "Ã¢", "Ã§", "Ã£", "Ã¡", "Ã¢", "Ãª", "Ã©", "Ã­", "Ã³", "Ã´", "Ãµ", "Ãº",
+    "Ã‡", "Ã€", "Ã‰", "Â", "â€", "â€“", "â€”", "ï¿½", "�",
+)
 
 TERM_REPLACEMENTS = {
     "acao": "ação",
@@ -54,7 +57,7 @@ TEXT_NORMALIZATION_TARGETS = {
     "Construtask.Obra": ("nome", "cliente", "responsavel", "descricao"),
     "Construtask.AnexoOperacional": ("descricao",),
     "Construtask.Compromisso": ("descricao", "fornecedor", "responsavel", "torre", "bloco", "etapa", "parecer_aprovacao"),
-    "Construtask.Medição": ("descricao", "fornecedor", "responsavel", "torre", "bloco", "etapa", "parecer_aprovacao"),
+    "Construtask.Medicao": ("descricao", "fornecedor", "responsavel", "torre", "bloco", "etapa", "parecer_aprovacao"),
     "Construtask.NotaFiscal": ("fornecedor", "descricao", "torre", "bloco", "etapa"),
     "Construtask.OrcamentoBaseline": ("descricao", "parecer_aprovacao"),
     "Construtask.Documento": ("processo", "codigo_documento", "titulo"),
@@ -63,7 +66,7 @@ TEXT_NORMALIZATION_TARGETS = {
     "Construtask.Fornecedor": ("razao_social", "nome_fantasia", "contato"),
     "Construtask.SolicitacaoCompra": ("titulo", "descricao", "observacoes"),
     "Construtask.SolicitacaoCompraItem": ("descricao_tecnica", "unidade"),
-    "Construtask.Cotação": ("observacoes", "justificativa_escolha"),
+    "Construtask.Cotacao": ("observacoes", "justificativa_escolha"),
     "Construtask.CotacaoAnexo": ("descricao",),
     "Construtask.OrdemCompra": ("descricao",),
 }
