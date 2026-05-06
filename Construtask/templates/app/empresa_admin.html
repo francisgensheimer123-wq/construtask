@@ -389,6 +389,44 @@
         </form>
     </section>
 
+    <section class="panel" style="margin-bottom: 24px;">
+        <div class="toolbar">
+            <h3>Obras da Empresa ({{ obras_da_empresa.count }})</h3>
+        </div>
+        {% if obras_da_empresa %}
+        <table class="compact-table" style="margin-bottom:16px;">
+            <thead>
+                <tr>
+                    <th>Código</th>
+                    <th>Nome</th>
+                    <th>Status</th>
+                    <th>Cliente</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for obra in obras_da_empresa %}
+                <tr>
+                    <td class="no-break-data">{{ obra.codigo }}</td>
+                    <td>{{ obra.nome }}</td>
+                    <td>{{ obra.get_status_display }}</td>
+                    <td>{{ obra.cliente|default:"-" }}</td>
+                    <td class="no-break-data">
+                        <form method="post" style="display:inline;" onsubmit="return confirm('Excluir a obra {{ obra.codigo }} - {{ obra.nome }}? Esta ação só será concluída se não houver vínculos operacionais.');">
+                            {% csrf_token %}
+                            <input type="hidden" name="acao" value="excluir_obra">
+                            <input type="hidden" name="obra_id" value="{{ obra.pk }}">
+                            <button type="submit" class="btn secondary" style="padding:6px 12px;">Excluir</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="empty">Nenhuma obra cadastrada para esta empresa.</p>
+        {% endif %}
+
         <h4 style="margin-top: 20px; margin-bottom: 12px;">Nova Obra</h4>
         <form method="post" class="panel admin-subpanel">
             {% csrf_token %}
@@ -477,6 +515,20 @@
                         {% endif %}
                     </td>
                     <td>
+                        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
+                            <form method="post" style="display:inline;" onsubmit="return confirm('Gerar uma nova senha temporária para {{ ue.usuario.username }}?');">
+                                {% csrf_token %}
+                                <input type="hidden" name="acao" value="resetar_senha_usuario">
+                                <input type="hidden" name="usuario_empresa_id" value="{{ ue.pk }}">
+                                <button type="submit" class="btn secondary" style="padding:6px 12px;">Redefinir senha</button>
+                            </form>
+                            <form method="post" style="display:inline;" onsubmit="return confirm('Excluir o usuário {{ ue.usuario.username }}? Se houver vínculos históricos, o acesso será desativado.');">
+                                {% csrf_token %}
+                                <input type="hidden" name="acao" value="excluir_usuario">
+                                <input type="hidden" name="usuario_empresa_id" value="{{ ue.pk }}">
+                                <button type="submit" class="btn secondary" style="padding:6px 12px;">Excluir</button>
+                            </form>
+                        </div>
                         {% if not ue.is_admin_empresa %}
                         <form method="post" style="display:inline-flex; gap:8px; align-items:center; margin-bottom:10px;">
                             {% csrf_token %}

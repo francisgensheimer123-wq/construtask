@@ -5,6 +5,7 @@ Inclui proteção com whitelist de URLs públicas.
 
 import re
 from django.conf import settings
+from django.contrib.auth import logout
 from django.contrib.auth.views import redirect_to_login
 from django.http import HttpResponseRedirect
 
@@ -45,6 +46,17 @@ class LoginRequiredMiddleware:
                 request.get_full_path(),
                 login_url=settings.LOGIN_URL
             )
+
+        if not getattr(request.user, "is_superuser", False):
+            try:
+                usuario_empresa = request.user.usuario_empresa
+                if not request.user.is_active or (usuario_empresa.empresa and not usuario_empresa.empresa.ativo):
+                    logout(request)
+                    return redirect_to_login(request.get_full_path(), login_url=settings.LOGIN_URL)
+            except Exception:
+                if not request.user.is_active:
+                    logout(request)
+                    return redirect_to_login(request.get_full_path(), login_url=settings.LOGIN_URL)
         
         return self.get_response(request)
     

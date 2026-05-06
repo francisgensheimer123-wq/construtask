@@ -5,6 +5,9 @@ Views para gerenciamento de usuarios e obras da empresa.
 from django import forms
 from django.contrib import messages
 from django.contrib.auth import get_user_model
+from django.db import transaction
+from django.db.models import ProtectedError
+from django.utils.crypto import get_random_string
 from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
 from django.views import View
@@ -27,6 +30,21 @@ from .services_lgpd import registrar_acesso_dado_pessoal
 from .services_tenant import TenantService, LimitePlanoExcedido
 
 User = get_user_model()
+
+
+def _gerar_senha_temporaria():
+    return get_random_string(12, allowed_chars="ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789@$#")
+
+
+def _excluir_usuario_ou_desativar(user):
+    username = user.get_username()
+    try:
+        user.delete()
+        return f"Usuário {username} excluído com sucesso."
+    except ProtectedError:
+        user.is_active = False
+        user.save(update_fields=["is_active"])
+        return f"Usuário {username} possui vínculos históricos e foi desativado."
 
 
 def _empresa_redirect_kwargs(empresa):
@@ -404,10 +422,16 @@ class UsuarioEmpresaListView(View):
             return self._atualizar_obras_usuario(request, empresa)
         elif acao == "atualizar_permissoes_usuario":
             return self._atualizar_permissoes_usuario(request, empresa)
+        elif acao == "resetar_senha_usuario":
+            return self._resetar_senha_usuario(request, empresa)
+        elif acao == "excluir_usuario":
+            return self._excluir_usuario(request, empresa)
         elif acao == "criar_usuario":
             return self._criar_usuario(request, empresa)
         elif acao == "criar_obra":
             return self._criar_obra(request, empresa)
+        elif acao == "excluir_obra":
+            return self._excluir_obra(request, empresa)
         elif acao == "salvar_parametros_alerta":
             return self._salvar_parametros_alerta(request, empresa)
         elif acao == "salvar_parametros_comunicacao":
@@ -486,6 +510,42 @@ class UsuarioEmpresaListView(View):
         messages.success(request, f"Permissões de módulo atualizadas para {usuario_empresa.usuario.username}.")
         return redirect("empresa_admin")
     
+    def _resetar_senha_usuario(self, request, empresa):
+        usuario_empresa_id = request.POST.get("usuario_empresa_id")
+        try:
+            usuario_empresa = UsuarioEmpresa.objects.select_related("usuario").get(pk=usuario_empresa_id, empresa=empresa)
+        except UsuarioEmpresa.DoesNotExist:
+            messages.error(request, "Usuário da empresa não encontrado.")
+            return redirect("empresa_admin")
+
+        nova_senha = _gerar_senha_temporaria()
+        usuario_empresa.usuario.set_password(nova_senha)
+        usuario_empresa.usuario.save(update_fields=["password"])
+        messages.success(
+            request,
+            f"Senha temporária de {usuario_empresa.usuario.username}: {nova_senha}. Informe ao usuário e peça a troca no próximo acesso.",
+        )
+        return redirect("empresa_admin")
+
+    def _excluir_usuario(self, request, empresa):
+        usuario_empresa_id = request.POST.get("usuario_empresa_id")
+        try:
+            usuario_empresa = UsuarioEmpresa.objects.select_related("usuario").get(pk=usuario_empresa_id, empresa=empresa)
+        except UsuarioEmpresa.DoesNotExist:
+            messages.error(request, "Usuário da empresa não encontrado.")
+            return redirect("empresa_admin")
+
+        if usuario_empresa.usuario_id == request.user.id:
+            messages.error(request, "Você não pode excluir o próprio usuário logado.")
+            return redirect("empresa_admin")
+
+        with transaction.atomic():
+            usuario = usuario_empresa.usuario
+            usuario_empresa.delete()
+            mensagem = _excluir_usuario_ou_desativar(usuario)
+        messages.success(request, mensagem)
+        return redirect("empresa_admin")
+
     def _criar_usuario(self, request, empresa):
         """Criar novo usuário."""
         username = request.POST.get("username", "").strip()
@@ -572,6 +632,22 @@ class UsuarioEmpresaListView(View):
         else:
             messages.error(request, "Erro ao criar obra. Verifique os dados.")
         
+        return redirect("empresa_admin")
+
+    def _excluir_obra(self, request, empresa):
+        obra_id = request.POST.get("obra_id")
+        try:
+            obra = Obra.objects.get(pk=obra_id, empresa=empresa)
+        except Obra.DoesNotExist:
+            messages.error(request, "Obra não encontrada.")
+            return redirect("empresa_admin")
+
+        identificador = f"{obra.codigo} - {obra.nome}"
+        try:
+            obra.delete()
+            messages.success(request, f"Obra {identificador} excluída com sucesso.")
+        except ProtectedError:
+            messages.error(request, f"Obra {identificador} não pode ser excluída porque possui vínculos operacionais.")
         return redirect("empresa_admin")
 
 
@@ -683,6 +759,14 @@ class SistemaAdminView(View):
 
         if acao == "criar_admin_empresa":
             return self._criar_admin_empresa(request, empresa)
+        if acao == "resetar_senha_usuario":
+            return self._resetar_senha_usuario(request, empresa)
+        if acao == "excluir_usuario":
+            return self._excluir_usuario(request, empresa)
+        if acao == "excluir_empresa":
+            return self._excluir_empresa(request, empresa)
+        if acao == "alternar_bloqueio_empresa":
+            return self._alternar_bloqueio_empresa(request, empresa)
         
         if acao == "definir_plano":
             plano_nome = request.POST.get("plano_nome", "STARTER")
@@ -709,8 +793,9 @@ class SistemaAdminView(View):
             "empresa": empresa,
             "plano_empresa": plano_empresa,
             "status_plano": status_plano,
-            "empresas": Empresa.objects.filter(ativo=True).order_by("nome"),
+            "empresas": Empresa.objects.all().order_by("nome"),
             "admins_empresa": self._admins_empresa_queryset(empresa),
+            "usuarios_empresa": self._usuarios_empresa_queryset(empresa),
             "empresa_create_form": empresa_create_form or SistemaEmpresaCreateForm(initial={"ativo": True}),
         }
         contexto.update(contexto_base_saas())
@@ -733,6 +818,15 @@ class SistemaAdminView(View):
             .order_by("usuario__username")
         )
 
+    def _usuarios_empresa_queryset(self, empresa):
+        if not empresa:
+            return UsuarioEmpresa.objects.none()
+        return (
+            UsuarioEmpresa.objects.filter(empresa=empresa)
+            .select_related("usuario")
+            .order_by("-is_admin_empresa", "usuario__username")
+        )
+
     def _criar_empresa(self, request):
         form = SistemaEmpresaCreateForm(request.POST)
         if not form.is_valid():
@@ -743,6 +837,62 @@ class SistemaAdminView(View):
         PlanoEmpresa.objects.get_or_create(empresa=empresa)
         messages.success(request, f"Empresa {empresa.nome} criada com sucesso.")
         return redirect(f"{reverse_lazy('sistema_admin')}?empresa={empresa.pk}")
+
+    def _resetar_senha_usuario(self, request, empresa):
+        usuario_empresa_id = request.POST.get("usuario_empresa_id")
+        try:
+            usuario_empresa = UsuarioEmpresa.objects.select_related("usuario").get(pk=usuario_empresa_id, empresa=empresa)
+        except UsuarioEmpresa.DoesNotExist:
+            messages.error(request, "Usuário da empresa não encontrado.")
+            return redirect(f"{reverse_lazy('sistema_admin')}?empresa={empresa.pk}")
+
+        nova_senha = _gerar_senha_temporaria()
+        usuario_empresa.usuario.set_password(nova_senha)
+        usuario_empresa.usuario.save(update_fields=["password"])
+        messages.success(
+            request,
+            f"Senha temporária de {usuario_empresa.usuario.username}: {nova_senha}. Informe ao usuário e peça a troca no próximo acesso.",
+        )
+        return redirect(f"{reverse_lazy('sistema_admin')}?empresa={empresa.pk}")
+
+    def _excluir_usuario(self, request, empresa):
+        usuario_empresa_id = request.POST.get("usuario_empresa_id")
+        try:
+            usuario_empresa = UsuarioEmpresa.objects.select_related("usuario").get(pk=usuario_empresa_id, empresa=empresa)
+        except UsuarioEmpresa.DoesNotExist:
+            messages.error(request, "Usuário da empresa não encontrado.")
+            return redirect(f"{reverse_lazy('sistema_admin')}?empresa={empresa.pk}")
+
+        if usuario_empresa.usuario_id == request.user.id:
+            messages.error(request, "Você não pode excluir o próprio usuário logado.")
+            return redirect(f"{reverse_lazy('sistema_admin')}?empresa={empresa.pk}")
+
+        with transaction.atomic():
+            usuario = usuario_empresa.usuario
+            usuario_empresa.delete()
+            mensagem = _excluir_usuario_ou_desativar(usuario)
+        messages.success(request, mensagem)
+        return redirect(f"{reverse_lazy('sistema_admin')}?empresa={empresa.pk}")
+
+    def _alternar_bloqueio_empresa(self, request, empresa):
+        empresa.ativo = not empresa.ativo
+        empresa.save(update_fields=["ativo", "atualizado_em"])
+        if not empresa.ativo:
+            User.objects.filter(usuario_empresa__empresa=empresa, is_superuser=False).update(is_active=False)
+            messages.success(request, f"Empresa {empresa.nome} bloqueada e usuários desativados no sistema.")
+        else:
+            messages.success(request, f"Empresa {empresa.nome} desbloqueada. Reative os usuários que devem voltar a acessar.")
+        return redirect(f"{reverse_lazy('sistema_admin')}?empresa={empresa.pk}")
+
+    def _excluir_empresa(self, request, empresa):
+        nome = empresa.nome
+        try:
+            empresa.delete()
+            messages.success(request, f"Empresa {nome} excluída com sucesso.")
+            return redirect("sistema_admin")
+        except ProtectedError:
+            messages.error(request, f"Empresa {nome} não pode ser excluída porque possui vínculos operacionais. Use o bloqueio para impedir acesso.")
+            return redirect(f"{reverse_lazy('sistema_admin')}?empresa={empresa.pk}")
 
     def _criar_admin_empresa(self, request, empresa):
         username = (request.POST.get("username") or "").strip()

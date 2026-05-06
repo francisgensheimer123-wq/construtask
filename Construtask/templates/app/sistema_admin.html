@@ -1,4 +1,4 @@
-{% extends "app/base.html" %}
+﻿{% extends "app/base.html" %}
 
 {% block main_class %}main-full{% endblock %}
 {% block title %}Gerenciamento do Sistema | Construtask{% endblock %}
@@ -8,7 +8,7 @@
     <div class="toolbar">
         <div>
             <h2>Gerenciamento do Sistema</h2>
-            <p>Área exclusiva do superuser técnico Construtask para sustentacao da plataforma e criação do admin de cada empresa.</p>
+            <p>Ãrea exclusiva do superuser tÃ©cnico Construtask para sustentacao da plataforma e criaÃ§Ã£o do admin de cada empresa.</p>
         </div>
         <div>
             <a class="btn secondary" href="{% url 'home' %}">Voltar</a>
@@ -87,7 +87,7 @@
         <div class="toolbar">
             <div>
                 <h3>Empresa em Gestao</h3>
-                <p class="muted">Selecione a empresa para consultar a base SaaS e administrar o usuário admin da empresa.</p>
+                <p class="muted">Selecione a empresa para consultar a base SaaS e administrar o usuÃ¡rio admin da empresa.</p>
             </div>
         </div>
         <form method="get" style="display:flex; gap:12px; align-items:end; flex-wrap:wrap;">
@@ -95,7 +95,7 @@
                 <label for="empresa">Empresa</label>
                 <select name="empresa" id="empresa">
                     {% for emp in empresas %}
-                    <option value="{{ emp.pk }}"{% if empresa and emp.pk == empresa.pk %} selected{% endif %}>{{ emp.nome }}</option>
+                    <option value="{{ emp.pk }}"{% if empresa and emp.pk == empresa.pk %} selected{% endif %}>{{ emp.nome }}{% if not emp.ativo %} (bloqueada){% endif %}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -108,7 +108,22 @@
         <h3>{{ empresa.nome }}</h3>
         {% if empresa.nome_fantasia %}<p>Nome fantasia: {{ empresa.nome_fantasia }}</p>{% endif %}
         <p>CNPJ: {{ empresa.cnpj }}</p>
-        <p class="muted">A partir desta área a Construtask cria o admin principal da empresa. A gestao diaria da empresa ocorre no ambiente do admin da propria empresa.</p>
+        <p>Status: <span class="badge bg-{% if empresa.ativo %}success{% else %}danger{% endif %}">{% if empresa.ativo %}Ativa{% else %}Bloqueada{% endif %}</span></p>
+        <p class="muted">A partir desta Ã¡rea a Construtask cria o admin principal da empresa. A gestao diaria da empresa ocorre no ambiente do admin da propria empresa.</p>
+        <div class="actions">
+            <form method="post" style="display:inline;" onsubmit="return confirm('Confirmar alteracao de bloqueio desta empresa?');">
+                {% csrf_token %}
+                <input type="hidden" name="acao" value="alternar_bloqueio_empresa">
+                <input type="hidden" name="empresa_id" value="{{ empresa.pk }}">
+                <button type="submit" class="btn secondary">{% if empresa.ativo %}Bloquear Empresa{% else %}Desbloquear Empresa{% endif %}</button>
+            </form>
+            <form method="post" style="display:inline;" onsubmit="return confirm('Confirmar exclusao desta empresa? A acao so sera concluida se nao houver vinculos operacionais.');">
+                {% csrf_token %}
+                <input type="hidden" name="acao" value="excluir_empresa">
+                <input type="hidden" name="empresa_id" value="{{ empresa.pk }}">
+                <button type="submit" class="btn secondary">Excluir Empresa</button>
+            </form>
+        </div>
     </section>
 
     <section class="panel" style="margin-bottom: 24px;">
@@ -124,7 +139,7 @@
             {% endif %}
         </div>
 
-        {# Cartões de uso atual #}
+        {# CartÃµes de uso atual #}
         {% if status_plano %}
         <div class="cards" style="margin-bottom: 16px;">
             <div class="card">
@@ -150,17 +165,17 @@
         {# Alertas de limite atingido #}
         {% if status_plano.alerta_usuario %}
         <div class="message error" style="margin-bottom:12px;">
-            ⚠️ {{ status_plano.alerta_usuario }}
+            âš ï¸ {{ status_plano.alerta_usuario }}
         </div>
         {% endif %}
         {% if status_plano.alerta_obra %}
         <div class="message error" style="margin-bottom:12px;">
-            ⚠️ {{ status_plano.alerta_obra }}
+            âš ï¸ {{ status_plano.alerta_obra }}
         </div>
         {% endif %}
         {% endif %}
 
-        {# Formulário de definição/troca de plano #}
+        {# FormulÃ¡rio de definiÃ§Ã£o/troca de plano #}
         <form method="post" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:16px; align-items:end;">
             {% csrf_token %}
             <input type="hidden" name="acao" value="definir_plano">
@@ -169,21 +184,21 @@
             <div class="field">
                 <label for="id_plano_nome">Plano</label>
                 <select name="plano_nome" id="id_plano_nome">
-                    <option value="STARTER"      {% if plano_empresa.nome == "STARTER" %}selected{% endif %}>Starter — R$ 490/mês (8 usuários / 3 obras)</option>
-                    <option value="PROFESSIONAL" {% if plano_empresa.nome == "PROFESSIONAL" %}selected{% endif %}>Professional — R$ 1.190/mês (23 usuários / 9 obras)</option>
-                    <option value="BUSINESS"     {% if plano_empresa.nome == "BUSINESS" %}selected{% endif %}>Business — R$ 2.490/mês (50 usuários / 18 obras)</option>
-                    <option value="ENTERPRISE"   {% if plano_empresa.nome == "ENTERPRISE" %}selected{% endif %}>Enterprise — R$ 4.990/mês (Ilimitado)</option>
+                    <option value="STARTER"      {% if plano_empresa.nome == "STARTER" %}selected{% endif %}>Starter â€” R$ 490/mÃªs (8 usuÃ¡rios / 3 obras)</option>
+                    <option value="PROFESSIONAL" {% if plano_empresa.nome == "PROFESSIONAL" %}selected{% endif %}>Professional â€” R$ 1.190/mÃªs (23 usuÃ¡rios / 9 obras)</option>
+                    <option value="BUSINESS"     {% if plano_empresa.nome == "BUSINESS" %}selected{% endif %}>Business â€” R$ 2.490/mÃªs (50 usuÃ¡rios / 18 obras)</option>
+                    <option value="ENTERPRISE"   {% if plano_empresa.nome == "ENTERPRISE" %}selected{% endif %}>Enterprise â€” R$ 4.990/mÃªs (Ilimitado)</option>
                 </select>
             </div>
 
             <div class="field">
-                <label for="id_max_usuarios">Limite Usuarios (vazio = padrão do plano)</label>
+                <label for="id_max_usuarios">Limite Usuarios (vazio = padrÃ£o do plano)</label>
                 <input type="number" name="max_usuarios" id="id_max_usuarios" min="1"
                        placeholder="Auto" value="{{ plano_empresa.max_usuarios|default:'' }}">
             </div>
 
             <div class="field">
-                <label for="id_max_obras">Limite Obras (vazio = padrão do plano)</label>
+                <label for="id_max_obras">Limite Obras (vazio = padrÃ£o do plano)</label>
                 <input type="number" name="max_obras" id="id_max_obras" min="1"
                        placeholder="Auto" value="{{ plano_empresa.max_obras|default:'' }}">
             </div>
@@ -198,7 +213,7 @@
         <div class="toolbar">
             <div>
                 <h3>Base Operacional SaaS</h3>
-                <p class="muted">Diagnostico de banco, storage, backup e configuração segura para sustentacao da plataforma.</p>
+                <p class="muted">Diagnostico de banco, storage, backup e configuraÃ§Ã£o segura para sustentacao da plataforma.</p>
             </div>
             <div>
                 <span class="badge bg-{% if base_saas.status == 'ok' %}success{% elif base_saas.status == 'degraded' %}warning{% else %}danger{% endif %}">
@@ -240,7 +255,7 @@
                 <strong>{% if base_saas_backup.ultimo_backup %}{{ base_saas_backup.ultimo_backup.executado_em|date:"d/m/Y H:i" }}{% else %}-{% endif %}</strong>
             </div>
             <div class="card">
-                <span>Teste de Recuperação</span>
+                <span>Teste de RecuperaÃ§Ã£o</span>
                 <strong>{% if base_saas_backup.ultimo_teste_recuperacao %}{{ base_saas_backup.ultimo_teste_recuperacao.executado_em|date:"d/m/Y H:i" }}{% else %}-{% endif %}</strong>
             </div>
             <div class="card">
@@ -248,7 +263,7 @@
                 <strong>{{ base_saas_backup.provedor|default:"-" }}</strong>
             </div>
             <div class="card">
-                <span>Retenção</span>
+                <span>RetenÃ§Ã£o</span>
                 <strong>{{ base_saas_backup.retencao_dias }} dia(s)</strong>
             </div>
         </div>
@@ -257,38 +272,56 @@
     <section class="panel" style="margin-bottom: 24px;">
         <div class="toolbar">
             <div>
-                <h3>Admin da Empresa</h3>
-                <p class="muted">A Construtask cria aqui o usuário administrador principal da empresa. Os demais usuarios ficam sob responsabilidade desse admin.</p>
+                <h3>Usuários da Empresa</h3>
+                <p class="muted">Redefina senhas temporárias e remova acessos dos usuários vinculados à empresa.</p>
             </div>
         </div>
 
-        {% if admins_empresa %}
+        {% if usuarios_empresa %}
         <table class="compact-table" style="margin-bottom:16px;">
             <thead>
                 <tr>
                     <th>Usuário</th>
                     <th>Email</th>
-                    <th>Funcao</th>
+                    <th>Tipo</th>
+                    <th>Função</th>
+                    <th>Ações</th>
                 </tr>
             </thead>
             <tbody>
-                {% for admin_empresa in admins_empresa %}
+                {% for usuario_empresa in usuarios_empresa %}
                 <tr>
-                    <td>{{ admin_empresa.usuario.username }}</td>
-                    <td>{{ admin_empresa.usuario.email|default:"-" }}</td>
-                    <td>{{ admin_empresa.get_papel_aprovacao_display }}</td>
+                    <td>{{ usuario_empresa.usuario.username }}</td>
+                    <td>{{ usuario_empresa.usuario.email|default:"-" }}</td>
+                    <td>{% if usuario_empresa.is_admin_empresa %}Admin da Empresa{% else %}Usuário{% endif %}</td>
+                    <td>{{ usuario_empresa.get_papel_aprovacao_display }}</td>
+                    <td class="no-break-data">
+                        <form method="post" style="display:inline;" onsubmit="return confirm('Gerar uma nova senha temporaria para este usuario?');">
+                            {% csrf_token %}
+                            <input type="hidden" name="acao" value="resetar_senha_usuario">
+                            <input type="hidden" name="empresa_id" value="{{ empresa.pk }}">
+                            <input type="hidden" name="usuario_empresa_id" value="{{ usuario_empresa.pk }}">
+                            <button type="submit" class="btn secondary" style="padding:6px 12px;">Redefinir senha</button>
+                        </form>
+                        <form method="post" style="display:inline;" onsubmit="return confirm('Excluir este usuario? Se houver vinculos historicos, o acesso sera desativado.');">
+                            {% csrf_token %}
+                            <input type="hidden" name="acao" value="excluir_usuario">
+                            <input type="hidden" name="empresa_id" value="{{ empresa.pk }}">
+                            <input type="hidden" name="usuario_empresa_id" value="{{ usuario_empresa.pk }}">
+                            <button type="submit" class="btn secondary" style="padding:6px 12px;">Excluir</button>
+                        </form>
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
         {% else %}
-        <p class="muted">Nenhum admin da empresa cadastrado ate o momento.</p>
+        <p class="muted">Nenhum usuário da empresa cadastrado até o momento.</p>
         {% endif %}
 
-        {# Alerta: limite de usuarios atingido #}
         {% if status_plano and status_plano.alerta_usuario %}
         <div class="message error" style="margin-bottom:16px;">
-            ⚠️ {{ status_plano.alerta_usuario }}
+            {{ status_plano.alerta_usuario }}
         </div>
         {% else %}
         <form method="post" class="panel admin-subpanel">
@@ -318,3 +351,4 @@
     {% endif %}
 </div>
 {% endblock %}
+
