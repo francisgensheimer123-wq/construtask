@@ -167,8 +167,8 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!labels.length) return;
 
         const wrapperWidth = canvas.parentElement ? canvas.parentElement.clientWidth : 900;
-        const width = Math.max(wrapperWidth, 640, (labels.length - 1) * 42 + 98);
-        const height = 320;
+        const width = Math.max(wrapperWidth, 640, (labels.length - 1) * 21 + 98);
+        const height = 360;
         canvas.width = width;
         canvas.height = height;
         canvas.style.width = width + "px";
@@ -190,7 +190,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         const maxValor = Math.max(1, ...pontosPlanejada.map(p => p.valor), ...pontosRealizada.map(p => p.valor));
-        const padding = { top: 24, right: 28, bottom: 82, left: 70 };
+        const padding = { top: 24, right: 28, bottom: 118, left: 70 };
         const chartWidth = width - padding.left - padding.right;
         const chartHeight = height - padding.top - padding.bottom;
 
@@ -261,7 +261,7 @@ document.addEventListener('DOMContentLoaded', function() {
         labels.forEach((mes, index) => {
             const x = labels.length === 1 ? padding.left + chartWidth / 2 : padding.left + (chartWidth * index / (labels.length - 1));
             g.save();
-            g.translate(x, padding.top + chartHeight + 58);
+            g.translate(x, padding.top + chartHeight + 12);
             g.rotate(-Math.PI / 2);
             g.fillText(mes, 0, 0);
             g.restore();
