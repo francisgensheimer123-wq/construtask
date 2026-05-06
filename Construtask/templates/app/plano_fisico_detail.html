@@ -49,6 +49,15 @@
         border-color: var(--red-soft);
         box-shadow: 0 0 0 3px rgba(139, 0, 0, 0.18);
     }
+    .curva-s-scroll {
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding-bottom: 8px;
+    }
+    .curva-s-scroll canvas {
+        display: block;
+        max-width: none;
+    }
 </style>
 <div class="toolbar">
     <div>
@@ -146,7 +155,9 @@
     <div class="panel">
         <h3>Curva S</h3>
         {% if curva_planejada %}
-        <canvas id="curvaSChart" height="120"></canvas>
+        <div class="curva-s-scroll">
+            <canvas id="curvaSChart" height="120"></canvas>
+        </div>
         {% else %}
         <p class="empty">Curva S indisponível para este cronograma.</p>
         {% endif %}
@@ -284,18 +295,18 @@ document.addEventListener("DOMContentLoaded", function () {
     ];
 
     function desenharCurvaS(canvas, seriePlanejada, serieRealizada) {
-        const wrapperWidth = canvas.parentElement ? canvas.parentElement.clientWidth : 900;
-        const width = Math.max(wrapperWidth, 640);
-        const height = 320;
-        canvas.width = width;
-        canvas.height = height;
-        canvas.style.width = "100%";
-        canvas.style.height = height + "px";
-
-        const g = canvas.getContext("2d");
         const labels = [...new Set([...seriePlanejada.map(i => i.mes), ...serieRealizada.map(i => i.mes)])].sort();
         if (!labels.length) return;
 
+        const wrapperWidth = canvas.parentElement ? canvas.parentElement.clientWidth : 900;
+        const width = Math.max(wrapperWidth, 640, (labels.length - 1) * 42 + 98);
+        const height = 320;
+        canvas.width = width;
+        canvas.height = height;
+        canvas.style.width = width + "px";
+        canvas.style.height = height + "px";
+
+        const g = canvas.getContext("2d");
         const mapPlanejada = Object.fromEntries(seriePlanejada.map(i => [i.mes, Number(i.acumulado || 0)]));
         const mapRealizada = Object.fromEntries(serieRealizada.map(i => [i.mes, Number(i.acumulado || 0)]));
 

@@ -2,6 +2,17 @@
 {% load l10n %}
 
 {% block content %}
+<style>
+    .curva-s-scroll {
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding-bottom: 8px;
+    }
+    .curva-s-scroll canvas {
+        display: block;
+        max-width: none;
+    }
+</style>
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1>Dashboard de Cronogramas</h1>
@@ -61,7 +72,9 @@
             <h5>Curva S - Planejado vs Realizado</h5>
         </div>
         <div class="card-body">
-            <canvas id="curvaSChart" width="400" height="150"></canvas>
+            <div class="curva-s-scroll">
+                <canvas id="curvaSChart" width="400" height="150"></canvas>
+            </div>
         </div>
     </div>
     {% endif %}
@@ -150,18 +163,18 @@ document.addEventListener('DOMContentLoaded', function() {
     ];
 
     function desenharCurvaS(canvas, seriePlanejada, serieRealizada) {
-        const wrapperWidth = canvas.parentElement ? canvas.parentElement.clientWidth : 900;
-        const width = Math.max(wrapperWidth, 640);
-        const height = 320;
-        canvas.width = width;
-        canvas.height = height;
-        canvas.style.width = "100%";
-        canvas.style.height = height + "px";
-
-        const g = canvas.getContext("2d");
         const labels = [...new Set([...seriePlanejada.map(i => i.mes), ...serieRealizada.map(i => i.mes)])].sort();
         if (!labels.length) return;
 
+        const wrapperWidth = canvas.parentElement ? canvas.parentElement.clientWidth : 900;
+        const width = Math.max(wrapperWidth, 640, (labels.length - 1) * 42 + 98);
+        const height = 320;
+        canvas.width = width;
+        canvas.height = height;
+        canvas.style.width = width + "px";
+        canvas.style.height = height + "px";
+
+        const g = canvas.getContext("2d");
         const mapPlanejada = Object.fromEntries(seriePlanejada.map(i => [i.mes, Number(i.acumulado || 0)]));
         const mapRealizada = Object.fromEntries(serieRealizada.map(i => [i.mes, Number(i.acumulado || 0)]));
 
