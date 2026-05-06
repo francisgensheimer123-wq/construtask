@@ -316,7 +316,7 @@ document.addEventListener("DOMContentLoaded", function () {
             ...pontosRealizada.map(p => p.valor)
         );
 
-        const padding = { top: 24, right: 28, bottom: 46, left: 70 };
+        const padding = { top: 24, right: 28, bottom: 82, left: 70 };
         const chartWidth = width - padding.left - padding.right;
         const chartHeight = height - padding.top - padding.bottom;
 
@@ -383,12 +383,16 @@ document.addEventListener("DOMContentLoaded", function () {
             desenharLinha(pontosRealizada, "#16a34a", "rgba(22,163,74,0.12)");
         }
 
-        g.textAlign = "center";
-        g.textBaseline = "top";
+        g.textAlign = "right";
+        g.textBaseline = "middle";
         g.fillStyle = "rgba(255,255,255,0.68)";
         labels.forEach((mes, index) => {
             const x = labels.length === 1 ? padding.left + chartWidth / 2 : padding.left + (chartWidth * index / (labels.length - 1));
-            g.fillText(mes, x, padding.top + chartHeight + 10);
+            g.save();
+            g.translate(x, padding.top + chartHeight + 58);
+            g.rotate(-Math.PI / 2);
+            g.fillText(mes, 0, 0);
+            g.restore();
         });
 
         const legendY = 10;
