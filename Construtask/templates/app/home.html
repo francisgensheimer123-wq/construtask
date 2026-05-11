@@ -192,7 +192,7 @@
         color: #3b82f6 !important;
     }
     .score-status-atencao {
-        color: #f97316 !important;
+        color: #facc15 !important;
     }
     .score-status-critico {
         color: #ef4444 !important;
@@ -277,8 +277,8 @@
 <section class="cards dashboard-cards">
     <div class="card score-summary-card {% if score_operacional.faixa == 'Excelente' %}score-status-excelente{% elif score_operacional.faixa == 'Saudavel' %}score-status-saudavel{% elif score_operacional.faixa == 'Atencao' %}score-status-atencao{% else %}score-status-critico{% endif %}">
         <span>Score Operacional</span>
-        <strong class="score-status-value {% if score_operacional.faixa == 'Excelente' %}score-status-excelente{% elif score_operacional.faixa == 'Saudavel' %}score-status-saudavel{% elif score_operacional.faixa == 'Atencao' %}score-status-atencao{% else %}score-status-critico{% endif %}">{{ score_operacional.pontuacao|trunc2 }}</strong>
-        <small class="score-status-text {% if score_operacional.faixa == 'Excelente' %}score-status-excelente{% elif score_operacional.faixa == 'Saudavel' %}score-status-saudavel{% elif score_operacional.faixa == 'Atencao' %}score-status-atencao{% else %}score-status-critico{% endif %}">{{ score_operacional.faixa }}</small>
+        <strong class="score-status-value {% if score_operacional.faixa == 'Excelente' %}score-status-excelente{% elif score_operacional.faixa == 'Saudável' %}score-status-saudavel{% elif score_operacional.faixa == 'Atenção' %}score-status-atencao{% else %}score-status-critico{% endif %}">{{ score_operacional.pontuacao|trunc2 }}</strong>
+        <small class="score-status-text {% if score_operacional.faixa == 'Excelente' %}score-status-excelente{% elif score_operacional.faixa == 'Saudável' %}score-status-saudavel{% elif score_operacional.faixa == 'Atenção' %}score-status-atencao{% else %}score-status-critico{% endif %}">{{ score_operacional.faixa }}</small>
     </div>
     <div class="card"><span>Orçado</span><strong>{{ indicadores_exec.orcado|money_br }}</strong></div>
     <div class="card"><span>Executado</span><strong>{{ indicadores_exec.executado|money_br }}</strong></div>
@@ -302,8 +302,8 @@
         <div class="score-donut">
             <div class="score-donut-center">
                 <span>Score Total</span>
-                <strong class="score-status-value {% if score_operacional.faixa == 'Excelente' %}score-status-excelente{% elif score_operacional.faixa == 'Saudavel' %}score-status-saudavel{% elif score_operacional.faixa == 'Atencao' %}score-status-atencao{% else %}score-status-critico{% endif %}">{{ score_operacional.pontuacao|trunc2 }}</strong>
-                <small class="score-status-text {% if score_operacional.faixa == 'Excelente' %}score-status-excelente{% elif score_operacional.faixa == 'Saudavel' %}score-status-saudavel{% elif score_operacional.faixa == 'Atencao' %}score-status-atencao{% else %}score-status-critico{% endif %}">{{ score_operacional.faixa }}</small>
+                <strong class="score-status-value {% if score_operacional.faixa == 'Excelente' %}score-status-excelente{% elif score_operacional.faixa == 'Saudável' %}score-status-saudavel{% elif score_operacional.faixa == 'Atenção' %}score-status-atencao{% else %}score-status-critico{% endif %}">{{ score_operacional.pontuacao|trunc2 }}</strong>
+                <small class="score-status-text {% if score_operacional.faixa == 'Excelente' %}score-status-excelente{% elif score_operacional.faixa == 'Saudável' %}score-status-saudavel{% elif score_operacional.faixa == 'Atenção' %}score-status-atencao{% else %}score-status-critico{% endif %}">{{ score_operacional.faixa }}</small>
             </div>
         </div>
         <div class="score-component-legend">
