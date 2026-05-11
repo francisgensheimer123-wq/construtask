@@ -89,7 +89,6 @@ from .importacao_cronograma import CronogramaService, MapeamentoService
 from .export_helpers import _pdf_ajustar_colunas_para_pagina
 from .queries.financeiro import construir_dados_projecao_financeira, construir_fluxo_financeiro_contratual
 from .queries.alertas import alerta_fora_sla
-from .navigation_helpers import _grafico_score_operacional
 from .views import ContratoDetailView, HomeView
 from .services import importar_plano_contas_excel, obter_dados_contrato, validar_rateio_nota
 from .services_aquisicoes import AquisicoesService
@@ -4663,23 +4662,6 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
         self.assertEqual(eva["PV"], Decimal("0.00"))
         self.assertEqual(eva["SPI"], Decimal("1.0000"))
         self.assertEqual(eva["CPI"], Decimal("1.0000"))
-
-    def test_grafico_score_usa_cores_por_nivel(self):
-        grafico = _grafico_score_operacional(
-            {
-                "componentes": [
-                    {"maximo": "25.00", "pontuacao": "25.00", "nivel": "excelente"},
-                    {"maximo": "25.00", "pontuacao": "20.00", "nivel": "saudavel"},
-                    {"maximo": "25.00", "pontuacao": "15.00", "nivel": "atencao"},
-                    {"maximo": "25.00", "pontuacao": "10.00", "nivel": "critico"},
-                ]
-            }
-        )
-
-        self.assertEqual(
-            [fatia["cor"] for fatia in grafico["fatias"]],
-            ["#22c55e", "#3b82f6", "#facc15", "#ef4444"],
-        )
 
     def test_score_operacional_reduz_com_alertas_e_riscos(self):
         risco = Risco.objects.create(
