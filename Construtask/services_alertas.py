@@ -606,7 +606,7 @@ def sincronizar_alertas_planejamento_suprimentos(obra):
             existe_solicitacao = SolicitacaoCompra.objects.filter(
                 obra=obra,
                 plano_contas=centro,
-                status__in=["RASCUNHO", "APROVADA", "COTANDO"],
+                status__in=["RASCUNHO", "APROVADA", "COTANDO", "ENCERRADA"],
             ).exists()
             if existe_solicitacao:
                 continue

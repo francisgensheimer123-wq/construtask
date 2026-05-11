@@ -3510,6 +3510,59 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
             ).exists()
         )
 
+    def test_regra_planejamento_suprimentos_nao_reabre_alerta_com_solicitacao_encerrada(self):
+        hoje = timezone.localdate()
+        plano = PlanoFisico.objects.create(
+            obra=self.obra,
+            titulo="Baseline Suprimento Encerrado",
+            responsavel_importacao=self.user,
+            status="BASELINE",
+            is_baseline=True,
+            data_base=hoje,
+        )
+        item = PlanoFisicoItem.objects.create(
+            plano=plano,
+            plano_contas=self.analitico,
+            codigo_atividade="ATV-SC-ENC",
+            atividade="Atividade com solicitação encerrada",
+            duracao=8,
+            data_inicio_prevista=hoje + timedelta(days=12),
+            data_fim_prevista=hoje + timedelta(days=20),
+            percentual_concluido=0,
+        )
+        sincronizar_alertas_planejamento_suprimentos(self.obra)
+        alerta = AlertaOperacional.objects.get(
+            obra=self.obra,
+            codigo_regra=CODIGO_ALERTA_PLANEJAMENTO_SUPRIMENTOS,
+            referencia=f"{item.pk}:{self.analitico.pk}",
+        )
+        AlertaOperacional.objects.filter(pk=alerta.pk).update(
+            status="ENCERRADO",
+            encerrado_em=timezone.now(),
+        )
+        SolicitacaoCompra.objects.create(
+            empresa=self.empresa,
+            obra=self.obra,
+            plano_contas=self.analitico,
+            titulo="Compra encerrada para atividade",
+            descricao="Solicitação emitida e encerrada",
+            solicitante=self.user,
+            data_solicitacao=hoje,
+            status="ENCERRADA",
+        )
+
+        alertas = sincronizar_alertas_planejamento_suprimentos(self.obra)
+
+        alerta.refresh_from_db()
+        self.assertEqual(alerta.status, "ENCERRADO")
+        self.assertEqual(alertas, [])
+        self.assertFalse(
+            AlertaOperacionalHistorico.objects.filter(
+                alerta=alerta,
+                acao="REABERTURA",
+            ).exists()
+        )
+
     def test_regra_contrato_sem_medicao_gera_alerta_para_contrato_ativo(self):
         contrato = Compromisso.objects.create(
             tipo="CONTRATO",
