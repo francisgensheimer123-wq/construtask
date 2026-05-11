@@ -18,11 +18,19 @@ def alerta_fora_sla(alerta, parametros, data_referencia=None):
     data_referencia = data_referencia or timezone.localdate()
     ultima_movimentacao = alerta.ultima_acao_em.date() if alerta.ultima_acao_em else alerta.criado_em.date()
     dias_sem_movimento = max((data_referencia - ultima_movimentacao).days, 0)
-    dias_em_aberto = max((data_referencia - alerta.criado_em.date()).days, 0)
+    inicio_alerta = data_inicio_sla_alerta(alerta)
+    dias_em_aberto = max((data_referencia - inicio_alerta).days, 0)
     return (
         dias_sem_movimento >= parametros.alerta_sem_workflow_dias
         or dias_em_aberto > parametros.alerta_prazo_solucao_dias
     )
+
+
+def data_inicio_sla_alerta(alerta):
+    inicio_alerta = alerta.criado_em.date()
+    if alerta.data_referencia and alerta.data_referencia < inicio_alerta:
+        inicio_alerta = alerta.data_referencia
+    return inicio_alerta
 
 
 def alerta_com_prazo_vencido(alerta, data_referencia=None):

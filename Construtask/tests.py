@@ -88,6 +88,7 @@ from .forms import (
 from .importacao_cronograma import CronogramaService, MapeamentoService
 from .export_helpers import _pdf_ajustar_colunas_para_pagina
 from .queries.financeiro import construir_dados_projecao_financeira, construir_fluxo_financeiro_contratual
+from .queries.alertas import alerta_fora_sla
 from .views import ContratoDetailView, HomeView
 from .services import importar_plano_contas_excel, obter_dados_contrato, validar_rateio_nota
 from .services_aquisicoes import AquisicoesService
@@ -4724,6 +4725,68 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
         )
         score_fora_sla = IndicadoresService.score_obra(self.obra, timezone.localdate())
         self.assertGreaterEqual(score_fora_sla["total_alertas_pendentes_score"], 1)
+
+    def test_score_penaliza_alerta_nc_criado_hoje_com_data_referencia_antiga(self):
+        parametros = ParametroAlertaEmpresa.obter_ou_criar(self.empresa)
+        ParametroAlertaEmpresa.objects.filter(pk=parametros.pk).update(
+            alerta_sem_workflow_dias=7,
+            alerta_prazo_solucao_dias=14,
+            nao_conformidade_sem_evolucao_dias=7,
+        )
+        parametros.refresh_from_db()
+        data_antiga = timezone.localdate() - timedelta(days=20)
+        nc = QualidadeWorkflowService.abrir(
+            empresa=self.empresa,
+            obra=self.obra,
+            plano_contas=self.analitico,
+            descricao="Não conformidade antiga para score",
+            responsavel=self.user,
+            criado_por=self.user,
+        )
+        NaoConformidade.objects.filter(pk=nc.pk).update(
+            data_abertura=data_antiga,
+            criado_em=timezone.now() - timedelta(days=20),
+        )
+        nc.historico.update(timestamp=timezone.now() - timedelta(days=20))
+
+        sincronizar_alertas_nc_sem_evolucao(self.obra)
+        alerta = AlertaOperacional.objects.get(
+            obra=self.obra,
+            codigo_regra=CODIGO_ALERTA_NC_SEM_EVOLUCAO,
+            entidade_id=nc.pk,
+        )
+        score = IndicadoresService.score_obra(self.obra, timezone.localdate())
+
+        self.assertEqual(alerta.data_referencia, data_antiga)
+        self.assertTrue(alerta_fora_sla(alerta, parametros, timezone.localdate()))
+        self.assertGreaterEqual(score["total_alertas_pendentes_score"], 1)
+
+    def test_score_usa_data_referencia_antiga_para_todas_as_frentes_de_alerta(self):
+        parametros = ParametroAlertaEmpresa.obter_ou_criar(self.empresa)
+        ParametroAlertaEmpresa.objects.filter(pk=parametros.pk).update(
+            alerta_sem_workflow_dias=7,
+            alerta_prazo_solucao_dias=14,
+        )
+        parametros.refresh_from_db()
+        data_antiga = timezone.localdate() - timedelta(days=20)
+        codigos = ["PLAN-PROG-001", "COST-BUD-001", "PLAN-SUP-001", "RISK-DUE-001"]
+        for codigo in codigos:
+            AlertaOperacional.objects.create(
+                obra=self.obra,
+                codigo_regra=codigo,
+                titulo=f"Alerta antigo {codigo}",
+                descricao="Ocorrência antiga sincronizada depois",
+                severidade="ALTA",
+                referencia=f"REF-{codigo}",
+                status="ABERTO",
+                data_referencia=data_antiga,
+            )
+
+        score = IndicadoresService.score_obra(self.obra, timezone.localdate())
+        alertas = AlertaOperacional.objects.filter(codigo_regra__in=codigos)
+
+        self.assertEqual(score["total_alertas_pendentes_score"], len(codigos))
+        self.assertTrue(all(alerta_fora_sla(alerta, parametros, timezone.localdate()) for alerta in alertas))
 
     def test_score_nao_penaliza_alerta_critico_recente_dentro_do_sla(self):
         ParametroAlertaEmpresa.obter_ou_criar(self.empresa)

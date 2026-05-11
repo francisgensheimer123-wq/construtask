@@ -9,6 +9,7 @@ from .importacao_cronograma import CronogramaService
 from .models import AlertaOperacional, ParametroAlertaEmpresa
 from .models_qualidade import NaoConformidade
 from .models_risco import Risco
+from .queries.alertas import data_inicio_sla_alerta
 from .services_alertas import resumo_alertas_operacionais
 from .services_eva import EVAService
 from .services_integracao import IntegracaoService
@@ -201,7 +202,8 @@ class IndicadoresService:
         for alerta in alertas_ativos:
             ultima_movimentacao = alerta.ultima_acao_em or alerta.criado_em
             dias_sem_movimento = max(0, (referencia_datetime - ultima_movimentacao).days)
-            dias_em_aberto = max(0, (referencia_datetime - alerta.criado_em).days)
+            inicio_alerta = data_inicio_sla_alerta(alerta)
+            dias_em_aberto = max(0, (data_referencia - inicio_alerta).days)
             if dias_sem_movimento >= dias_sem_workflow or dias_em_aberto > prazo_solucao_dias:
                 pendentes.append(alerta)
         return pendentes
