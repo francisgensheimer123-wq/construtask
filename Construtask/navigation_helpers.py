@@ -19,7 +19,12 @@ def _nivel_resumo_alerta(total):
 
 def _grafico_score_operacional(score_operacional):
     componentes = list(score_operacional.get("componentes") or [])
-    cores = ["#a61e1e", "#d4a017", "#4f9a2f", "#3f6fd1"]
+    cores_por_nivel = {
+        "excelente": "#22c55e",
+        "saudavel": "#3b82f6",
+        "atencao": "#facc15",
+        "critico": "#ef4444",
+    }
     fatias = []
     offset = Decimal("0.00")
     for indice, componente in enumerate(componentes):
@@ -32,7 +37,7 @@ def _grafico_score_operacional(score_operacional):
         fim = min(Decimal("100.00"), offset + Decimal("25.00"))
         fatias.append(
             {
-                "cor": cores[indice % len(cores)],
+                "cor": cores_por_nivel.get(componente.get("nivel"), "#d1d5db"),
                 "inicio": inicio,
                 "fim": fim,
                 "percentual_componente": percentual,
