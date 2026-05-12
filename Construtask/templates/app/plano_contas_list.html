@@ -309,7 +309,7 @@
     .modal-notas-table th,
     .modal-notas-table td {
         padding: 10px 12px;
-        border-bottom: 1px solid #d5d9df;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.10);
         vertical-align: top;
     }
 
@@ -322,7 +322,7 @@
     .modal-backdrop {
         position: absolute;
         inset: 0;
-        background: rgba(15, 23, 42, 0.52);
+        background: rgba(0, 0, 0, 0.68);
     }
 
     .modal-card {
@@ -331,15 +331,32 @@
         max-height: calc(100vh - 48px);
         overflow: auto;
         margin: 24px auto;
-        background: #ffffff;
+        background: linear-gradient(180deg, rgba(56, 56, 56, 0.98) 0%, rgba(24, 24, 24, 0.99) 100%);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-top: 4px solid var(--red-dark);
         border-radius: 18px;
+        color: var(--text);
         padding: 20px;
-        box-shadow: 0 24px 80px rgba(15, 23, 42, 0.22);
+        box-shadow: 0 24px 80px rgba(0, 0, 0, 0.46);
+    }
+
+    .modal-card .muted {
+        color: var(--text-soft);
     }
 
     .modal-notas-table th {
         text-align: left;
-        background: #eef0f3;
+        background: linear-gradient(180deg, rgba(139, 0, 0, 0.82) 0%, rgba(92, 0, 0, 0.92) 100%);
+        color: #ffffff;
+        border-bottom-color: rgba(255, 255, 255, 0.18);
+    }
+
+    .modal-notas-table td {
+        color: var(--text-soft);
+    }
+
+    .modal-notas-table tbody tr:hover {
+        background: rgba(255, 255, 255, 0.045);
     }
 </style>
 
