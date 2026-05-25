@@ -28,13 +28,18 @@ class ConstrutaskConfig(AppConfig):
         # exceto o próprio processar_jobs_assincronos
         import sys
         argv = sys.argv
+        argv_texto = " ".join(argv).lower()
+        executavel = os.path.basename(argv[0]).lower() if argv else ""
+        if "celery" in executavel or "celery" in argv_texto:
+            return
         if len(argv) >= 2 and argv[1] not in (
-            "runserver", "gunicorn", "uvicorn", "processar_jobs_assincronos"
+            "runserver", "gunicorn", "uvicorn"
         ):
             management_commands = {
                 "migrate", "makemigrations", "collectstatic", "shell",
                 "createsuperuser", "dbshell", "check", "test",
                 "validar_prontidao_producao", "normalizar_textos_cadastrais",
+                "processar_jobs_assincronos",
             }
             if argv[1] in management_commands:
                 return

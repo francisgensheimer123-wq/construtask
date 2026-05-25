@@ -1,4 +1,5 @@
 import csv
+import time
 from io import StringIO
 
 from django.core.files.base import ContentFile
@@ -14,6 +15,10 @@ from .importacao_cronograma import CronogramaService
 
 
 JOB_HANDLERS = {}
+
+
+class JobArquivoEntradaIndisponivel(Exception):
+    pass
 
 
 def registrar_job_handler(tipo):
@@ -148,12 +153,28 @@ def _executar_job_seguro(job):
         job.erro = f"Handler não registrado para tipo '{job.tipo}'."
         job.save(update_fields=["status", "concluido_em", "erro", "atualizado_em"])
         return
+    if job.status != "EM_EXECUCAO":
+        job.status = "EM_EXECUCAO"
+        job.iniciado_em = _tz.now()
+        job.tentativas += 1
+        job.save(update_fields=["status", "iniciado_em", "tentativas", "atualizado_em"])
     try:
         resultado = handler(job)
         job.status = "CONCLUIDO"
         job.concluido_em = _tz.now()
         job.resultado = resultado or {}
         job.save(update_fields=["status", "concluido_em", "resultado", "arquivo_resultado", "atualizado_em"])
+    except JobArquivoEntradaIndisponivel as exc:
+        _job_worker_logger.warning(f"[Job {job.pk}] Arquivo de entrada ainda indisponivel: {exc}")
+        if job.tentativas < 5:
+            job.status = "PENDENTE"
+            job.erro = str(exc)
+            job.save(update_fields=["status", "erro", "atualizado_em"])
+            return
+        job.status = "FALHOU"
+        job.concluido_em = _tz.now()
+        job.erro = str(exc)
+        job.save(update_fields=["status", "concluido_em", "erro", "atualizado_em"])
     except Exception as exc:
         _job_worker_logger.exception(f"[Job {job.pk}] Falha ao executar job '{job.tipo}'.")
         job.status = "FALHOU"
@@ -170,6 +191,20 @@ def _salvar_csv_job(job, nome_arquivo, cabecalhos, linhas):
         writer.writerow(linha)
     job.arquivo_resultado.save(nome_arquivo, ContentFile(buffer.getvalue().encode("utf-8")), save=False)
     return {"arquivo": job.arquivo_resultado.name, "linhas": len(linhas)}
+
+
+def _abrir_arquivo_entrada_job(job):
+    ultimo_erro = None
+    for tentativa in range(1, 4):
+        try:
+            return job.arquivo_entrada.open("rb")
+        except FileNotFoundError as exc:
+            ultimo_erro = exc
+            if tentativa < 3:
+                time.sleep(2)
+    raise JobArquivoEntradaIndisponivel(
+        f"Arquivo de entrada ainda nao disponivel no storage: {job.arquivo_entrada.name}. erro={ultimo_erro}"
+    )
 
 
 @registrar_job_handler("SINCRONIZAR_ALERTAS_OBRA")
@@ -189,7 +224,7 @@ def executar_job_importar_plano_contas(job):
     obra = job.obra or Obra.objects.get(pk=job.parametros["obra_id"])
     if not job.arquivo_entrada:
         raise ValueError("Job de importação sem arquivo de entrada.")
-    with job.arquivo_entrada.open("rb") as arquivo:
+    with _abrir_arquivo_entrada_job(job) as arquivo:
         importar_plano_contas_excel(arquivo, obra=obra)
     return {
         "obra_id": obra.pk,
@@ -256,7 +291,7 @@ def executar_job_importar_cronograma(job):
     criar_baseline = job.parametros.get("criar_baseline", False)
     responsavel = job.solicitado_por
 
-    with job.arquivo_entrada.open("rb") as arquivo:
+    with _abrir_arquivo_entrada_job(job) as arquivo:
         plano = CronogramaService.importar_xlsx(
             arquivo=arquivo,
             obra=obra,
