@@ -430,9 +430,12 @@ class CronogramaService:
     @classmethod
     def _normalizar_string(cls, valor):
         """Normaliza uma string para uso interno."""
-        if valor is None:
+        if valor is None or pd.isna(valor):
             return None
-        return str(valor).strip()
+        texto = str(valor).strip()
+        if texto.lower() in {"", "nan", "none", "null", "nat"}:
+            return None
+        return texto
     
     @classmethod
     def _parse_data(cls, valor):

@@ -86,6 +86,7 @@ from .forms import (
     ObraForm,
 )
 from .importacao_cronograma import CronogramaService, MapeamentoService
+from .application.planejamento import consolidar_arvore_cronograma
 from .export_helpers import _pdf_ajustar_colunas_para_pagina
 from .queries.financeiro import construir_dados_projecao_financeira, construir_fluxo_financeiro_contratual
 from .queries.alertas import alerta_fora_sla
@@ -3992,6 +3993,40 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
         self.assertEqual(item.codigo_eap_importado, "EAP-INEXISTENTE")
         self.assertIsNone(item.plano_contas)
         self.assertIn("não localizado", item.erro_vinculo_eap.lower())
+
+    def test_cronograma_nao_exibe_erro_eap_nan_em_atividades_pai(self):
+        plano = PlanoFisico.objects.create(
+            obra=self.obra,
+            titulo="Cronograma com agrupador",
+            responsavel_importacao=self.user,
+            status="ATIVO",
+        )
+        pai = PlanoFisicoItem.objects.create(
+            plano=plano,
+            codigo_atividade="01",
+            atividade="SERVIÇOS PRELIMINARES",
+            codigo_eap_importado="nan",
+            erro_vinculo_eap="Código da EAP 'nan' não localizado na EAP da obra.",
+            level=0,
+            sort_order=1,
+        )
+        PlanoFisicoItem.objects.create(
+            plano=plano,
+            parent=pai,
+            codigo_atividade="01.01",
+            atividade="Limpeza do terreno",
+            plano_contas=self.analitico,
+            codigo_eap_importado=self.analitico.codigo,
+            level=1,
+            sort_order=2,
+        )
+
+        linhas = consolidar_arvore_cronograma(plano)
+        pai_exibicao = next(item for item in linhas if item.pk == pai.pk)
+
+        self.assertTrue(pai_exibicao.tem_filhos_exibicao)
+        self.assertEqual(pai_exibicao.codigos_eap_exibicao, [])
+        self.assertEqual(pai_exibicao.erro_vinculo_exibicao, "")
 
     def test_importacao_cronograma_reconhece_colunas_previstas_e_data_com_hora(self):
         arquivo = BytesIO()

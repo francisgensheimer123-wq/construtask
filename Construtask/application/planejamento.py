@@ -19,6 +19,13 @@ def itens_plano_carregados(plano):
     return list(plano.itens.select_related("plano_contas", "parent").order_by("sort_order", "pk"))
 
 
+def _codigo_eap_exibivel(codigo):
+    texto = str(codigo or "").strip()
+    if texto.lower() in {"", "nan", "none", "null", "nat"}:
+        return ""
+    return texto
+
+
 def consolidar_arvore_cronograma(plano, analise_vinculos=None):
     analise_vinculos = analise_vinculos or MapeamentoService.analisar_vinculos(plano)
     valores_planejados = analise_vinculos["valores_item"]
@@ -122,10 +129,16 @@ def consolidar_arvore_cronograma(plano, analise_vinculos=None):
             item.valor_realizado_exibicao = metricas["valor_realizado"]
             item.tem_filhos_exibicao = metricas["tem_filhos"]
             item.nivel_exibicao = item.level
-            item.codigos_eap_exibicao = codigos_por_item.get(item.pk) or (
-                [item.codigo_eap_importado] if item.codigo_eap_importado else []
-            )
-            item.erro_vinculo_exibicao = mensagens_vinculo.get(item.pk) or item.erro_vinculo_eap
+            if item.tem_filhos_exibicao:
+                item.codigos_eap_exibicao = []
+                item.erro_vinculo_exibicao = ""
+            else:
+                codigos = [_codigo_eap_exibivel(codigo) for codigo in codigos_por_item.get(item.pk, [])]
+                codigo_importado = _codigo_eap_exibivel(item.codigo_eap_importado)
+                item.codigos_eap_exibicao = [codigo for codigo in codigos if codigo] or (
+                    [codigo_importado] if codigo_importado else []
+                )
+                item.erro_vinculo_exibicao = mensagens_vinculo.get(item.pk) or item.erro_vinculo_eap
             linhas.append(item)
             percorrer(item.pk)
 
