@@ -1,4 +1,5 @@
 import math
+import unicodedata
 from decimal import Decimal
 
 import pandas as pd
@@ -25,6 +26,25 @@ def normalizar_codigo(codigo):
     if codigo.endswith(".0"):
         codigo = codigo[:-2]
     return codigo
+
+
+def normalizar_nome_coluna(nome):
+    texto = str(nome or "").strip().upper()
+    texto = "".join(
+        caractere
+        for caractere in unicodedata.normalize("NFKD", texto)
+        if not unicodedata.combining(caractere)
+    )
+    return " ".join(texto.replace("_", " ").split())
+
+
+def obter_valor_coluna(row, *nomes):
+    colunas = {normalizar_nome_coluna(coluna): coluna for coluna in row.index}
+    for nome in nomes:
+        valor = row.get(colunas.get(normalizar_nome_coluna(nome)))
+        if valor is not None:
+            return valor
+    return None
 
 
 def importar_plano_contas_excel(arquivo, obra=None):
@@ -77,10 +97,12 @@ def importar_plano_contas_excel(arquivo, obra=None):
             if not codigo:
                 continue
 
-            descricao = str(row.get("DESCRIÇÃO", row.get("DESCRIÇÃO", ""))).strip()
-            unidade = row.get("UN")
-            quantidade = tratar_decimal(row.get("QTD"))
-            valor_unitario = tratar_decimal(row.get("VALOR UNIT."))
+            descricao = str(obter_valor_coluna(row, "DESCRIÇÃO", "DESCRICAO", "DESCRIÇAO", "DESCRIÇÃO ") or "").strip()
+            unidade = obter_valor_coluna(row, "UN", "UNIDADE")
+            quantidade = tratar_decimal(obter_valor_coluna(row, "QTD", "QUANTIDADE"))
+            valor_unitario = tratar_decimal(
+                obter_valor_coluna(row, "VALOR UNIT.", "VALOR UNIT", "VALOR UNITARIO", "VALOR UNITÁRIO")
+            )
             partes = codigo.split(".")
 
             if codigo not in possui_filhos:

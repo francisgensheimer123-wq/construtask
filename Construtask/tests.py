@@ -5366,7 +5366,9 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
         job.refresh_from_db()
 
         self.assertEqual(job.status, "CONCLUIDO")
-        self.assertTrue(PlanoContas.objects.filter(obra=self.obra, codigo="1.1.1.1.1.1").exists())
+        folha = PlanoContas.objects.get(obra=self.obra, codigo="1.1.1.1.1.1")
+        self.assertEqual(folha.descricao, "Equipe")
+        self.assertEqual(folha.valor_total, Decimal("100.00"))
 
     def test_relatorio_financeiro_por_job_gera_arquivo_resultado(self):
         response = self.client.post(
