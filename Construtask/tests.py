@@ -623,6 +623,26 @@ class ImportacaoPlanoContasServiceTests(TestCase):
         self.assertEqual(folha.descricao, "Concreto")
         self.assertEqual(folha.valor_total, Decimal("100.00"))
 
+    def test_importar_plano_contas_excel_aceita_cabecalhos_do_modelo_demonstracao(self):
+        arquivo = BytesIO()
+        df = pd.DataFrame(
+            [
+                {"Item": "01", "Descrição": "SERVIÇOS PRELIMINARES", "Unidade": None, "Quantidade": None, "Valor Unitário": None},
+                {"Item": "01.01", "Descrição": "CANTEIRO DE OBRAS", "Unidade": None, "Quantidade": None, "Valor Unitário": None},
+                {"Item": "01.01.01", "Descrição": "INSTALAÇÕES INICIAIS", "Unidade": None, "Quantidade": None, "Valor Unitário": None},
+                {"Item": "01.01.01.001", "Descrição": "MOBILIZAÇÃO", "Unidade": None, "Quantidade": None, "Valor Unitário": None},
+                {"Item": "01.01.01.001.001", "Descrição": "Limpeza do terreno", "Unidade": "m²", "Quantidade": "1250", "Valor Unitário": "8"},
+            ]
+        )
+        df.to_excel(arquivo, index=False)
+        arquivo.seek(0)
+
+        importar_plano_contas_excel(arquivo)
+
+        folha = PlanoContas.objects.get(codigo="01.01.01.001.001.1")
+        self.assertEqual(folha.descricao, "Limpeza do terreno")
+        self.assertEqual(folha.valor_total, Decimal("10000.00"))
+
 
 class DomainTests(BaseFinanceTestCase):
     def test_calcula_saldo_disponivel_do_compromisso(self):

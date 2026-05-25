@@ -60,7 +60,7 @@ def importar_plano_contas_excel(arquivo, obra=None):
 
     codigos_excel = []
     for _, row in df.iterrows():
-        codigo = normalizar_codigo(row.get("ITEM"))
+        codigo = normalizar_codigo(obter_valor_coluna(row, "ITEM"))
         if codigo:
             codigos_excel.append(codigo)
 
@@ -93,7 +93,7 @@ def importar_plano_contas_excel(arquivo, obra=None):
 
         objetos_criados = {}
         for _, row in df.iterrows():
-            codigo = normalizar_codigo(row.get("ITEM"))
+            codigo = normalizar_codigo(obter_valor_coluna(row, "ITEM"))
             if not codigo:
                 continue
 
