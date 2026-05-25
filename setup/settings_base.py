@@ -37,6 +37,15 @@ def _env_json(name, default=None):
         raise ImproperlyConfigured(f"Valor invalido em {name}: JSON esperado.") from exc
 
 
+def _normalizar_endpoint_url_opcoes_storage(options):
+    if not isinstance(options, dict):
+        return options
+    endpoint = (options.get("endpoint_url") or "").strip()
+    if endpoint and not endpoint.startswith(("http://", "https://")):
+        options = {**options, "endpoint_url": f"https://{endpoint}"}
+    return options
+
+
 def _redis_db_url(base_url, db_index):
     base = (base_url or "redis://localhost:6379").rstrip("/")
     if base.rsplit("/", 1)[-1].isdigit():
@@ -190,7 +199,7 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 MEDIA_STORAGE_BACKEND = os.environ.get("DJANGO_MEDIA_STORAGE_BACKEND", "django.core.files.storage.FileSystemStorage")
-MEDIA_STORAGE_OPTIONS = _env_json("DJANGO_MEDIA_STORAGE_OPTIONS_JSON", {})
+MEDIA_STORAGE_OPTIONS = _normalizar_endpoint_url_opcoes_storage(_env_json("DJANGO_MEDIA_STORAGE_OPTIONS_JSON", {}))
 CONSTRUTASK_MEDIA_PERSISTENT = _env_bool(
     "CONSTRUTASK_MEDIA_PERSISTENT",
     DEBUG or MEDIA_STORAGE_BACKEND != "django.core.files.storage.FileSystemStorage",
