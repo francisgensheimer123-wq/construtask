@@ -1,4 +1,5 @@
-from django.core.files.base import ContentFile
+﻿from django.core.files.base import ContentFile
+from django.db import transaction
 
 from ..permissions import get_empresa_operacional, get_obra_do_contexto
 from ..queries.jobs import listar_jobs_contexto, resumir_jobs_contexto
@@ -21,7 +22,7 @@ def enfileirar_sincronizacao_alertas(request):
         return None
     return enfileirar_job(
         tipo="SINCRONIZAR_ALERTAS_OBRA",
-        descricao=f"Sincronização operacional de alertas da obra {obra.codigo}",
+        descricao=f"SincronizaÃ§Ã£o operacional de alertas da obra {obra.codigo}",
         solicitado_por=request.user,
         empresa=obra.empresa,
         obra=obra,
@@ -33,15 +34,16 @@ def enfileirar_importacao_plano_contas(request, arquivo):
     obra = get_obra_do_contexto(request)
     if not obra:
         return None
-    job = enfileirar_job(
-        tipo="IMPORTAR_PLANO_CONTAS",
-        descricao=f"Importação de plano de contas da obra {obra.codigo}",
-        solicitado_por=request.user,
-        empresa=obra.empresa,
-        obra=obra,
-        parametros={"obra_id": obra.pk, "nome_original": arquivo.name},
-    )
-    job.arquivo_entrada.save(arquivo.name, ContentFile(arquivo.read()), save=True)
+    with transaction.atomic():
+        job = enfileirar_job(
+            tipo="IMPORTAR_PLANO_CONTAS",
+            descricao=f"ImportaÃ§Ã£o de plano de contas da obra {obra.codigo}",
+            solicitado_por=request.user,
+            empresa=obra.empresa,
+            obra=obra,
+            parametros={"obra_id": obra.pk, "nome_original": arquivo.name},
+        )
+        job.arquivo_entrada.save(arquivo.name, ContentFile(arquivo.read()), save=True)
     return job
 
 
@@ -51,11 +53,11 @@ def enfileirar_relatorio_financeiro(request, *, relatorio, parametros):
         return None
     if relatorio == "FECHAMENTO_MENSAL":
         descricao = (
-            f"Relatório de fechamento mensal da obra {obra.codigo} "
+            f"RelatÃ³rio de fechamento mensal da obra {obra.codigo} "
             f"({int(parametros['mes']):02d}/{int(parametros['ano'])})"
         )
     else:
-        descricao = f"Relatório de projeção financeira da obra {obra.codigo} ({int(parametros['meses'])} meses)"
+        descricao = f"RelatÃ³rio de projeÃ§Ã£o financeira da obra {obra.codigo} ({int(parametros['meses'])} meses)"
     return enfileirar_job(
         tipo="GERAR_RELATORIO_FINANCEIRO",
         descricao=descricao,
