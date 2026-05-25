@@ -2,7 +2,7 @@ import csv
 from io import StringIO
 
 from django.core.files.base import ContentFile
-from django.db import transaction
+from django.db import models, transaction
 from django.utils import timezone
 
 from .application.financeiro import registrar_fechamento_mensal
