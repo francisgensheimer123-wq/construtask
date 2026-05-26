@@ -1636,6 +1636,12 @@ class Documento(models.Model):
             models.Index(fields=["empresa", "status"]),
             models.Index(fields=["codigo_documento"]),
         ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["empresa", "obra", "codigo_documento"],
+                name="uq_documento_codigo_por_obra",
+            ),
+        ]
 
     STATUS_CHOICES = (
         ("RASCUNHO", "Rascunho"),
@@ -1695,39 +1701,42 @@ class Documento(models.Model):
         super().save(*args, **kwargs)
 
     def gerar_codigo(self):
-            from django.db import transaction
+        from django.db import transaction
 
-            prefixos = {
-                "PROCEDIMENTO": "PRO",
-                "INSTRUCAO": "INS",
-                "REGISTRO": "REG",
-                "MANUAL": "MAN",
-                "POLITICA": "POL",
-                "ROTEIRO": "ROT",
-                "FORMULARIO": "FOR",
-                "OUTRO": "OUT",
-            }
-            prefixo = prefixos.get(self.tipo_documento, "DOC")
-            ano = timezone.now().year
-            prefixo_ano = f"{prefixo}-{ano}-"
+        prefixos = {
+            "PROCEDIMENTO": "PRO",
+            "INSTRUCAO": "INS",
+            "REGISTRO": "REG",
+            "MANUAL": "MAN",
+            "POLITICA": "POL",
+            "ROTEIRO": "ROT",
+            "FORMULARIO": "FOR",
+            "OUTRO": "OUT",
+        }
+        prefixo = prefixos.get(self.tipo_documento, "DOC")
+        ano = timezone.now().year
+        prefixo_ano = f"{prefixo}-{ano}-"
+        filtros_escopo = {
+            "empresa": self.empresa,
+            "obra": self.obra,
+            "codigo_documento__startswith": prefixo_ano,
+        }
 
-            with transaction.atomic():
-                ultimo = (
-                    Documento.objects
-                    .select_for_update()
-                    .filter(codigo_documento__startswith=prefixo_ano)
-                    .order_by("-codigo_documento")
-                    .first()
-                )
-                if ultimo is None:
-                    return f"{prefixo_ano}0001"
-                try:
-                    numero = int(ultimo.codigo_documento.split("-")[-1]) + 1
-                except (ValueError, IndexError):
-                    numero = Documento.objects.filter(
-                        codigo_documento__startswith=prefixo_ano
-                    ).count() + 1
-                return f"{prefixo_ano}{numero:04d}"
+        with transaction.atomic():
+            ultimo = (
+                Documento.objects
+                .select_for_update()
+                .filter(**filtros_escopo)
+                .order_by("-codigo_documento")
+                .first()
+            )
+            if ultimo is None:
+                return f"{prefixo_ano}0001"
+            try:
+                numero = int(ultimo.codigo_documento.split("-")[-1]) + 1
+            except (ValueError, IndexError):
+                numero = Documento.objects.filter(**filtros_escopo).count() + 1
+            return f"{prefixo_ano}{numero:04d}"
 
     def pode_revisar(self):
         return self.status == "RASCUNHO"

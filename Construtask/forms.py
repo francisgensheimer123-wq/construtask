@@ -878,7 +878,7 @@ class DocumentoForm(NormalizeTextFieldsMixin, forms.ModelForm):
             'obra': forms.Select(attrs={'class': 'form-select'}),
             'processo': forms.TextInput(attrs={'placeholder': 'Ex: ISO 7.5, ISO 9.1'}),
             'tipo_documento': forms.Select(attrs={'class': 'form-select'}),
-            'codigo_documento': forms.TextInput(attrs={'placeholder': 'Código único do documento'}),
+            'codigo_documento': forms.TextInput(attrs={'placeholder': 'Código único do documento', 'autocomplete': 'off'}),
             'titulo': forms.TextInput(attrs={'placeholder': 'Título do documento'}),
         }
 
@@ -895,8 +895,8 @@ class DocumentoForm(NormalizeTextFieldsMixin, forms.ModelForm):
                 self.fields["obra"].initial = obra_contexto
                 self.fields["plano_contas"].queryset = PlanoContas.objects.filter(obra=obra_contexto).order_by("tree_id", "lft")
             else:
-                self.fields['obra'].queryset = filtrar_obras_liberadas_para_lancamento(empresa.obras.all()).order_by("codigo")
-                self.fields['plano_contas'].queryset = PlanoContas.objects.filter(obra__empresa=empresa).order_by("tree_id", "lft")
+                self.fields['obra'].queryset = Obra.objects.none()
+                self.fields['plano_contas'].queryset = PlanoContas.objects.none()
         else:
             self.fields['obra'].queryset = Obra.objects.none()
             self.fields['plano_contas'].queryset = PlanoContas.objects.none()

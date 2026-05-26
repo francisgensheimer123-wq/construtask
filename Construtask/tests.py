@@ -81,6 +81,7 @@ from .forms import (
     AditivoContratoItemFormSet,
     CotacaoForm,
     CotacaoFornecedorComparativoForm,
+    DocumentoForm,
     MedicaoForm,
     NotaFiscalForm,
     ObraForm,
@@ -1332,6 +1333,51 @@ class AppViewsTests(BaseFinanceTestCase):
 
         detail_response = self.client.get(reverse("documento_detail", args=[documento.pk]))
         self.assertContains(detail_response, "v001")
+
+    def test_documento_codigo_automatico_reinicia_por_obra(self):
+        ano = timezone.now().year
+        outra_obra = Obra.objects.create(
+            empresa=self.empresa,
+            codigo="OBR-DOC-002",
+            nome="Obra Documental 2",
+            status="EM_ANDAMENTO",
+        )
+
+        documento_obra_atual = Documento.objects.create(
+            empresa=self.empresa,
+            obra=self.obra,
+            tipo_documento="PROCEDIMENTO",
+            codigo_documento="",
+            titulo="Procedimento obra atual",
+            criado_por=self.user,
+        )
+        documento_outra_obra = Documento.objects.create(
+            empresa=self.empresa,
+            obra=outra_obra,
+            tipo_documento="PROCEDIMENTO",
+            codigo_documento="",
+            titulo="Procedimento outra obra",
+            criado_por=self.user,
+        )
+        segundo_documento_obra_atual = Documento.objects.create(
+            empresa=self.empresa,
+            obra=self.obra,
+            tipo_documento="PROCEDIMENTO",
+            codigo_documento="",
+            titulo="Segundo procedimento obra atual",
+            criado_por=self.user,
+        )
+
+        self.assertEqual(documento_obra_atual.codigo_documento, f"PRO-{ano}-0001")
+        self.assertEqual(documento_outra_obra.codigo_documento, f"PRO-{ano}-0001")
+        self.assertEqual(segundo_documento_obra_atual.codigo_documento, f"PRO-{ano}-0002")
+
+    def test_documento_form_sem_obra_contexto_nao_lista_opcoes_de_outras_obras(self):
+        form = DocumentoForm(empresa=self.empresa, obra_contexto=None)
+
+        self.assertFalse(form.fields["obra"].queryset.exists())
+        self.assertFalse(form.fields["plano_contas"].queryset.exists())
+        self.assertEqual(form.fields["codigo_documento"].widget.attrs.get("autocomplete"), "off")
 
     def test_documento_obsoleto_bloqueia_download_para_usuario_nao_admin_empresa(self):
         documento = Documento.objects.create(
