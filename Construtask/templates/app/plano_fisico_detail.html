@@ -232,13 +232,11 @@
                                 <span class="badge bg-dark">{{ item.percentual_realizado_exibicao|trunc2 }}%</span>
                             {% else %}
                                 <input
-                                    type="number"
-                                    min="0"
-                                    max="100"
-                                    step="1"
+                                    type="text"
+                                    inputmode="decimal"
                                     name="realizado_{{ item.pk|unlocalize }}"
                                     data-item-pk="{{ item.pk|unlocalize }}"
-                                    value="{{ item.percentual_concluido|default:0 }}"
+                                    value="{{ item.percentual_concluido|default:0|trunc2 }}"
                                     class="cronograma-realizado-input"
                                 >
                             {% endif %}

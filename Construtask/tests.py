@@ -1040,6 +1040,31 @@ class AppViewsTests(BaseFinanceTestCase):
         self.assertEqual(item.percentual_concluido, Decimal("12.50"))
         self.assertEqual(item.valor_realizado, Decimal("125.00"))
 
+    def test_cronograma_detail_exibe_realizado_persistido_no_input(self):
+        plano = PlanoFisico.objects.create(
+            obra=self.obra,
+            titulo="Cronograma realizado persistido",
+            responsavel_importacao=self.user,
+            status="ATIVO",
+        )
+        item = PlanoFisicoItem.objects.create(
+            plano=plano,
+            plano_contas=self.analitico,
+            codigo_atividade="CRN-VAL-001",
+            atividade="Concreto",
+            data_inicio_prevista=timezone.localdate(),
+            data_fim_prevista=timezone.localdate() + timedelta(days=10),
+            percentual_concluido=Decimal("12.50"),
+            valor_planejado=Decimal("1000.00"),
+        )
+
+        response = self.client.get(reverse("plano_fisico_detail", args=[plano.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f'name="realizado_{item.pk}"')
+        self.assertContains(response, 'inputmode="decimal"')
+        self.assertContains(response, 'value="12,50"')
+
     def test_cronograma_concluido_no_prazo_nao_fica_atrasado_por_inicio_real(self):
         hoje = timezone.localdate()
         plano = PlanoFisico.objects.create(
@@ -1060,6 +1085,27 @@ class AppViewsTests(BaseFinanceTestCase):
         )
 
         self.assertLessEqual(item.dias_desvio, 0)
+
+    def test_cronograma_concluido_antes_do_prazo_registra_desvio_negativo(self):
+        hoje = timezone.localdate()
+        plano = PlanoFisico.objects.create(
+            obra=self.obra,
+            titulo="Cronograma adiantado",
+            responsavel_importacao=self.user,
+            status="ATIVO",
+        )
+        item = PlanoFisicoItem.objects.create(
+            plano=plano,
+            codigo_atividade="CRN-ADI-001",
+            atividade="Acabamento",
+            data_inicio_prevista=hoje - timedelta(days=8),
+            data_fim_prevista=hoje + timedelta(days=4),
+            data_inicio_real=hoje - timedelta(days=7),
+            data_fim_real=hoje,
+            percentual_concluido=Decimal("100.00"),
+        )
+
+        self.assertEqual(item.dias_desvio, -4)
 
     def test_cronograma_incompleto_apos_fim_previsto_conta_dias_vencidos(self):
         hoje = timezone.localdate()
