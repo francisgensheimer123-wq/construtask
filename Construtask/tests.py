@@ -106,6 +106,7 @@ from .services_lgpd import (
     descartar_fornecedor_anonimizado,
     excluir_logicamente_fornecedor,
 )
+from .nota_fiscal_xml import importar_dados_nota_fiscal_xml
 from .services_alertas import (
     CODIGO_ALERTA_COMPROMISSO_ACIMA_ORCADO,
     CODIGO_ALERTA_CONTRATO_SEM_MEDICAO,
@@ -321,6 +322,82 @@ class CnpjNormalizationTests(BaseFinanceTestCase):
         self.assertIn("form-control-phone", compromisso_form.fields["telefone"].widget.attrs["class"])
         self.assertIn("form-control-date", compromisso_form.fields["data_assinatura"].widget.attrs["class"])
         self.assertEqual(fornecedor_form.fields["cnpj"].widget.attrs["placeholder"], "00.000.000/0001-00")
+
+
+class NotaFiscalXmlImportTests(TestCase):
+    def _importar(self, xml):
+        return importar_dados_nota_fiscal_xml(BytesIO(xml.encode("utf-8")))
+
+    def test_importa_xml_nfse_abrasf(self):
+        dados = self._importar(
+            """<CompNfse xmlns="http://www.abrasf.org.br/nfse.xsd">
+                <Nfse>
+                    <InfNfse>
+                        <Numero>321</Numero>
+                        <DataEmissao>2026-04-10T12:00:00</DataEmissao>
+                        <Servico>
+                            <Valores>
+                                <ValorServicos>1500.25</ValorServicos>
+                            </Valores>
+                            <Discriminacao>Serviço de consultoria técnica</Discriminacao>
+                        </Servico>
+                        <PrestadorServico>
+                            <IdentificacaoPrestador><CpfCnpj><Cnpj>11222333000144</Cnpj></CpfCnpj></IdentificacaoPrestador>
+                            <RazaoSocial>Prestador ABRASF LTDA</RazaoSocial>
+                        </PrestadorServico>
+                    </InfNfse>
+                </Nfse>
+            </CompNfse>"""
+        )
+
+        self.assertEqual(dados.numero, "321")
+        self.assertEqual(dados.tipo, "SERVICO")
+        self.assertEqual(dados.fornecedor, "Prestador ABRASF LTDA")
+        self.assertEqual(dados.cnpj, "11.222.333/0001-44")
+        self.assertEqual(dados.valor_total, Decimal("1500.25"))
+        self.assertIn("consultoria técnica", dados.descricao)
+
+    def test_importa_xml_cte(self):
+        dados = self._importar(
+            """<cteProc xmlns="http://www.portalfiscal.inf.br/cte">
+                <CTe>
+                    <infCte>
+                        <ide><serie>4</serie><nCT>4567</nCT><dhEmi>2026-04-11T09:00:00-03:00</dhEmi></ide>
+                        <emit><CNPJ>22333444000155</CNPJ><xNome>Transportadora CT-e LTDA</xNome></emit>
+                        <compl><xObs>Frete de materiais de obra</xObs></compl>
+                        <vPrest><vTPrest>780.90</vTPrest></vPrest>
+                    </infCte>
+                </CTe>
+            </cteProc>"""
+        )
+
+        self.assertEqual(dados.numero, "4567")
+        self.assertEqual(dados.serie, "4")
+        self.assertEqual(dados.tipo, "SERVICO")
+        self.assertEqual(dados.fornecedor, "Transportadora CT-e LTDA")
+        self.assertEqual(dados.cnpj, "22.333.444/0001-55")
+        self.assertEqual(dados.valor_total, Decimal("780.90"))
+
+    def test_importa_xml_cfe_sat(self):
+        dados = self._importar(
+            """<CFe>
+                <infCFe Id="CFe35160411222333000144599000012345678901234567">
+                    <ide><nCFe>123456</nCFe><nserieSAT>900001</nserieSAT><dEmi>20260412</dEmi></ide>
+                    <emit><CNPJ>33444555000166</CNPJ><xNome>Fornecedor SAT LTDA</xNome></emit>
+                    <det><prod><xProd>Material de consumo</xProd></prod></det>
+                    <total><vCFe>45.67</vCFe></total>
+                </infCFe>
+            </CFe>"""
+        )
+
+        self.assertEqual(dados.numero, "123456")
+        self.assertEqual(dados.serie, "900001")
+        self.assertEqual(dados.tipo, "MATERIAL")
+        self.assertEqual(dados.data_emissao, date(2026, 4, 12))
+        self.assertEqual(dados.fornecedor, "Fornecedor SAT LTDA")
+        self.assertEqual(dados.cnpj, "33.444.555/0001-66")
+        self.assertEqual(dados.valor_total, Decimal("45.67"))
+        self.assertIn("Material de consumo", dados.descricao)
 
 
 class RegrasFinanceirasTests(BaseFinanceTestCase):
@@ -3266,6 +3343,51 @@ class AppViewsTests(BaseFinanceTestCase):
         self.assertContains(response, 'value="987.65"')
         self.assertContains(response, "Concreto usinado")
         self.assertFalse(NotaFiscal.objects.filter(numero="12345").exists())
+
+    def test_importa_xml_nfse_padrao_nacional_no_formulario_de_nova_nota_fiscal(self):
+        xml = """<?xml version="1.0" encoding="utf-8"?>
+        <NFSe versao="1.01" xmlns="http://www.sped.fazenda.gov.br/nfse">
+            <infNFSe>
+                <nNFSe>19</nNFSe>
+                <dhProc>2026-05-05T09:11:01-03:00</dhProc>
+                <emit>
+                    <CNPJ>49511088000103</CNPJ>
+                    <xNome>49.511.088 FRANCIS RODRIGUES DO NASCIMENTO</xNome>
+                </emit>
+                <valores><vLiq>6000.00</vLiq></valores>
+                <DPS>
+                    <infDPS>
+                        <dhEmi>2026-05-05T09:11:01-03:00</dhEmi>
+                        <serie>70000</serie>
+                        <serv>
+                            <cServ>
+                                <xDescServ>Serviços de Elaboração de Estimativas de Custo no mês de abril/2026.</xDescServ>
+                            </cServ>
+                        </serv>
+                    </infDPS>
+                </DPS>
+            </infNFSe>
+        </NFSe>""".encode()
+        response = self.client.post(
+            reverse("nota_fiscal_create"),
+            data={
+                "acao": "importar_xml",
+                "xml_nota": SimpleUploadedFile("nfse.xml", xml, content_type="application/xml"),
+                "rateio-TOTAL_FORMS": "1",
+                "rateio-INITIAL_FORMS": "0",
+                "rateio-MIN_NUM_FORMS": "0",
+                "rateio-MAX_NUM_FORMS": "1000",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'value="19"')
+        self.assertContains(response, 'value="70000"')
+        self.assertContains(response, 'value="2026-05-05"')
+        self.assertContains(response, 'value="49.511.088 FRANCIS RODRIGUES DO NASCIMENTO"')
+        self.assertContains(response, 'value="49.511.088/0001-03"')
+        self.assertContains(response, 'value="6000.00"')
+        self.assertContains(response, "Serviços de Elaboração de Estimativas de Custo")
 
     def test_importar_xml_mantem_fornecedor_do_pedido_se_origem_foi_selecionada(self):
         self._aprovar_pedido()
