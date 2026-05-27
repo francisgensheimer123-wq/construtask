@@ -18,7 +18,7 @@
             <label for="{{ form.xml_nota.id_for_label }}">{{ form.xml_nota.label }}</label>
             <div class="inline-form-row">
                 {{ form.xml_nota }}
-                <button class="btn secondary" type="submit" name="acao" value="importar_xml">Importar XML</button>
+                <button class="btn secondary" type="submit" name="acao" value="importar_xml" formnovalidate>Importar XML</button>
             </div>
             {% if form.xml_nota.errors %}
                 <div style="color:#b91c1c; margin-top:6px;">{{ form.xml_nota.errors }}</div>
