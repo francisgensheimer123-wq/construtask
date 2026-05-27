@@ -1008,6 +1008,97 @@ class AppViewsTests(BaseFinanceTestCase):
         self.assertEqual(item.data_fim_real, timezone.localdate())
         self.assertEqual(item.valor_realizado, Decimal("500.00"))
 
+    def test_cronograma_detail_aceita_percentual_realizado_decimal(self):
+        plano = PlanoFisico.objects.create(
+            obra=self.obra,
+            titulo="Cronograma decimal",
+            responsavel_importacao=self.user,
+            status="ATIVO",
+        )
+        item = PlanoFisicoItem.objects.create(
+            plano=plano,
+            plano_contas=self.analitico,
+            codigo_atividade="CRN-DEC-001",
+            atividade="Instalacoes",
+            data_inicio_prevista=timezone.localdate(),
+            data_fim_prevista=timezone.localdate() + timedelta(days=10),
+            percentual_concluido=0,
+            valor_planejado=Decimal("1000.00"),
+        )
+
+        response = self.client.post(
+            reverse("plano_fisico_detail", args=[plano.pk]),
+            {
+                "acao": "atualizar_cronograma",
+                f"realizado_{item.pk}": "12,5",
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        item.refresh_from_db()
+        self.assertEqual(item.percentual_concluido, Decimal("12.50"))
+        self.assertEqual(item.valor_realizado, Decimal("125.00"))
+
+    def test_cronograma_concluido_no_prazo_nao_fica_atrasado_por_inicio_real(self):
+        hoje = timezone.localdate()
+        plano = PlanoFisico.objects.create(
+            obra=self.obra,
+            titulo="Cronograma concluido",
+            responsavel_importacao=self.user,
+            status="ATIVO",
+        )
+        item = PlanoFisicoItem.objects.create(
+            plano=plano,
+            codigo_atividade="CRN-FIM-001",
+            atividade="Pintura",
+            data_inicio_prevista=hoje - timedelta(days=10),
+            data_fim_prevista=hoje + timedelta(days=2),
+            data_inicio_real=hoje,
+            data_fim_real=hoje,
+            percentual_concluido=Decimal("100.00"),
+        )
+
+        self.assertLessEqual(item.dias_desvio, 0)
+
+    def test_cronograma_incompleto_apos_fim_previsto_conta_dias_vencidos(self):
+        hoje = timezone.localdate()
+        plano = PlanoFisico.objects.create(
+            obra=self.obra,
+            titulo="Cronograma vencido",
+            responsavel_importacao=self.user,
+            status="ATIVO",
+        )
+        item = PlanoFisicoItem.objects.create(
+            plano=plano,
+            codigo_atividade="CRN-VENC-001",
+            atividade="Revestimento",
+            data_inicio_prevista=hoje - timedelta(days=10),
+            data_fim_prevista=hoje - timedelta(days=3),
+            percentual_concluido=Decimal("99.00"),
+        )
+
+        self.assertEqual(item.dias_desvio, 3)
+
+    def test_cronograma_em_andamento_calcula_desvio_por_previsto_menos_realizado(self):
+        hoje = timezone.localdate()
+        plano = PlanoFisico.objects.create(
+            obra=self.obra,
+            titulo="Cronograma em andamento",
+            responsavel_importacao=self.user,
+            status="ATIVO",
+        )
+        item = PlanoFisicoItem.objects.create(
+            plano=plano,
+            codigo_atividade="CRN-AND-001",
+            atividade="Alvenaria",
+            data_inicio_prevista=hoje - timedelta(days=5),
+            data_fim_prevista=hoje + timedelta(days=5),
+            percentual_concluido=Decimal("30.00"),
+        )
+
+        self.assertEqual(item.dias_desvio, 1)
+
     def test_cronograma_detail_mantem_pai_consolidado_e_atualiza_somente_filho(self):
         plano = PlanoFisico.objects.create(
             obra=self.obra,

@@ -2,7 +2,7 @@
 Módulo de planejamento físico e controle de cronogramas.
 """
 
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal, ROUND_CEILING
 
 from django.conf import settings
 from django.db import models
@@ -163,8 +163,10 @@ class PlanoFisicoItem(models.Model):
     data_fim_prevista = models.DateField(null=True, blank=True)
     data_inicio_real = models.DateField(null=True, blank=True)
     data_fim_real = models.DateField(null=True, blank=True)
-    percentual_concluido = models.PositiveSmallIntegerField(
-        default=0,
+    percentual_concluido = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal("0.00"),
         help_text="Percentual realizado informado para a atividade (0-100)",
     )
     is_marco = models.BooleanField(default=False, help_text="Indica se e um marco")
@@ -188,21 +190,21 @@ class PlanoFisicoItem(models.Model):
         data_referencia = data_lancamento or timezone.localdate()
         percentual_decimal = Decimal(str(percentual or 0))
         percentual_decimal = max(Decimal("0.00"), min(percentual_decimal, Decimal("100.00")))
-        percentual_inteiro = int(percentual_decimal.quantize(Decimal("1"), rounding=ROUND_HALF_UP))
-        percentual_anterior = int(self.percentual_concluido or 0)
+        percentual_decimal = percentual_decimal.quantize(Decimal("0.01"))
+        percentual_anterior = Decimal(str(self.percentual_concluido or 0))
 
-        if percentual_inteiro <= 0:
-            self.percentual_concluido = 0
+        if percentual_decimal <= 0:
+            self.percentual_concluido = Decimal("0.00")
             self.data_inicio_real = None
             self.data_fim_real = None
         else:
-            self.percentual_concluido = percentual_inteiro
+            self.percentual_concluido = percentual_decimal
             if not self.data_inicio_real:
                 self.data_inicio_real = data_referencia
-            if percentual_anterior == 0 and percentual_inteiro == 100:
+            if percentual_anterior == 0 and percentual_decimal == Decimal("100.00"):
                 self.data_inicio_real = data_referencia
                 self.data_fim_real = data_referencia
-            elif percentual_inteiro == 100:
+            elif percentual_decimal == Decimal("100.00"):
                 self.data_fim_real = data_referencia
             elif self.data_fim_real:
                 self.data_fim_real = None
@@ -217,22 +219,13 @@ class PlanoFisicoItem(models.Model):
         elif not self.parent_id:
             self.level = 0
 
-        if self.data_inicio_prevista and self.data_inicio_real:
-            diff = self.data_inicio_real - self.data_inicio_prevista
-            self.dias_desvio = diff.days
-        elif self.data_inicio_prevista:
-            from datetime import date
-
-            if date.today() > self.data_inicio_prevista:
-                diff = date.today() - self.data_inicio_prevista
-                self.dias_desvio = diff.days
-            else:
-                self.dias_desvio = 0
+        self.dias_desvio = self._calcular_dias_desvio()
 
         if self.percentual_concluido is not None:
-            expected_percent = self._calcular_percentual_esperado()
-            if expected_percent > 0:
-                self.percent_desvio = self.percentual_concluido - expected_percent
+            expected_percent = Decimal(str(self._calcular_percentual_esperado() or 0))
+            self.percent_desvio = (Decimal(str(self.percentual_concluido or 0)) - expected_percent).quantize(
+                Decimal("0.01")
+            )
 
         if self.pk and self.filhos.exists():
             self.valor_realizado = Decimal("0.00")
@@ -243,6 +236,36 @@ class PlanoFisicoItem(models.Model):
             self.valor_realizado = (valor_planejado * percentual / Decimal("100.00")).quantize(Decimal("0.01"))
 
         super().save(*args, **kwargs)
+
+    def _calcular_dias_desvio(self):
+        if not self.data_fim_prevista:
+            return 0
+
+        percentual = Decimal(str(self.percentual_concluido or 0))
+        hoje = timezone.localdate()
+
+        if percentual >= Decimal("100.00"):
+            data_fim_real = self.data_fim_real or hoje
+            return (data_fim_real - self.data_fim_prevista).days
+
+        if hoje > self.data_fim_prevista:
+            return (hoje - self.data_fim_prevista).days
+
+        if not self.data_inicio_prevista or hoje < self.data_inicio_prevista:
+            return 0
+
+        dias_restantes = (self.data_fim_prevista - hoje).days
+        if dias_restantes <= 0:
+            return 0
+
+        percentual_previsto = Decimal(str(self._calcular_percentual_esperado() or 0))
+        atraso_percentual = percentual_previsto - percentual
+        if atraso_percentual <= 0:
+            return 0
+
+        atraso_decimal = atraso_percentual / Decimal("100.00")
+        desvio = atraso_decimal * Decimal(str(dias_restantes))
+        return int(desvio.to_integral_value(rounding=ROUND_CEILING))
 
     def _calcular_percentual_esperado(self):
         if not self.data_inicio_prevista or not self.data_fim_prevista:

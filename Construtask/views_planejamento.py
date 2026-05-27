@@ -435,8 +435,7 @@ class PlanoFisicoDetailView(DetailView):
                 erros.append(f"{item.codigo_atividade}: informe um percentual entre 0 e 100.")
                 continue
 
-            percentual_inteiro = int(percentual.quantize(Decimal("1")))
-            item.aplicar_percentual_realizado(percentual_inteiro)
+            item.aplicar_percentual_realizado(percentual)
 
         if erros:
             for erro in erros:
