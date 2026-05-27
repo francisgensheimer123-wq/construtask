@@ -254,6 +254,34 @@
         .inline-form-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
         .inline-form-row input[type="file"] { width: min(100%, 460px); }
         .actions { display: flex; gap: 12px; margin-top: 24px; }
+        .form-page-shell,
+        .form-page-shell.form-page-compact { width: min(100%, calc(100vw - 36px)); }
+        .form-page-shell .panel > form {
+            display: grid;
+            grid-template-columns: repeat(12, minmax(0, 1fr));
+            gap: 16px 18px;
+            align-items: start;
+        }
+        .form-page-shell .panel > form > .field {
+            grid-column: span 6;
+            margin-bottom: 0;
+            min-width: 0;
+        }
+        .form-page-shell .panel > form > .field:has(input[type="date"]),
+        .form-page-shell .panel > form > .field:has(input[data-cnpj-mask="true"]),
+        .form-page-shell .panel > form > .field:has(.form-control-phone) {
+            grid-column: span 6;
+        }
+        .form-page-shell .panel > form > .field:has(textarea),
+        .form-page-shell .panel > form > .field:has(input[type="file"]),
+        .form-page-shell .panel > form > .field:has(table),
+        .form-page-shell .panel > form > .field:has(.compact-table),
+        .form-page-shell .panel > form > .field:has(.inline-form-row),
+        .form-page-shell .panel > form > .field-full,
+        .form-page-shell .panel > form > .actions,
+        .form-page-shell .panel > form > [style*="color:#b91c1c"] {
+            grid-column: 1 / -1;
+        }
         .empty { color: var(--muted); }
         .chart-row { margin-bottom: 16px; }
         .chart-head { display:flex; justify-content:space-between; font-weight:600; margin-bottom:6px; }
@@ -481,6 +509,17 @@
             .nav-dropdown-menu { position: fixed; right: 8px; min-width: 180px; }
             .detail-list li { grid-template-columns: 1fr; }
             .toolbar { flex-direction: column; align-items: stretch; }
+            .form-page-shell { width: 100%; }
+            .form-page-shell .panel > form > .field,
+            .form-page-shell .panel > form > .field:has(select),
+            .form-page-shell .panel > form > .field:has(input[type="email"]),
+            .form-page-shell .panel > form > .field:has(input[type="date"]),
+            .form-page-shell .panel > form > .field:has(input[data-cnpj-mask="true"]),
+            .form-page-shell .panel > form > .field:has(.form-control-phone),
+            .form-page-shell .panel > form > .actions,
+            .form-page-shell .panel > form > [style*="color:#b91c1c"] {
+                grid-column: 1 / -1;
+            }
         }
     </style>
     <link rel="stylesheet" href="{% static 'app/design-system.css' %}">

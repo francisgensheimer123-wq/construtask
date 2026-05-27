@@ -36,6 +36,26 @@
         flex: 0 0 auto;
         accent-color: #c71f1f;
     }
+    .cotacao-form-page .cotacao-meta-grid {
+        align-items: start;
+        display: grid;
+        gap: 16px 18px;
+        grid-template-columns: repeat(12, minmax(0, 1fr));
+        margin-bottom: 18px;
+    }
+    .cotacao-form-page .cotacao-meta-grid > .field {
+        grid-column: span 6;
+        margin-bottom: 0;
+        min-width: 0;
+    }
+    .cotacao-form-page .cotacao-meta-grid > .field:has(textarea) {
+        grid-column: 1 / -1;
+    }
+    @media (max-width: 800px) {
+        .cotacao-form-page .cotacao-meta-grid > .field {
+            grid-column: 1 / -1;
+        }
+    }
 </style>
 {% endblock %}
 
@@ -45,6 +65,7 @@
     <p>Compare fornecedores lado a lado, defina o vencedor e registre a proposta de cada um na mesma tela.</p>
     <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
+        <div class="cotacao-meta-grid">
         {% for field in form %}
         <div class="field">
             <label for="{{ field.id_for_label }}">{{ field.label }}</label>
@@ -54,6 +75,7 @@
             {% endif %}
         </div>
         {% endfor %}
+        </div>
 
         <div class="field">
             <label>Comparativo de Fornecedores</label>

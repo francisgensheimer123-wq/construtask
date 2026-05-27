@@ -97,7 +97,7 @@ class NormalizeTextFieldsMixin:
         for field_name, field in self.fields.items():
             if _is_phone_field(field_name):
                 _append_widget_class(field.widget, "form-control-phone")
-            if isinstance(field.widget, forms.DateInput) or field.widget.input_type == "date":
+            if isinstance(field.widget, forms.DateInput) or getattr(field.widget, "input_type", "") == "date":
                 _append_widget_class(field.widget, "form-control-date")
 
     def clean(self):

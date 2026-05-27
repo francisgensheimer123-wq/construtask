@@ -9,17 +9,43 @@
     <p>Registre a demanda inicial com os centros de custo e os itens tecnicos que serao enviados para cotação.</p>
     <form method="post">
         {% csrf_token %}
-        {% for field in form %}
         <div class="field">
-            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-            {{ field }}
-            {% if field.errors %}
-            <div class="message error" style="margin-top:8px;">{{ field.errors|striptags }}</div>
+            <label for="{{ form.titulo.id_for_label }}">{{ form.titulo.label }}</label>
+            {{ form.titulo }}
+            {% if form.titulo.errors %}
+            <div class="message error" style="margin-top:8px;">{{ form.titulo.errors|striptags }}</div>
             {% endif %}
         </div>
-        {% endfor %}
-
         <div class="field">
+            <label for="{{ form.data_solicitacao.id_for_label }}">{{ form.data_solicitacao.label }}</label>
+            {{ form.data_solicitacao }}
+            {% if form.data_solicitacao.errors %}
+            <div class="message error" style="margin-top:8px;">{{ form.data_solicitacao.errors|striptags }}</div>
+            {% endif %}
+        </div>
+        <div class="field">
+            <label for="{{ form.status.id_for_label }}">{{ form.status.label }}</label>
+            {{ form.status }}
+            {% if form.status.errors %}
+            <div class="message error" style="margin-top:8px;">{{ form.status.errors|striptags }}</div>
+            {% endif %}
+        </div>
+        <div class="field field-full">
+            <label for="{{ form.descricao.id_for_label }}">{{ form.descricao.label }}</label>
+            {{ form.descricao }}
+            {% if form.descricao.errors %}
+            <div class="message error" style="margin-top:8px;">{{ form.descricao.errors|striptags }}</div>
+            {% endif %}
+        </div>
+        <div class="field field-full">
+            <label for="{{ form.observacoes.id_for_label }}">{{ form.observacoes.label }}</label>
+            {{ form.observacoes }}
+            {% if form.observacoes.errors %}
+            <div class="message error" style="margin-top:8px;">{{ form.observacoes.errors|striptags }}</div>
+            {% endif %}
+        </div>
+
+        <div class="field field-full">
             <label>Itens da Solicitação</label>
             {{ item_formset.management_form }}
             {% if item_formset.non_form_errors %}

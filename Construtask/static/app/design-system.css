@@ -439,6 +439,41 @@ form .form-control-date {
     width: min(100%, 460px);
 }
 
+.form-page-shell,
+.form-page-shell.form-page-compact {
+    width: min(100%, calc(100vw - 36px));
+}
+
+.form-page-shell .panel > form {
+    align-items: start;
+    display: grid;
+    gap: 16px 18px;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+}
+
+.form-page-shell .panel > form > .field {
+    grid-column: span 6;
+    margin-bottom: 0;
+    min-width: 0;
+}
+
+.form-page-shell .panel > form > .field:has(input[type="date"]),
+.form-page-shell .panel > form > .field:has(input[data-cnpj-mask="true"]),
+.form-page-shell .panel > form > .field:has(.form-control-phone) {
+    grid-column: span 6;
+}
+
+.form-page-shell .panel > form > .field:has(textarea),
+.form-page-shell .panel > form > .field:has(input[type="file"]),
+.form-page-shell .panel > form > .field:has(table),
+.form-page-shell .panel > form > .field:has(.compact-table),
+.form-page-shell .panel > form > .field:has(.inline-form-row),
+.form-page-shell .panel > form > .field-full,
+.form-page-shell .panel > form > .actions,
+.form-page-shell .panel > form > [style*="color:#b91c1c"] {
+    grid-column: 1 / -1;
+}
+
 form input:not([type="checkbox"]):not([type="radio"]):focus,
 form select:focus,
 form textarea:focus,
@@ -455,6 +490,23 @@ textarea:focus {
 form label,
 .form-label {
     color: var(--text-soft);
+}
+
+@media (max-width: 800px) {
+    .form-page-shell {
+        width: 100%;
+    }
+
+    .form-page-shell .panel > form > .field,
+    .form-page-shell .panel > form > .field:has(select),
+    .form-page-shell .panel > form > .field:has(input[type="email"]),
+    .form-page-shell .panel > form > .field:has(input[type="date"]),
+    .form-page-shell .panel > form > .field:has(input[data-cnpj-mask="true"]),
+    .form-page-shell .panel > form > .field:has(.form-control-phone),
+    .form-page-shell .panel > form > .actions,
+    .form-page-shell .panel > form > [style*="color:#b91c1c"] {
+        grid-column: 1 / -1;
+    }
 }
 
 .badge {
