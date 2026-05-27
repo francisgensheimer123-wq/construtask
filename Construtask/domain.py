@@ -116,6 +116,7 @@ def gerar_numero_documento(model, prefixo, campo):
 
 def hidratar_medicao_do_contrato(medicao):
     contrato = medicao.contrato
+    medicao.fornecedor_cadastro = contrato.fornecedor_cadastro
     medicao.fornecedor = contrato.fornecedor
     medicao.cnpj = contrato.cnpj
     medicao.responsavel = contrato.responsavel

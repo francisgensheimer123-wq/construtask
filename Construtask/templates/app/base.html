@@ -237,6 +237,13 @@
         form label { display: block; font-weight: 600; margin-bottom: 6px; }
         form input:not([type="checkbox"]):not([type="radio"]), form select, form textarea,
         .form-control, .form-select { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); box-sizing: border-box; background: rgba(10,10,10,.72); color: var(--white); }
+        form input[data-cnpj-mask="true"],
+        form .form-control-cnpj { width: min(100%, 19ch); max-width: 19ch; }
+        form input.form-control-phone,
+        form input[name*="telefone" i],
+        form input[name*="celular" i] { width: min(100%, 17ch); max-width: 17ch; }
+        form input[type="date"],
+        form .form-control-date { width: min(100%, 16ch); max-width: 16ch; }
         form input:not([type="checkbox"]):not([type="radio"]):focus, form select:focus, form textarea:focus,
         .form-control:focus, .form-select:focus {
             outline: none;
@@ -244,6 +251,8 @@
             box-shadow: 0 0 0 3px rgba(139, 0, 0, 0.18);
         }
         .form-label { font-weight: 700; color: var(--muted-soft); }
+        .inline-form-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .inline-form-row input[type="file"] { width: min(100%, 460px); }
         .actions { display: flex; gap: 12px; margin-top: 24px; }
         .empty { color: var(--muted); }
         .chart-row { margin-bottom: 16px; }
@@ -581,6 +590,41 @@
         </div>
     </footer>
     <script>
+        (function () {
+            function aplicarMascaraCnpj(valor) {
+                const digitos = String(valor || "").replace(/\D/g, "").slice(0, 14);
+                if (digitos.length <= 2) {
+                    return digitos;
+                }
+                if (digitos.length <= 5) {
+                    return `${digitos.slice(0, 2)}.${digitos.slice(2)}`;
+                }
+                if (digitos.length <= 8) {
+                    return `${digitos.slice(0, 2)}.${digitos.slice(2, 5)}.${digitos.slice(5)}`;
+                }
+                if (digitos.length <= 12) {
+                    return `${digitos.slice(0, 2)}.${digitos.slice(2, 5)}.${digitos.slice(5, 8)}/${digitos.slice(8)}`;
+                }
+                return `${digitos.slice(0, 2)}.${digitos.slice(2, 5)}.${digitos.slice(5, 8)}/${digitos.slice(8, 12)}-${digitos.slice(12)}`;
+            }
+
+            function habilitarMascaraCnpj() {
+                document.querySelectorAll("input[data-cnpj-mask='true']").forEach((input) => {
+                    const atualizar = () => {
+                        input.value = aplicarMascaraCnpj(input.value);
+                    };
+                    input.addEventListener("input", atualizar);
+                    input.addEventListener("blur", atualizar);
+                    atualizar();
+                });
+            }
+
+            if (document.readyState === "loading") {
+                document.addEventListener("DOMContentLoaded", habilitarMascaraCnpj);
+            } else {
+                habilitarMascaraCnpj();
+            }
+        })();
         (function () {
             function marcarCamposSemQuebra() {
                 const patternData = /^(?:\d{1,2}\/\d{1,2}\/\d{2,4})(?:\s+\d{1,2}:\d{2}(?::\d{2})?)?$/;

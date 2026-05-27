@@ -111,6 +111,7 @@ from .navigation_helpers import (
     _nivel_resumo_alerta,
     _obter_grupos_navegacao,
 )
+from .nota_fiscal_xml import NotaFiscalXmlError, importar_dados_nota_fiscal_xml
 from .pagination import DefaultPaginationMixin
 from .services_jobs import listar_jobs_recentes
 from .text_normalization import corrigir_mojibake
@@ -3870,14 +3871,51 @@ class NotaFiscalCreateView(CreateView):
     template_name = "app/nota_fiscal_form.html"
     success_url = reverse_lazy("nota_fiscal_list")
 
+    def post(self, request, *args, **kwargs):
+        self.object = None
+        if request.POST.get("acao") == "importar_xml":
+            return self._importar_xml(request)
+        return super().post(request, *args, **kwargs)
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         pedido, medicao = _obter_origem_nota(self.request)
         obra_contexto = _obter_obra_contexto(self.request)
         context["titulo"] = "Nova Nota Fiscal"
         context["voltar_url"] = reverse_lazy("nota_fiscal_list")
+        context["importar_xml_habilitado"] = True
         context["rateio_formset"] = kwargs.get("rateio_formset") or _construir_formset_nota(prefix="rateio", pedido=pedido, medicao=medicao, obra=obra_contexto)
         return context
+
+    def _importar_xml(self, request):
+        arquivo = request.FILES.get("xml_nota")
+        if not arquivo:
+            messages.error(request, "Selecione o XML da nota fiscal para importar.")
+            form = self.get_form()
+            return self.render_to_response(self.get_context_data(form=form))
+        try:
+            dados_xml = importar_dados_nota_fiscal_xml(arquivo)
+        except NotaFiscalXmlError as exc:
+            messages.error(request, str(exc))
+            form = self.get_form()
+            return self.render_to_response(self.get_context_data(form=form))
+
+        data = request.POST.copy()
+        for campo, valor in dados_xml.as_form_data().items():
+            data[campo] = valor
+
+        form = self.get_form_class()(data=data, obra_contexto=_obter_obra_contexto(request))
+        pedido, medicao = _obter_origem_nota(request)
+        rateio_formset = _construir_formset_nota(
+            data=data,
+            instance=form.instance,
+            prefix="rateio",
+            pedido=pedido,
+            medicao=medicao,
+            obra=_obter_obra_contexto(request),
+        )
+        messages.success(request, "Dados do XML importados. Revise as informações antes de salvar.")
+        return self.render_to_response(self.get_context_data(form=form, rateio_formset=rateio_formset))
 
     def form_valid(self, form):
         pedido = form.cleaned_data.get("pedido_compra")

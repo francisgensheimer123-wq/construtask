@@ -36,6 +36,7 @@ from .models_qualidade import NaoConformidade
 from .permissions import filtrar_obras_liberadas_para_lancamento, obra_em_somente_leitura
 from .services import validar_rateio_nota
 from .text_normalization import normalizar_texto_cadastral
+from .cnpj_utils import CNPJ_MASK, formatar_cnpj
 
 
 def obter_plano_contas_completo(obra=None):
@@ -79,13 +80,50 @@ def obter_centros_da_origem_nota(nota=None, pedido=None, medicao=None, obra=None
 class NormalizeTextFieldsMixin:
     text_fields_to_normalize = ()
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field_name in ("cnpj", "cnpj_info"):
+            if field_name in self.fields:
+                field = self.fields[field_name]
+                field.widget.attrs.update(
+                    {
+                        "data-cnpj-mask": "true",
+                        "inputmode": "numeric",
+                        "maxlength": "18",
+                        "placeholder": CNPJ_MASK,
+                    }
+                )
+                _append_widget_class(field.widget, "form-control-cnpj")
+        for field_name, field in self.fields.items():
+            if _is_phone_field(field_name):
+                _append_widget_class(field.widget, "form-control-phone")
+            if isinstance(field.widget, forms.DateInput) or field.widget.input_type == "date":
+                _append_widget_class(field.widget, "form-control-date")
+
     def clean(self):
         cleaned_data = super().clean()
         for field_name in self.text_fields_to_normalize:
             value = cleaned_data.get(field_name)
             if isinstance(value, str):
-                cleaned_data[field_name] = normalizar_texto_cadastral(value)
+                if field_name == "cnpj":
+                    cleaned_data[field_name] = formatar_cnpj(value)
+                else:
+                    cleaned_data[field_name] = normalizar_texto_cadastral(value)
+        if "cnpj" in cleaned_data and isinstance(cleaned_data.get("cnpj"), str):
+            cleaned_data["cnpj"] = formatar_cnpj(cleaned_data["cnpj"])
         return cleaned_data
+
+
+def _append_widget_class(widget, class_name):
+    classes = widget.attrs.get("class", "").split()
+    if class_name not in classes:
+        classes.append(class_name)
+    widget.attrs["class"] = " ".join(classes).strip()
+
+
+def _is_phone_field(field_name):
+    normalized = field_name.lower()
+    return "telefone" in normalized or "celular" in normalized
 
 
 def _normalizar_tipo_nota(valor):
@@ -348,6 +386,14 @@ class CompromissoForm(NormalizeTextFieldsMixin, forms.ModelForm):
             self.fields[field_name].required = False
         if not self.instance.pk and obra_contexto:
             self.fields["obra"].initial = obra_contexto.pk
+        if getattr(self.instance, "fornecedor_cadastro_id", None):
+            fornecedor = self.instance.fornecedor_cadastro
+            self.fields["fornecedor"].initial = fornecedor.razao_social
+            self.fields["cnpj"].initial = fornecedor.cnpj
+            self.fields["responsavel"].initial = fornecedor.contato or self.instance.responsavel
+            self.fields["telefone"].initial = fornecedor.telefone or self.instance.telefone
+            for field_name in ["fornecedor", "cnpj", "responsavel", "telefone"]:
+                self.fields[field_name].disabled = True
 
     class Meta:
         model = Compromisso
@@ -375,6 +421,12 @@ class CompromissoForm(NormalizeTextFieldsMixin, forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
+        fornecedor_cadastro = getattr(self.instance, "fornecedor_cadastro", None)
+        if fornecedor_cadastro:
+            cleaned_data["fornecedor"] = fornecedor_cadastro.razao_social
+            cleaned_data["cnpj"] = fornecedor_cadastro.cnpj
+            cleaned_data["responsavel"] = fornecedor_cadastro.contato or self.instance.responsavel
+            cleaned_data["telefone"] = fornecedor_cadastro.telefone or self.instance.telefone
         return cleaned_data
 
 
@@ -712,6 +764,11 @@ MedicaoItemFormSet = inlineformset_factory(
 class NotaFiscalForm(NormalizeTextFieldsMixin, forms.ModelForm):
     text_fields_to_normalize = ("numero", "status", "fornecedor", "cnpj", "descricao")
 
+    xml_nota = forms.FileField(
+        required=False,
+        label="XML da Nota Fiscal",
+        widget=forms.FileInput(attrs={"accept": ".xml,text/xml,application/xml"}),
+    )
     origem_info = forms.CharField(required=False, disabled=True, label="Origem Selecionada")
 
     def __init__(self, *args, **kwargs):
@@ -756,11 +813,26 @@ class NotaFiscalForm(NormalizeTextFieldsMixin, forms.ModelForm):
             self.fields["origem_info"].initial = str(self.instance.medicao)
         elif getattr(self.instance, "pedido_compra_id", None):
             self.fields["origem_info"].initial = self.instance.pedido_compra.numero
+        origem = None
+        if getattr(self.instance, "medicao_id", None):
+            origem = self.instance.medicao
+        elif getattr(self.instance, "pedido_compra_id", None):
+            origem = self.instance.pedido_compra
+        elif medicao_postada:
+            origem = self.fields["medicao"].queryset.filter(pk=medicao_postada).first()
+        elif pedido_postado:
+            origem = self.fields["pedido_compra"].queryset.filter(pk=pedido_postado).first()
+        if origem:
+            self.fields["fornecedor"].initial = getattr(origem, "fornecedor", "")
+            self.fields["cnpj"].initial = getattr(origem, "cnpj", "")
+            for field_name in ["fornecedor", "cnpj"]:
+                self.fields[field_name].disabled = True
 
     class Meta:
         model = NotaFiscal
         fields = [
             "numero",
+            "serie",
             "tipo",
             "status",
             "data_emissao",
@@ -788,6 +860,10 @@ class NotaFiscalForm(NormalizeTextFieldsMixin, forms.ModelForm):
             self.add_error("medicao", "Só é possível emitir nota fiscal para medições aprovadas.")
         if pedido and pedido.status != "APROVADO":
             self.add_error("pedido_compra", "Só é possível emitir nota fiscal para pedidos aprovados.")
+        origem = medicao or pedido
+        if origem:
+            cleaned_data["fornecedor"] = getattr(origem, "fornecedor", "")
+            cleaned_data["cnpj"] = getattr(origem, "cnpj", "")
         return cleaned_data
 
 
@@ -1033,7 +1109,7 @@ class FornecedorForm(NormalizeTextFieldsMixin, forms.ModelForm):
     def clean_cnpj(self):
         from .models_aquisicoes import Fornecedor
 
-        cnpj = self.cleaned_data.get("cnpj")
+        cnpj = formatar_cnpj(self.cleaned_data.get("cnpj"))
         if not cnpj or not self.empresa:
             return cnpj
 

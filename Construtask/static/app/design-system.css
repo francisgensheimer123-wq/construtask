@@ -409,6 +409,36 @@ textarea {
     color: var(--white);
 }
 
+form input[data-cnpj-mask="true"],
+form .form-control-cnpj {
+    max-width: 19ch;
+    width: min(100%, 19ch);
+}
+
+form input.form-control-phone,
+form input[name*="telefone" i],
+form input[name*="celular" i] {
+    max-width: 17ch;
+    width: min(100%, 17ch);
+}
+
+form input[type="date"],
+form .form-control-date {
+    max-width: 16ch;
+    width: min(100%, 16ch);
+}
+
+.inline-form-row {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.inline-form-row input[type="file"] {
+    width: min(100%, 460px);
+}
+
 form input:not([type="checkbox"]):not([type="radio"]):focus,
 form select:focus,
 form textarea:focus,

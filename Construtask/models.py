@@ -26,6 +26,7 @@ from .upload_paths import (
     upload_job_entrada,
     upload_job_resultado,
 )
+from .cnpj_utils import formatar_cnpj
 
 
 # Validators
@@ -157,6 +158,10 @@ class Empresa(models.Model):
 
     def __str__(self):
         return self.nome
+
+    def save(self, *args, **kwargs):
+        self.cnpj = formatar_cnpj(self.cnpj)
+        super().save(*args, **kwargs)
 
 
 class ParametroAlertaEmpresa(models.Model):
@@ -1063,6 +1068,13 @@ class Compromisso(models.Model):
         blank=True,
     )
     descricao = models.CharField(max_length=900)
+    fornecedor_cadastro = models.ForeignKey(
+        "Fornecedor",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="compromissos",
+    )
     fornecedor = models.CharField(max_length=150)
     cnpj = models.CharField(max_length=18, validators=[cnpj_validator])
     responsavel = models.CharField(max_length=150)
@@ -1133,6 +1145,15 @@ class Compromisso(models.Model):
         validar_compromisso_orcamento(self)
 
     def save(self, *args, **kwargs):
+        if self.fornecedor_cadastro_id:
+            fornecedor = self.fornecedor_cadastro
+            self.fornecedor = fornecedor.razao_social
+            self.cnpj = fornecedor.cnpj
+            if fornecedor.contato:
+                self.responsavel = fornecedor.contato
+            if fornecedor.telefone:
+                self.telefone = fornecedor.telefone
+        self.cnpj = formatar_cnpj(self.cnpj)
         if self.centro_custo_id and not self.obra_id:
             self.obra = self.centro_custo.obra
         if not self.status:
@@ -1325,6 +1346,13 @@ class Medicao(models.Model):
     bloco = models.CharField(max_length=80, blank=True)
     etapa = models.CharField(max_length=120, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_MEDICAO_CHOICES, default="EM_ELABORACAO")
+    fornecedor_cadastro = models.ForeignKey(
+        "Fornecedor",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="medicoes",
+    )
     fornecedor = models.CharField(max_length=150, blank=True)
     cnpj = models.CharField(max_length=18, blank=True)
     responsavel = models.CharField(max_length=150, blank=True)
@@ -1392,6 +1420,7 @@ class Medicao(models.Model):
         if self.contrato_id and not self.etapa:
             self.etapa = self.contrato.etapa
         hidratar_medicao_do_contrato(self)
+        self.cnpj = formatar_cnpj(self.cnpj)
         if not self.numero_da_medicao or not self.numero_da_medicao.startswith("MED-"):
             self.numero_da_medicao = gerar_numero_documento(Medicao, "MED-", "numero_da_medicao")
         super().save(*args, **kwargs)
@@ -1484,6 +1513,13 @@ class NotaFiscal(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_NOTA_CHOICES, default="LANCADA")
     data_emissao = models.DateField()
     data_vencimento = models.DateField(null=True, blank=True)
+    fornecedor_cadastro = models.ForeignKey(
+        "Fornecedor",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="notas_fiscais",
+    )
     fornecedor = models.CharField(max_length=150)
     cnpj = models.CharField(max_length=18, validators=[cnpj_validator])
     descricao = models.CharField(max_length=900)
@@ -1510,6 +1546,10 @@ class NotaFiscal(models.Model):
         if not self.status:
             self.status = "LANCADA"
         origem = self.medicao or self.pedido_compra
+        if origem:
+            self.fornecedor_cadastro = getattr(origem, "fornecedor_cadastro", None)
+            self.fornecedor = getattr(origem, "fornecedor", "")
+            self.cnpj = getattr(origem, "cnpj", "")
         if origem and not self.obra_id:
             self.obra = getattr(origem, "obra", None)
         if origem and not self.torre:
@@ -1518,6 +1558,7 @@ class NotaFiscal(models.Model):
             self.bloco = getattr(origem, "bloco", "")
         if origem and not self.etapa:
             self.etapa = getattr(origem, "etapa", "")
+        self.cnpj = formatar_cnpj(self.cnpj)
         super().save(*args, **kwargs)
 
 

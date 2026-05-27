@@ -6,6 +6,7 @@ from django.db import models
 from .domain import arredondar_moeda, calcular_total_item, gerar_numero_documento
 from .tenant_querysets import TenantScopedManager
 from .upload_paths import upload_cotacao_anexo
+from .cnpj_utils import formatar_cnpj
 
 
 class Fornecedor(models.Model):
@@ -39,6 +40,10 @@ class Fornecedor(models.Model):
 
     def __str__(self):
         return self.nome_fantasia or self.razao_social
+
+    def save(self, *args, **kwargs):
+        self.cnpj = formatar_cnpj(self.cnpj)
+        super().save(*args, **kwargs)
 
 
 class FornecedorAvaliacao(models.Model):

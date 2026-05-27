@@ -28,6 +28,7 @@ from .services_alertas import catalogo_alertas_empresa
 from .services_lgpd import registrar_acesso_dado_pessoal
 
 from .services_tenant import TenantService, LimitePlanoExcedido
+from .cnpj_utils import CNPJ_MASK, formatar_cnpj
 
 User = get_user_model()
 
@@ -194,8 +195,8 @@ class EmpresaAdminForm(forms.Form):
     cliente = forms.CharField(max_length=150, required=False)
     responsavel = forms.CharField(max_length=150, required=False)
     status = forms.ChoiceField(choices=Obra._meta.get_field("status").choices, initial="PLANEJADA")
-    data_inicio = forms.DateField(required=False, widget=forms.DateInput(attrs={"type": "date"}))
-    data_fim = forms.DateField(required=False, widget=forms.DateInput(attrs={"type": "date"}))
+    data_inicio = forms.DateField(required=False, widget=forms.DateInput(attrs={"type": "date", "class": "form-control-date"}))
+    data_fim = forms.DateField(required=False, widget=forms.DateInput(attrs={"type": "date", "class": "form-control-date"}))
     descricao = forms.CharField(widget=forms.Textarea(attrs={"rows": 3}), required=False)
 
 
@@ -207,6 +208,16 @@ class SistemaEmpresaCreateForm(forms.ModelForm):
         fields = ["nome", "nome_fantasia", "cnpj", "telefone", "email", "endereco", "ativo"]
         widgets = {
             "endereco": forms.Textarea(attrs={"rows": 3}),
+            "cnpj": forms.TextInput(
+                attrs={
+                    "data-cnpj-mask": "true",
+                    "inputmode": "numeric",
+                    "maxlength": "18",
+                    "placeholder": CNPJ_MASK,
+                    "class": "form-control-cnpj",
+                }
+            ),
+            "telefone": forms.TextInput(attrs={"class": "form-control-phone"}),
         }
         labels = {
             "nome": "Razão social",
@@ -225,7 +236,7 @@ class SistemaEmpresaCreateForm(forms.ModelForm):
         return (self.cleaned_data.get("nome_fantasia") or "").strip()
 
     def clean_cnpj(self):
-        return (self.cleaned_data.get("cnpj") or "").strip()
+        return formatar_cnpj(self.cleaned_data.get("cnpj"))
 
     def clean_telefone(self):
         return (self.cleaned_data.get("telefone") or "").strip()

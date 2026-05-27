@@ -79,9 +79,11 @@ from .models_planejamento import MapaCorrespondencia, PlanoFisico, PlanoFisicoIt
 from .models_risco import Risco
 from .forms import (
     AditivoContratoItemFormSet,
+    CompromissoForm,
     CotacaoForm,
     CotacaoFornecedorComparativoForm,
     DocumentoForm,
+    FornecedorForm,
     MedicaoForm,
     NotaFiscalForm,
     ObraForm,
@@ -226,6 +228,99 @@ class BaseFinanceTestCase(TestCase):
             quantidade=Decimal("200.00"),
             valor_unitario=Decimal("5.00"),
         )
+
+
+class CnpjNormalizationTests(BaseFinanceTestCase):
+    def test_modelos_gravam_cnpj_formatado_quando_recebem_apenas_numeros(self):
+        empresa = Empresa.objects.create(
+            nome="Empresa CNPJ",
+            nome_fantasia="Empresa CNPJ",
+            cnpj="12345678000190",
+        )
+        compromisso = Compromisso.objects.create(
+            tipo="CONTRATO",
+            obra=self.obra,
+            centro_custo=self.analitico,
+            descricao="Contrato CNPJ",
+            fornecedor="Fornecedor CNPJ",
+            cnpj="11222333000144",
+            responsavel="Maria",
+            telefone="11999999999",
+            data_assinatura=timezone.localdate(),
+            status="APROVADO",
+        )
+        medicao = Medicao.objects.create(
+            contrato=compromisso,
+            obra=self.obra,
+            descricao="Medição CNPJ",
+            cnpj="99888777000166",
+            data_medicao=timezone.localdate(),
+        )
+        nota = NotaFiscal.objects.create(
+            numero="NF-CNPJ",
+            tipo="MATERIAL",
+            obra=self.obra,
+            status="LANCADA",
+            data_emissao=timezone.localdate(),
+            fornecedor="Fornecedor CNPJ",
+            cnpj="55666777000188",
+            descricao="Nota CNPJ",
+            valor_total=Decimal("10.00"),
+        )
+        fornecedor = Fornecedor.objects.create(
+            empresa=self.empresa,
+            razao_social="Fornecedor Normalizado",
+            cnpj="44333222000111",
+        )
+
+        self.assertEqual(empresa.cnpj, "12.345.678/0001-90")
+        self.assertEqual(compromisso.cnpj, "11.222.333/0001-44")
+        self.assertEqual(medicao.cnpj, "11.222.333/0001-44")
+        self.assertEqual(nota.cnpj, "55.666.777/0001-88")
+        self.assertEqual(fornecedor.cnpj, "44.333.222/0001-11")
+
+    def test_forms_de_cnpj_aceitam_digitos_e_expõem_mascara(self):
+        compromisso_form = CompromissoForm(
+            data={
+                "tipo": "CONTRATO",
+                "obra": self.obra.pk,
+                "torre": "",
+                "bloco": "",
+                "etapa": "",
+                "centro_custo": self.analitico.pk,
+                "descricao": "Contrato form CNPJ",
+                "fornecedor": "Fornecedor form",
+                "cnpj": "12345678000190",
+                "responsavel": "Maria",
+                "telefone": "11999999999",
+                "data_assinatura": timezone.localdate().isoformat(),
+                "data_prevista_inicio": "",
+                "data_prevista_fim": "",
+            },
+            obra_contexto=self.obra,
+        )
+        fornecedor_form = FornecedorForm(
+            data={
+                "razao_social": "Fornecedor form",
+                "nome_fantasia": "",
+                "cnpj": "22333444000155",
+                "contato": "",
+                "telefone": "",
+                "email": "",
+                "ativo": "on",
+            },
+            empresa=self.empresa,
+        )
+
+        self.assertTrue(compromisso_form.is_valid(), compromisso_form.errors)
+        self.assertTrue(fornecedor_form.is_valid(), fornecedor_form.errors)
+        self.assertEqual(compromisso_form.cleaned_data["cnpj"], "12.345.678/0001-90")
+        self.assertEqual(fornecedor_form.cleaned_data["cnpj"], "22.333.444/0001-55")
+        self.assertEqual(compromisso_form.fields["cnpj"].widget.attrs["data-cnpj-mask"], "true")
+        self.assertIn("form-control-cnpj", compromisso_form.fields["cnpj"].widget.attrs["class"])
+        self.assertIn("form-control-phone", compromisso_form.fields["telefone"].widget.attrs["class"])
+        self.assertIn("form-control-date", compromisso_form.fields["data_assinatura"].widget.attrs["class"])
+        self.assertEqual(fornecedor_form.fields["cnpj"].widget.attrs["placeholder"], "00.000.000/0001-00")
 
 
 class RegrasFinanceirasTests(BaseFinanceTestCase):
@@ -3131,6 +3226,82 @@ class AppViewsTests(BaseFinanceTestCase):
         self.assertTrue(NotaFiscal.objects.filter(numero="NF-100").exists())
         self.assertEqual(NotaFiscalCentroCusto.objects.filter(nota_fiscal__numero="NF-100").count(), 1)
 
+    def test_importa_xml_no_formulario_de_nova_nota_fiscal(self):
+        xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+        <nfeProc xmlns="http://www.portalfiscal.inf.br/nfe">
+            <NFe>
+                <infNFe>
+                    <ide>
+                        <serie>7</serie>
+                        <nNF>12345</nNF>
+                        <dhEmi>2026-03-18T10:20:30-03:00</dhEmi>
+                    </ide>
+                    <emit>
+                        <CNPJ>12345678000190</CNPJ>
+                        <xNome>Fornecedor XML LTDA</xNome>
+                    </emit>
+                    <det><prod><xProd>Concreto usinado</xProd></prod></det>
+                    <total><ICMSTot><vNF>987.65</vNF></ICMSTot></total>
+                </infNFe>
+            </NFe>
+        </nfeProc>"""
+        response = self.client.post(
+            reverse("nota_fiscal_create"),
+            data={
+                "acao": "importar_xml",
+                "xml_nota": SimpleUploadedFile("nota.xml", xml, content_type="application/xml"),
+                "rateio-TOTAL_FORMS": "1",
+                "rateio-INITIAL_FORMS": "0",
+                "rateio-MIN_NUM_FORMS": "0",
+                "rateio-MAX_NUM_FORMS": "1000",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'value="12345"')
+        self.assertContains(response, 'value="7"')
+        self.assertContains(response, 'value="2026-03-18"')
+        self.assertContains(response, 'value="Fornecedor XML LTDA"')
+        self.assertContains(response, 'value="12.345.678/0001-90"')
+        self.assertContains(response, 'value="987.65"')
+        self.assertContains(response, "Concreto usinado")
+        self.assertFalse(NotaFiscal.objects.filter(numero="12345").exists())
+
+    def test_importar_xml_mantem_fornecedor_do_pedido_se_origem_foi_selecionada(self):
+        self._aprovar_pedido()
+        self.pedido.fornecedor = "Fornecedor Pedido LTDA"
+        self.pedido.cnpj = "22.222.222/0001-22"
+        self.pedido.save()
+        xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+        <nfeProc xmlns="http://www.portalfiscal.inf.br/nfe">
+            <NFe>
+                <infNFe>
+                    <ide><nNF>999</nNF><dhEmi>2026-03-19T08:00:00-03:00</dhEmi></ide>
+                    <emit><CNPJ>99999999000199</CNPJ><xNome>Fornecedor Manipulado XML</xNome></emit>
+                    <total><ICMSTot><vNF>30.00</vNF></ICMSTot></total>
+                </infNFe>
+            </NFe>
+        </nfeProc>"""
+        response = self.client.post(
+            reverse("nota_fiscal_create"),
+            data={
+                "acao": "importar_xml",
+                "pedido_compra": self.pedido.pk,
+                "medicao": "",
+                "xml_nota": SimpleUploadedFile("nota.xml", xml, content_type="application/xml"),
+                "rateio-TOTAL_FORMS": "1",
+                "rateio-INITIAL_FORMS": "0",
+                "rateio-MIN_NUM_FORMS": "0",
+                "rateio-MAX_NUM_FORMS": "1000",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'value="999"')
+        self.assertContains(response, 'value="Fornecedor Pedido LTDA"')
+        self.assertContains(response, 'value="22.222.222/0001-22"')
+        self.assertNotContains(response, "Fornecedor Manipulado XML")
+
     def test_exportacao_de_notas_fiscais_retorna_excel(self):
         response = self.client.get(reverse("nota_fiscal_export"))
         self.assertEqual(response.status_code, 200)
@@ -3255,6 +3426,7 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
             razao_social="Fornecedor Estruturado LTDA",
             nome_fantasia="Fornecedor Estruturado",
             cnpj="22.222.222/0001-22",
+            contato="Contato Fornecedor",
             telefone="1133333333",
         )
         self.client.login(username="gestor", password="senhaforte123")
@@ -4759,8 +4931,142 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
         self.assertEqual(ordem.compromisso_relacionado.itens.count(), 1)
         self.assertEqual(ordem.compromisso_relacionado.valor_contratado, Decimal("90.00"))
         self.assertEqual(ordem.compromisso_relacionado.tipo, "CONTRATO")
+        self.assertEqual(ordem.compromisso_relacionado.fornecedor_cadastro, self.fornecedor)
+        self.assertEqual(ordem.compromisso_relacionado.fornecedor, self.fornecedor.razao_social)
+        self.assertEqual(ordem.compromisso_relacionado.cnpj, self.fornecedor.cnpj)
+        self.assertEqual(ordem.compromisso_relacionado.responsavel, self.fornecedor.contato)
+        self.assertEqual(ordem.compromisso_relacionado.telefone, self.fornecedor.telefone)
         self.assertEqual(ordem.compromisso_relacionado.itens.first().descricao_tecnica, "Aco CA-50 10mm")
         self.assertEqual(ordem.compromisso_relacionado.itens.first().unidade, "kg")
+
+    def test_documentos_pos_cotacao_herdam_fornecedor_aprovado_e_ignoram_manipulacao(self):
+        solicitacao = SolicitacaoCompra.objects.create(
+            empresa=self.empresa,
+            obra=self.obra,
+            plano_contas=self.analitico,
+            titulo="Compra rastreada",
+            solicitante=self.user,
+            data_solicitacao="2026-03-10",
+            status="COTANDO",
+        )
+        item_solicitacao = SolicitacaoCompraItem.objects.create(
+            solicitacao=solicitacao,
+            plano_contas=self.analitico,
+            descricao_tecnica="Material rastreado",
+            unidade="un",
+            quantidade=Decimal("2.00"),
+            valor_estimado_unitario=Decimal("5.00"),
+        )
+        cotacao = Cotacao.objects.create(
+            empresa=self.empresa,
+            obra=self.obra,
+            solicitacao=solicitacao,
+            fornecedor=self.fornecedor,
+            status="APROVADA",
+            data_cotacao="2026-03-12",
+            criado_por=self.user,
+        )
+        CotacaoItem.objects.create(cotacao=cotacao, item_solicitacao=item_solicitacao, valor_unitario=Decimal("6.00"))
+        fornecedor_2 = Fornecedor.objects.create(
+            empresa=self.empresa,
+            razao_social="Fornecedor Reserva LTDA",
+            cnpj="55.555.555/0001-55",
+        )
+        cotacao_2 = Cotacao.objects.create(
+            empresa=self.empresa,
+            obra=self.obra,
+            solicitacao=solicitacao,
+            fornecedor=fornecedor_2,
+            status="EM_ANALISE",
+            data_cotacao="2026-03-12",
+            criado_por=self.user,
+        )
+        CotacaoItem.objects.create(cotacao=cotacao_2, item_solicitacao=item_solicitacao, valor_unitario=Decimal("7.00"))
+
+        ordem = AquisicoesService.emitir_ordem_compra(cotacao, self.user, "Fluxo rastreado", "CONTRATO")
+        contrato = ordem.compromisso_relacionado
+        contrato.fornecedor = "Fornecedor Manipulado"
+        contrato.cnpj = "99.999.999/0001-99"
+        contrato.save()
+        contrato.refresh_from_db()
+
+        medicao = Medicao.objects.create(
+            contrato=contrato,
+            obra=self.obra,
+            descricao="Medição rastreada",
+            fornecedor="Fornecedor Manipulado",
+            cnpj="99.999.999/0001-99",
+            data_medicao=timezone.localdate(),
+            status="APROVADA",
+        )
+        nota = NotaFiscal.objects.create(
+            numero="NF-RASTRO",
+            tipo="SERVICO",
+            obra=self.obra,
+            status="LANCADA",
+            data_emissao=timezone.localdate(),
+            fornecedor="Fornecedor Manipulado",
+            cnpj="99.999.999/0001-99",
+            descricao="Nota rastreada",
+            valor_total=Decimal("12.00"),
+            medicao=medicao,
+        )
+
+        self.assertEqual(contrato.fornecedor_cadastro, self.fornecedor)
+        self.assertEqual(contrato.fornecedor, self.fornecedor.razao_social)
+        self.assertEqual(contrato.cnpj, self.fornecedor.cnpj)
+        self.assertEqual(medicao.fornecedor_cadastro, self.fornecedor)
+        self.assertEqual(medicao.fornecedor, self.fornecedor.razao_social)
+        self.assertEqual(medicao.cnpj, self.fornecedor.cnpj)
+        self.assertEqual(nota.fornecedor_cadastro, self.fornecedor)
+        self.assertEqual(nota.fornecedor, self.fornecedor.razao_social)
+        self.assertEqual(nota.cnpj, self.fornecedor.cnpj)
+
+    def test_nota_fiscal_form_bloqueia_fornecedor_e_cnpj_da_origem(self):
+        pedido = Compromisso.objects.create(
+            tipo="PEDIDO_COMPRA",
+            obra=self.obra,
+            centro_custo=self.analitico,
+            descricao="Pedido com fornecedor bloqueado",
+            fornecedor_cadastro=self.fornecedor,
+            fornecedor="Fornecedor Manipulado",
+            cnpj="99.999.999/0001-99",
+            responsavel="Responsável",
+            telefone="11999999999",
+            data_assinatura=timezone.localdate(),
+            status="APROVADO",
+        )
+        CompromissoItem.objects.create(
+            compromisso=pedido,
+            centro_custo=self.analitico,
+            unidade="un",
+            quantidade=Decimal("1.00"),
+            valor_unitario=Decimal("10.00"),
+        )
+        pedido.recalcular_totais_por_itens()
+        form = NotaFiscalForm(
+            data={
+                "numero": "NF-FORM-LOCK",
+                "tipo": "MATERIAL",
+                "status": "LANCADA",
+                "data_emissao": timezone.localdate().isoformat(),
+                "data_vencimento": "",
+                "pedido_compra": pedido.pk,
+                "medicao": "",
+                "origem_info": "",
+                "fornecedor": "Fornecedor Manipulado",
+                "cnpj": "99.999.999/0001-99",
+                "descricao": "Nota com origem",
+                "valor_total": "10.00",
+            },
+            obra_contexto=self.obra,
+        )
+
+        self.assertTrue(form.fields["fornecedor"].disabled)
+        self.assertTrue(form.fields["cnpj"].disabled)
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data["fornecedor"], self.fornecedor.razao_social)
+        self.assertEqual(form.cleaned_data["cnpj"], self.fornecedor.cnpj)
 
     def test_emitir_ordem_compra_exige_duas_cotacoes_de_fornecedores_distintos(self):
         solicitacao = SolicitacaoCompra.objects.create(
