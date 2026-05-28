@@ -133,7 +133,7 @@ def projecao_financeira_export_view(request):
         detalhes="Exportacao Excel da projeção financeira.",
     )
     linhas = [
-        {"Mes": item["label"], "Executado": item["executado"], "Saidas": item["saida"], "Saldo": item["saldo"]}
+        {"Mes": item["label"], "Entradas": item["entrada"], "Saidas": item["saida"], "Saldo": item["saldo"]}
         for item in dados["series"]
     ]
     return _exportar_excel_response("projecao_financeira.xlsx", "Projeção Financeira", linhas)
@@ -144,12 +144,12 @@ def projecao_financeira_pdf_view(request):
     dados = dados_projecao_financeira_request(request)
     resumo = {
         "Total Orçado": money_br(dados["total_orcado"]),
-        "Total Executado": money_br(dados["total_executado"]),
+        "Total Entradas": money_br(dados["total_entradas"]),
         "Total Saidas": money_br(dados["total_saidas"]),
         "Saldo no Horizonte": money_br(dados["total_saldo"]),
     }
     extras = [
-        {"Mes": item["label"], "Executado": money_br(item["executado"]), "Saidas": money_br(item["saida"]), "Saldo": money_br(item["saldo"])}
+        {"Mes": item["label"], "Entradas": money_br(item["entrada"]), "Saidas": money_br(item["saida"]), "Saldo": money_br(item["saldo"])}
         for item in dados["series"]
     ]
     return _pdf_relatorio_probatorio_response(
@@ -159,6 +159,6 @@ def projecao_financeira_pdf_view(request):
         [],
         extras,
         extras_titulo="Visão Mensal",
-        extras_colunas=[("Mes", 80), ("Executado", 135), ("Saidas", 135), ("Saldo", 145)],
+        extras_colunas=[("Mes", 80), ("Entradas", 135), ("Saidas", 135), ("Saldo", 145)],
         incluir_historico=False,
     )

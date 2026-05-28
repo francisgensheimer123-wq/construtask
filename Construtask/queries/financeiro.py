@@ -6,6 +6,7 @@ from django.db.models import Count, DateField, Sum
 from django.db.models.functions import Coalesce, TruncMonth
 
 from ..domain import arredondar_moeda
+from ..importacao_cronograma import CronogramaService
 from ..models import (
     AditivoContrato,
     Compromisso,
@@ -18,6 +19,7 @@ from ..models import (
     Obra,
     PlanoContas,
 )
+from ..services_integracao import IntegracaoService
 
 
 def adicionar_um_mes(data_base):
@@ -171,27 +173,17 @@ def construir_dados_projecao_financeira(*, obra=None, meses_qtd=12):
         planos_qs = planos_qs.filter(obra=obra)
     total_orcado = planos_qs.aggregate(total=Sum("valor_total"))["total"] or Decimal("0.00")
 
-    medicoes_qs = (
-        Medicao.objects.filter(data_medicao__gte=inicio, data_medicao__lt=fim_exclusivo)
-        .annotate(mes_competencia=TruncMonth("data_medicao"))
-        .values("mes_competencia")
-        .annotate(total=Sum("valor_medido"))
-    )
-    if obra:
-        medicoes_qs = medicoes_qs.filter(obra=obra)
-    executado_por_mes = {m: Decimal("0.00") for m in month_starts}
-    for medicao in medicoes_qs:
-        mes_competencia = medicao["mes_competencia"]
-        m = date(mes_competencia.year, mes_competencia.month, 1)
-        if m in executado_por_mes:
-            executado_por_mes[m] += medicao["total"] or Decimal("0.00")
-
-    executado_acumulado = Decimal("0.00")
-    executado_anterior = Decimal("0.00")
-    for idx, month_start in enumerate(month_starts):
-        executado_acumulado += executado_por_mes.get(month_start, Decimal("0.00"))
-        entradas[idx] = arredondar_moeda(executado_acumulado - executado_anterior)
-        executado_anterior = executado_acumulado
+    obras_referencia = [obra] if obra else Obra.objects.all()
+    for obra_referencia in obras_referencia:
+        plano_referencia = IntegracaoService.obter_plano_referencia(obra_referencia)
+        if not plano_referencia:
+            continue
+        for ponto in CronogramaService.gerar_curva_s_realizada(plano_referencia.pk, hoje):
+            ano, mes = [int(parte) for parte in str(ponto["mes"]).split("-")]
+            mes_competencia = date(ano, mes, 1)
+            idx = idx_by_month.get(mes_competencia)
+            if idx is not None:
+                entradas[idx] += Decimal(str(ponto.get("valor_mes") or 0))
 
     notas_qs = (
         NotaFiscal.objects.filter(data_emissao__gte=inicio, data_emissao__lt=fim_exclusivo)
@@ -210,27 +202,27 @@ def construir_dados_projecao_financeira(*, obra=None, meses_qtd=12):
 
     series = []
     for i, ms in enumerate(month_starts):
-        executado = arredondar_moeda(entradas[i])
+        entrada = arredondar_moeda(entradas[i])
         saida = arredondar_moeda(saidas[i])
-        saldo = arredondar_moeda(executado - saida)
+        saldo = arredondar_moeda(entrada - saida)
         series.append(
             {
                 "label": ms.strftime("%m/%Y"),
-                "entrada": executado,
-                "executado": executado,
+                "entrada": entrada,
+                "executado": entrada,
                 "saida": saida,
                 "saldo": saldo,
             }
         )
 
-    total_executado = arredondar_moeda(sum(s["executado"] for s in series))
+    total_entradas = arredondar_moeda(sum(s["entrada"] for s in series))
     return {
         "meses_opcoes": meses_opcoes,
         "meses_qtd": meses_qtd,
         "series": series,
         "total_orcado": total_orcado,
-        "total_entradas": total_executado,
-        "total_executado": total_executado,
+        "total_entradas": total_entradas,
+        "total_executado": total_entradas,
         "total_saidas": arredondar_moeda(sum(s["saida"] for s in series)),
         "total_saldo": arredondar_moeda(sum(s["saldo"] for s in series)),
     }

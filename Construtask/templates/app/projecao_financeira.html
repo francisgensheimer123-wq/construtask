@@ -2,13 +2,13 @@
 {% load formatters %}
 
 {% block main_class %}main-full{% endblock %}
-{% block title %}Projecao Financeira | Construtask{% endblock %}
+{% block title %}Projeção Financeira | Construtask{% endblock %}
 
 {% block content %}
 <div class="toolbar">
     <div>
         <h2>Projeção Financeira</h2>
-        <p>Executado mensal apurado pelo corte no ultimo dia de cada mes e saidas pelas notas fiscais por competencia.</p>
+        <p>Entradas pelo avanço físico do cronograma aplicado no mês e saídas pelas notas fiscais emitidas no mês.</p>
     </div>
     <div style="display:flex; gap:8px; flex-wrap:wrap;">
         <a class="btn secondary" href="{% url 'projecao_financeira_export' %}?meses={{ meses_qtd }}">Exportar Excel</a>
@@ -26,8 +26,8 @@
 </div>
 
 <section class="cards">
-    <div class="card"><span>Total Executado</span><strong class="money" style="text-align:left;">{{ total_executado|money_br }}</strong></div>
-    <div class="card"><span>Total Saidas</span><strong class="money" style="text-align:left;">{{ total_saidas|money_br }}</strong></div>
+    <div class="card"><span>Total Entradas</span><strong class="money" style="text-align:left;">{{ total_entradas|money_br }}</strong></div>
+    <div class="card"><span>Total Saídas</span><strong class="money" style="text-align:left;">{{ total_saidas|money_br }}</strong></div>
     <div class="card"><span>Saldo no Horizonte</span><strong class="money" style="text-align:left;">{{ total_saldo|money_br }}</strong></div>
 </section>
 
@@ -37,9 +37,9 @@
     <table class="compact-table">
         <thead>
             <tr>
-                <th>Mes</th>
-                <th class="text-right">Executado</th>
-                <th class="text-right">Saidas</th>
+                <th>Mês</th>
+                <th class="text-right">Entradas</th>
+                <th class="text-right">Saídas</th>
                 <th class="text-right">Saldo</th>
             </tr>
         </thead>
@@ -47,7 +47,7 @@
             {% for mes in series %}
             <tr>
                 <td>{{ mes.label }}</td>
-                <td class="money">{{ mes.executado|money_br }}</td>
+                <td class="money">{{ mes.entrada|money_br }}</td>
                 <td class="money">{{ mes.saida|money_br }}</td>
                 <td class="money">{{ mes.saldo|money_br }}</td>
             </tr>

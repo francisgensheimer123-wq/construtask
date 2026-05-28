@@ -6099,11 +6099,72 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
         self.assertEqual(len(dados["series"]), 18)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "18 meses")
-        self.assertContains(response, "Total Executado")
-        self.assertContains(response, "Executado")
+        self.assertContains(response, "Total Entradas")
+        self.assertContains(response, "Entradas")
         self.assertNotContains(response, "Gerar por Job")
         self.assertNotContains(response, "Ver Jobs")
         self.assertNotContains(response, "Jobs Recentes")
+
+    def test_projecao_financeira_usa_avanco_cronograma_como_entrada_e_notas_como_saida(self):
+        hoje = date.today()
+        contrato = Compromisso.objects.create(
+            obra=self.obra,
+            tipo="CONTRATO",
+            centro_custo=self.analitico,
+            descricao="Contrato da medição ignorada na projeção",
+            fornecedor="Fornecedor Projeção",
+            cnpj="12.345.678/0001-90",
+            responsavel="Maria",
+            telefone="11999999999",
+            data_assinatura=hoje,
+        )
+        Medicao.objects.create(
+            obra=self.obra,
+            contrato=contrato,
+            descricao="Medição que não deve compor entrada da projeção",
+            valor_medido=Decimal("999.00"),
+            data_medicao=hoje,
+        )
+        NotaFiscal.objects.create(
+            obra=self.obra,
+            numero="NF-PROJ",
+            tipo="SERVICO",
+            data_emissao=hoje,
+            fornecedor="Fornecedor Projeção",
+            cnpj="12.345.678/0001-90",
+            descricao="Nota da projeção",
+            valor_total=Decimal("45.00"),
+        )
+        plano = PlanoFisico.objects.create(
+            obra=self.obra,
+            titulo="Cronograma da projeção",
+            responsavel_importacao=self.user,
+            status="BASELINE",
+            is_baseline=True,
+            data_base=hoje,
+        )
+        PlanoFisicoItem.objects.create(
+            plano=plano,
+            plano_contas=self.analitico,
+            codigo_atividade="PROJ-001",
+            atividade="Avanço aplicado no mês",
+            duracao=1,
+            data_inicio_prevista=hoje,
+            data_fim_prevista=hoje,
+            data_inicio_real=hoje,
+            data_fim_real=hoje,
+            percentual_concluido=Decimal("100.00"),
+            valor_planejado=Decimal("120.00"),
+            valor_realizado=Decimal("120.00"),
+        )
+
+        dados = construir_dados_projecao_financeira(obra=self.obra, meses_qtd=6)
+        mes_atual = dados["series"][0]
+
+        self.assertEqual(mes_atual["entrada"], Decimal("120.00"))
+        self.assertEqual(mes_atual["saida"], Decimal("45.00"))
+        self.assertEqual(mes_atual["saldo"], Decimal("75.00"))
+        self.assertNotEqual(mes_atual["entrada"], Decimal("999.00"))
 
     def test_jobs_assincronos_lista_registros_do_contexto(self):
         JobAssincrono.objects.create(
