@@ -13,20 +13,75 @@
 <section class="panel">
     <form method="post">
         {% csrf_token %}
-        {% for field in form %}
-        <div class="field">
-            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-            {{ field }}
-            {% if field.errors %}
-                <div style="color:#b91c1c; margin-top:6px;">{{ field.errors }}</div>
+        <h3 class="form-section-title">Origem da Medição</h3>
+        <div class="field form-col-full">
+            <label for="{{ form.contrato.id_for_label }}">{{ form.contrato.label }}</label>
+            {{ form.contrato }}
+            {% if form.contrato.errors %}
+                <div style="color:#b91c1c; margin-top:6px;">{{ form.contrato.errors }}</div>
             {% endif %}
         </div>
-        {% endfor %}
+        <div class="field form-col-lg">
+            <label for="{{ form.fornecedor_info.id_for_label }}">{{ form.fornecedor_info.label }}</label>
+            {{ form.fornecedor_info }}
+            {% if form.fornecedor_info.errors %}
+                <div style="color:#b91c1c; margin-top:6px;">{{ form.fornecedor_info.errors }}</div>
+            {% endif %}
+        </div>
+        <div class="field form-col-xs">
+            <label for="{{ form.cnpj_info.id_for_label }}">{{ form.cnpj_info.label }}</label>
+            {{ form.cnpj_info }}
+            {% if form.cnpj_info.errors %}
+                <div style="color:#b91c1c; margin-top:6px;">{{ form.cnpj_info.errors }}</div>
+            {% endif %}
+        </div>
+        <div class="field form-col-md">
+            <label for="{{ form.responsavel_info.id_for_label }}">{{ form.responsavel_info.label }}</label>
+            {{ form.responsavel_info }}
+            {% if form.responsavel_info.errors %}
+                <div style="color:#b91c1c; margin-top:6px;">{{ form.responsavel_info.errors }}</div>
+            {% endif %}
+        </div>
+
+        <h3 class="form-section-title">Dados da Medição</h3>
+        <div class="field form-col-full">
+            <label for="{{ form.descricao.id_for_label }}">{{ form.descricao.label }}</label>
+            {{ form.descricao }}
+            {% if form.descricao.errors %}
+                <div style="color:#b91c1c; margin-top:6px;">{{ form.descricao.errors }}</div>
+            {% endif %}
+        </div>
+
+        <h3 class="form-section-title">Período da Medição</h3>
+        <div class="field form-col-xs">
+            <label for="{{ form.data_medicao.id_for_label }}">{{ form.data_medicao.label }}</label>
+            {{ form.data_medicao }}
+            {% if form.data_medicao.errors %}
+                <div style="color:#b91c1c; margin-top:6px;">{{ form.data_medicao.errors }}</div>
+            {% endif %}
+        </div>
+        <div class="field form-col-xs">
+            <label for="{{ form.data_prevista_inicio.id_for_label }}">{{ form.data_prevista_inicio.label }}</label>
+            {{ form.data_prevista_inicio }}
+            {% if form.data_prevista_inicio.errors %}
+                <div style="color:#b91c1c; margin-top:6px;">{{ form.data_prevista_inicio.errors }}</div>
+            {% endif %}
+        </div>
+        <div class="field form-col-xs">
+            <label for="{{ form.data_prevista_fim.id_for_label }}">{{ form.data_prevista_fim.label }}</label>
+            {{ form.data_prevista_fim }}
+            {% if form.data_prevista_fim.errors %}
+                <div style="color:#b91c1c; margin-top:6px;">{{ form.data_prevista_fim.errors }}</div>
+            {% endif %}
+        </div>
+
         {% if form.non_field_errors %}
             <div style="color:#b91c1c;">{{ form.non_field_errors }}</div>
         {% endif %}
+
+        <h3 class="form-section-title">Itens da Medição</h3>
         <div class="field">
-            <label>Itens da Medição</label>
+            <label>Centros de custo</label>
             {{ item_formset.management_form }}
             {% if item_formset.non_form_errors %}
                 <div style="color:#b91c1c; margin-bottom:10px;">{{ item_formset.non_form_errors }}</div>

@@ -101,7 +101,7 @@ INVENTARIO_DADOS_PESSOAIS = [
     {
         "categoria_titular": "Fornecedor",
         "entidade": "Fornecedor / Compromisso / Cotação / OrdemCompra / NotaFiscal",
-        "dados_tratados": "Razao social, nome fantasia, CNPJ, contato, telefone, email e histórico comercial",
+        "dados_tratados": "Razao social, nome fantasia, CNPJ, contato, telefone, email, endereço e histórico comercial",
         "finalidade": "Aquisições, contratações, pagamentos, medição de desempenho e prova operacional",
         "base_legal": "Execução de contrato e exercicio regular de direitos",
         "retencao": "Durante a relacao comercial e pelo prazo legal, contabil e contratual aplicavel",
@@ -157,7 +157,7 @@ POLITICA_DESCARTE_ANONIMIZACAO = [
     {
         "entidade": "Fornecedor",
         "criterio": "Cadastro inativo e sem necessidade operacional de manter dados de contato identificaveis.",
-        "acao_recomendada": "Anonimizar contato, telefone, email e nome fantasia, preservando histórico contratual e fiscal.",
+        "acao_recomendada": "Anonimizar contato, telefone, email, endereço e nome fantasia, preservando histórico contratual e fiscal.",
     },
     {
         "entidade": "Usuário operacional",
@@ -363,6 +363,11 @@ def anonimizar_fornecedor_inativo(fornecedor):
         fornecedor.email = ""
         campos.append("email")
         atualizado = True
+    for campo in ("cep", "endereco", "numero", "complemento", "bairro", "cidade", "uf"):
+        if getattr(fornecedor, campo, ""):
+            setattr(fornecedor, campo, "")
+            campos.append(campo)
+            atualizado = True
 
     if atualizado:
         fornecedor.anonimizado_em = timezone.now()

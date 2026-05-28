@@ -308,6 +308,13 @@ class CnpjNormalizationTests(BaseFinanceTestCase):
                 "contato": "",
                 "telefone": "",
                 "email": "",
+                "cep": "30190-110",
+                "endereco": "Rua Araguari",
+                "numero": "37",
+                "complemento": "Sala 201",
+                "bairro": "Barro Preto",
+                "cidade": "Belo Horizonte",
+                "uf": "MG",
                 "ativo": "on",
             },
             empresa=self.empresa,
@@ -322,6 +329,8 @@ class CnpjNormalizationTests(BaseFinanceTestCase):
         self.assertIn("form-control-phone", compromisso_form.fields["telefone"].widget.attrs["class"])
         self.assertIn("form-control-date", compromisso_form.fields["data_assinatura"].widget.attrs["class"])
         self.assertEqual(fornecedor_form.fields["cnpj"].widget.attrs["placeholder"], "00.000.000/0001-00")
+        self.assertIn("form-field-short", fornecedor_form.fields["cep"].widget.attrs["class"])
+        self.assertIn("form-field-medium", fornecedor_form.fields["cidade"].widget.attrs["class"])
 
 
 class NotaFiscalXmlImportTests(TestCase):
@@ -6370,12 +6379,23 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
                 "contato": "Ana",
                 "telefone": "1144444444",
                 "email": "contato@fornecedorweb.com",
+                "cep": "30190-110",
+                "endereco": "Rua Araguari",
+                "numero": "37",
+                "complemento": "Sala 201",
+                "bairro": "Barro Preto",
+                "cidade": "Belo Horizonte",
+                "uf": "MG",
                 "ativo": "on",
             },
             follow=True,
         )
         self.assertEqual(response.status_code, 200)
-        self.assertTrue(Fornecedor.objects.filter(cnpj="33.333.333/0001-33").exists())
+        fornecedor = Fornecedor.objects.get(cnpj="33.333.333/0001-33")
+        self.assertEqual(fornecedor.endereco, "Rua Araguari")
+        self.assertEqual(fornecedor.numero, "37")
+        self.assertEqual(fornecedor.cidade, "Belo Horizonte")
+        self.assertContains(response, "Belo Horizonte/MG")
 
     def test_fluxo_web_de_solicitacao_cotacao_e_ordem(self):
         solicitacao = SolicitacaoCompra.objects.create(
@@ -7150,6 +7170,13 @@ class LgpdRotinasTests(BaseFinanceTestCase):
             contato="Carlos",
             telefone="1144444444",
             email="carlos@fornecedor.com",
+            cep="30190-110",
+            endereco="Rua Araguari",
+            numero="37",
+            complemento="Sala 201",
+            bairro="Barro Preto",
+            cidade="Belo Horizonte",
+            uf="MG",
             ativo=False,
         )
 
@@ -7161,6 +7188,13 @@ class LgpdRotinasTests(BaseFinanceTestCase):
         self.assertEqual(fornecedor.contato, "Contato anonimizado")
         self.assertEqual(fornecedor.telefone, "")
         self.assertEqual(fornecedor.email, "")
+        self.assertEqual(fornecedor.cep, "")
+        self.assertEqual(fornecedor.endereco, "")
+        self.assertEqual(fornecedor.numero, "")
+        self.assertEqual(fornecedor.complemento, "")
+        self.assertEqual(fornecedor.bairro, "")
+        self.assertEqual(fornecedor.cidade, "")
+        self.assertEqual(fornecedor.uf, "")
 
     def test_anonimiza_usuario_inativo(self):
         user_model = get_user_model()

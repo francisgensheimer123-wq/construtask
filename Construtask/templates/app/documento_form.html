@@ -18,86 +18,80 @@
         {% endfor %}
     {% endif %}
 
-    <div class="card">
-        <div class="card-body">
-            <form method="POST" enctype="multipart/form-data">
-                {% csrf_token %}
-                
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">Tipo de Documento *</label>
-                        {{ form.tipo_documento }}
-                        {% if form.tipo_documento.errors %}
-                            <div class="text-danger">{{ form.tipo_documento.errors }}</div>
-                        {% endif %}
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">Código do Documento</label>
-                        {{ form.codigo_documento }}
-                        {% if form.codigo_documento.errors %}
-                            <div class="text-danger">{{ form.codigo_documento.errors }}</div>
-                        {% endif %}
-                        <small class="text-muted">Código único (gerado automaticamente se vazio)</small>
-                    </div>
-                </div>
+    <section class="panel">
+        <form method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+            <h3 class="form-section-title">Identificação do Documento</h3>
+            <div class="field form-col-md">
+                <label class="form-label">Tipo de Documento *</label>
+                {{ form.tipo_documento }}
+                {% if form.tipo_documento.errors %}
+                    <div class="text-danger">{{ form.tipo_documento.errors }}</div>
+                {% endif %}
+            </div>
+            <div class="field form-col-sm">
+                <label class="form-label">Código do Documento</label>
+                {{ form.codigo_documento }}
+                {% if form.codigo_documento.errors %}
+                    <div class="text-danger">{{ form.codigo_documento.errors }}</div>
+                {% endif %}
+                <small class="text-muted">Código único (gerado automaticamente se vazio)</small>
+            </div>
+            <div class="field form-col-lg">
+                <label class="form-label">Título *</label>
+                {{ form.titulo }}
+                {% if form.titulo.errors %}
+                    <div class="text-danger">{{ form.titulo.errors }}</div>
+                {% endif %}
+            </div>
 
-                <div class="mb-3">
-                    <label class="form-label">Título *</label>
-                    {{ form.titulo }}
-                    {% if form.titulo.errors %}
-                        <div class="text-danger">{{ form.titulo.errors }}</div>
-                    {% endif %}
-                </div>
+            <h3 class="form-section-title">Vinculação Operacional</h3>
+            <div class="field form-col-lg">
+                <label class="form-label">Obra (opcional)</label>
+                {{ form.obra }}
+                {% if form.obra.errors %}
+                    <div class="text-danger">{{ form.obra.errors }}</div>
+                {% endif %}
+            </div>
+            <div class="field form-col-lg">
+                <label class="form-label">EAP - Nível 5 (opcional)</label>
+                {{ form.plano_contas }}
+                {% if form.plano_contas.errors %}
+                    <div class="text-danger">{{ form.plano_contas.errors }}</div>
+                {% endif %}
+            </div>
 
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">Obra (opcional)</label>
-                        {{ form.obra }}
-                        {% if form.obra.errors %}
-                            <div class="text-danger">{{ form.obra.errors }}</div>
-                        {% endif %}
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">EAP - Nível 5 (opcional)</label>
-                        {{ form.plano_contas }}
-                        {% if form.plano_contas.errors %}
-                            <div class="text-danger">{{ form.plano_contas.errors }}</div>
-                        {% endif %}
-                    </div>
-                </div>
+            <h3 class="form-section-title">Classificação ISO</h3>
+            <div class="field form-col-md">
+                <label class="form-label">Processo/Atividade ISO (opcional)</label>
+                {{ form.processo }}
+                {% if form.processo.errors %}
+                    <div class="text-danger">{{ form.processo.errors }}</div>
+                {% endif %}
+                <small class="text-muted">Ex: ISO 7.5, ISO 9.1, ISO 8.5</small>
+            </div>
 
-                <div class="mb-3">
-                    <label class="form-label">Processo/Atividade ISO (opcional)</label>
-                    {{ form.processo }}
-                    {% if form.processo.errors %}
-                        <div class="text-danger">{{ form.processo.errors }}</div>
-                    {% endif %}
-                    <small class="text-muted">Ex: ISO 7.5, ISO 9.1, ISO 8.5</small>
-                </div>
+            <h3 class="form-section-title">Arquivo do Documento</h3>
+            <div class="field form-col-full">
+                <label class="form-label">Anexo do Documento *</label>
+                {{ form.arquivo_inicial }}
+                {% if form.arquivo_inicial.errors %}
+                    <div class="text-danger">{{ form.arquivo_inicial.errors }}</div>
+                {% endif %}
+                <small class="text-muted">{{ form.arquivo_inicial.help_text }}</small>
+            </div>
 
-                <div class="mb-3">
-                    <label class="form-label">Anexo do Documento *</label>
-                    {{ form.arquivo_inicial }}
-                    {% if form.arquivo_inicial.errors %}
-                        <div class="text-danger">{{ form.arquivo_inicial.errors }}</div>
-                    {% endif %}
-                    <small class="text-muted">{{ form.arquivo_inicial.help_text }}</small>
-                </div>
+            {{ form.empresa.as_hidden }}
 
-                {{ form.empresa.as_hidden }}
-
-                <hr>
-                
-                <div class="d-flex gap-2">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-check-circle"></i> Salvar
-                    </button>
-                    <a href="{{ voltar_url }}" class="btn btn-outline-secondary">
-                        <i class="bi bi-x-circle"></i> Cancelar
-                    </a>
-                </div>
-            </form>
-        </div>
-    </div>
+            <div class="actions">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-circle"></i> Salvar
+                </button>
+                <a href="{{ voltar_url }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-x-circle"></i> Cancelar
+                </a>
+            </div>
+        </form>
+    </section>
 </div>
 {% endblock %}

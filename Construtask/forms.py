@@ -99,6 +99,7 @@ class NormalizeTextFieldsMixin:
                 _append_widget_class(field.widget, "form-control-phone")
             if isinstance(field.widget, forms.DateInput) or getattr(field.widget, "input_type", "") == "date":
                 _append_widget_class(field.widget, "form-control-date")
+            _append_widget_class(field.widget, _layout_class_for_field(field_name, field.widget))
 
     def clean(self):
         cleaned_data = super().clean()
@@ -124,6 +125,36 @@ def _append_widget_class(widget, class_name):
 def _is_phone_field(field_name):
     normalized = field_name.lower()
     return "telefone" in normalized or "celular" in normalized
+
+
+def _layout_class_for_field(field_name, widget):
+    normalized = field_name.lower()
+    input_type = getattr(widget, "input_type", "")
+    if isinstance(widget, forms.Textarea) or input_type == "file":
+        return "form-col-full"
+    if normalized in {"descricao", "observacoes", "justificativa", "justificativa_escolha", "motivo_mudanca"}:
+        return "form-col-full"
+    if any(token in normalized for token in ("descricao", "observacao", "justificativa", "parecer", "motivo", "plano_resposta", "causa")):
+        return "form-col-full"
+    if input_type == "date" or "data" in normalized:
+        return "form-col-xs"
+    if normalized in {"serie", "numero", "unidade", "quantidade", "cep", "uf", "codigo"}:
+        return "form-col-xs"
+    if normalized in {"status", "tipo"}:
+        return "form-col-sm"
+    if any(token in normalized for token in ("percentual", "delta", "dias")):
+        return "form-col-xs"
+    if any(token in normalized for token in ("valor_unitario", "quantidade")):
+        return "form-col-xs"
+    if normalized in {"cnpj", "cnpj_info", "cpf"} or _is_phone_field(normalized):
+        return "form-col-sm"
+    if any(token in normalized for token in ("valor", "prazo")):
+        return "form-col-sm"
+    if input_type == "email" or normalized in {"email", "responsavel", "contato", "cidade", "bairro", "complemento", "categoria"}:
+        return "form-col-md"
+    if normalized in {"obra", "empresa", "cliente", "fornecedor", "contrato", "medicao", "pedido_compra", "origem_info"}:
+        return "form-col-lg"
+    return "form-col-lg"
 
 
 def _normalizar_tipo_nota(valor):
@@ -1096,11 +1127,39 @@ class NaoConformidadeForm(NormalizeTextFieldsMixin, forms.ModelForm):
 
 
 class FornecedorForm(NormalizeTextFieldsMixin, forms.ModelForm):
-    text_fields_to_normalize = ("razao_social", "nome_fantasia", "contato", "telefone", "email")
+    text_fields_to_normalize = (
+        "razao_social",
+        "nome_fantasia",
+        "contato",
+        "telefone",
+        "email",
+        "cep",
+        "endereco",
+        "numero",
+        "complemento",
+        "bairro",
+        "cidade",
+        "uf",
+    )
 
     class Meta:
         model = Fornecedor
-        fields = ["razao_social", "nome_fantasia", "cnpj", "contato", "telefone", "email", "ativo"]
+        fields = [
+            "razao_social",
+            "nome_fantasia",
+            "cnpj",
+            "contato",
+            "telefone",
+            "email",
+            "cep",
+            "endereco",
+            "numero",
+            "complemento",
+            "bairro",
+            "cidade",
+            "uf",
+            "ativo",
+        ]
 
     def __init__(self, *args, **kwargs):
         self.empresa = kwargs.pop("empresa", None)

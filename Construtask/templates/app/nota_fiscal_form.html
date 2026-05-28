@@ -14,7 +14,8 @@
     <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
         {% if importar_xml_habilitado %}
-        <div class="field">
+        <h3 class="form-section-title">Importação por XML</h3>
+        <div class="field form-col-full">
             <label for="{{ form.xml_nota.id_for_label }}">{{ form.xml_nota.label }}</label>
             <div class="inline-form-row">
                 {{ form.xml_nota }}
@@ -25,24 +26,112 @@
             {% endif %}
         </div>
         {% endif %}
-        {% for field in form %}
-        {% if field.name == "xml_nota" %}
-        {% else %}
-        <div class="field">
-            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-            {{ field }}
-            {% if field.errors %}
-                <div style="color:#b91c1c; margin-top:6px;">{{ field.errors }}</div>
+
+        <h3 class="form-section-title">Origem da Nota</h3>
+        <div class="field form-col-lg">
+            <label for="{{ form.pedido_compra.id_for_label }}">{{ form.pedido_compra.label }}</label>
+            {{ form.pedido_compra }}
+            {% if form.pedido_compra.errors %}
+                <div style="color:#b91c1c; margin-top:6px;">{{ form.pedido_compra.errors }}</div>
             {% endif %}
         </div>
-        {% endif %}
-        {% endfor %}
+        <div class="field form-col-lg">
+            <label for="{{ form.medicao.id_for_label }}">{{ form.medicao.label }}</label>
+            {{ form.medicao }}
+            {% if form.medicao.errors %}
+                <div style="color:#b91c1c; margin-top:6px;">{{ form.medicao.errors }}</div>
+            {% endif %}
+        </div>
+        <div class="field form-col-full">
+            <label for="{{ form.origem_info.id_for_label }}">{{ form.origem_info.label }}</label>
+            {{ form.origem_info }}
+            {% if form.origem_info.errors %}
+                <div style="color:#b91c1c; margin-top:6px;">{{ form.origem_info.errors }}</div>
+            {% endif %}
+        </div>
+
+        <h3 class="form-section-title">Identificação Fiscal</h3>
+        <div class="field form-col-xs">
+            <label for="{{ form.numero.id_for_label }}">{{ form.numero.label }}</label>
+            {{ form.numero }}
+            {% if form.numero.errors %}
+                <div style="color:#b91c1c; margin-top:6px;">{{ form.numero.errors }}</div>
+            {% endif %}
+        </div>
+        <div class="field form-col-xs">
+            <label for="{{ form.serie.id_for_label }}">{{ form.serie.label }}</label>
+            {{ form.serie }}
+            {% if form.serie.errors %}
+                <div style="color:#b91c1c; margin-top:6px;">{{ form.serie.errors }}</div>
+            {% endif %}
+        </div>
+        <div class="field form-col-md">
+            <label for="{{ form.tipo.id_for_label }}">{{ form.tipo.label }}</label>
+            {{ form.tipo }}
+            {% if form.tipo.errors %}
+                <div style="color:#b91c1c; margin-top:6px;">{{ form.tipo.errors }}</div>
+            {% endif %}
+        </div>
+        <div class="field form-col-xs">
+            <label for="{{ form.status.id_for_label }}">{{ form.status.label }}</label>
+            {{ form.status }}
+            {% if form.status.errors %}
+                <div style="color:#b91c1c; margin-top:6px;">{{ form.status.errors }}</div>
+            {% endif %}
+        </div>
+        <div class="field form-col-xs">
+            <label for="{{ form.data_emissao.id_for_label }}">{{ form.data_emissao.label }}</label>
+            {{ form.data_emissao }}
+            {% if form.data_emissao.errors %}
+                <div style="color:#b91c1c; margin-top:6px;">{{ form.data_emissao.errors }}</div>
+            {% endif %}
+        </div>
+        <div class="field form-col-xs">
+            <label for="{{ form.data_vencimento.id_for_label }}">{{ form.data_vencimento.label }}</label>
+            {{ form.data_vencimento }}
+            {% if form.data_vencimento.errors %}
+                <div style="color:#b91c1c; margin-top:6px;">{{ form.data_vencimento.errors }}</div>
+            {% endif %}
+        </div>
+
+        <h3 class="form-section-title">Fornecedor da Nota</h3>
+        <div class="field form-col-lg">
+            <label for="{{ form.fornecedor.id_for_label }}">{{ form.fornecedor.label }}</label>
+            {{ form.fornecedor }}
+            {% if form.fornecedor.errors %}
+                <div style="color:#b91c1c; margin-top:6px;">{{ form.fornecedor.errors }}</div>
+            {% endif %}
+        </div>
+        <div class="field form-col-xs">
+            <label for="{{ form.cnpj.id_for_label }}">{{ form.cnpj.label }}</label>
+            {{ form.cnpj }}
+            {% if form.cnpj.errors %}
+                <div style="color:#b91c1c; margin-top:6px;">{{ form.cnpj.errors }}</div>
+            {% endif %}
+        </div>
+
+        <h3 class="form-section-title">Valores e Descrição</h3>
+        <div class="field form-col-xs">
+            <label for="{{ form.valor_total.id_for_label }}">{{ form.valor_total.label }}</label>
+            {{ form.valor_total }}
+            {% if form.valor_total.errors %}
+                <div style="color:#b91c1c; margin-top:6px;">{{ form.valor_total.errors }}</div>
+            {% endif %}
+        </div>
+        <div class="field form-col-full">
+            <label for="{{ form.descricao.id_for_label }}">{{ form.descricao.label }}</label>
+            {{ form.descricao }}
+            {% if form.descricao.errors %}
+                <div style="color:#b91c1c; margin-top:6px;">{{ form.descricao.errors }}</div>
+            {% endif %}
+        </div>
         {% if form.non_field_errors %}
             <div style="color:#b91c1c;">{{ form.non_field_errors }}</div>
         {% endif %}
 
+        <h3 class="form-section-title">Rateio por Centro de Custo</h3>
         <div class="field">
-            <label>Rateio por Centro de Custo</label>
+            <label>Distribuição do valor</label>
             {{ rateio_formset.management_form }}
             {% if rateio_formset.non_form_errors %}
                 <div style="color:#b91c1c; margin-bottom:10px;">{{ rateio_formset.non_form_errors }}</div>

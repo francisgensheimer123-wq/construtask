@@ -8,20 +8,59 @@
     <div class="toolbar">
         <div>
             <h2>{% if object %}Editar Não Conformidade{% else %}Nova Não Conformidade{% endif %}</h2>
-            <p>Registre a ocorrencia, a causa e a ação corretiva associada.</p>
+            <p>Registre a ocorrência, a causa e a ação corretiva associada.</p>
         </div>
     </div>
     <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
-        {% for field in form %}
-        <div class="field">
-            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-            {{ field }}
-            {% if field.errors %}
-            <div class="message error" style="margin-top:8px;">{{ field.errors|striptags }}</div>
+        <h3 class="form-section-title">Contexto da Ocorrência</h3>
+        <div class="field form-col-lg">
+            <label for="{{ form.obra.id_for_label }}">{{ form.obra.label }}</label>
+            {{ form.obra }}
+            {% if form.obra.errors %}
+            <div class="message error" style="margin-top:8px;">{{ form.obra.errors|striptags }}</div>
             {% endif %}
         </div>
-        {% endfor %}
+        <div class="field form-col-lg">
+            <label for="{{ form.plano_contas.id_for_label }}">{{ form.plano_contas.label }}</label>
+            {{ form.plano_contas }}
+            {% if form.plano_contas.errors %}
+            <div class="message error" style="margin-top:8px;">{{ form.plano_contas.errors|striptags }}</div>
+            {% endif %}
+        </div>
+
+        <h3 class="form-section-title">Registro da Não Conformidade</h3>
+        <div class="field form-col-full">
+            <label for="{{ form.descricao.id_for_label }}">{{ form.descricao.label }}</label>
+            {{ form.descricao }}
+            {% if form.descricao.errors %}
+            <div class="message error" style="margin-top:8px;">{{ form.descricao.errors|striptags }}</div>
+            {% endif %}
+        </div>
+        <div class="field form-col-full">
+            <label for="{{ form.causa.id_for_label }}">{{ form.causa.label }}</label>
+            {{ form.causa }}
+            {% if form.causa.errors %}
+            <div class="message error" style="margin-top:8px;">{{ form.causa.errors|striptags }}</div>
+            {% endif %}
+        </div>
+
+        <h3 class="form-section-title">Tratamento e Responsabilidade</h3>
+        <div class="field form-col-full">
+            <label for="{{ form.acao_corretiva.id_for_label }}">{{ form.acao_corretiva.label }}</label>
+            {{ form.acao_corretiva }}
+            {% if form.acao_corretiva.errors %}
+            <div class="message error" style="margin-top:8px;">{{ form.acao_corretiva.errors|striptags }}</div>
+            {% endif %}
+        </div>
+        <div class="field form-col-md">
+            <label for="{{ form.responsavel.id_for_label }}">{{ form.responsavel.label }}</label>
+            {{ form.responsavel }}
+            {% if form.responsavel.errors %}
+            <div class="message error" style="margin-top:8px;">{{ form.responsavel.errors|striptags }}</div>
+            {% endif %}
+        </div>
+
         <div class="actions">
             <button class="btn" type="submit">Salvar</button>
             <a class="btn secondary" href="{% url 'nao_conformidade_list' %}">Voltar</a>

@@ -6,8 +6,8 @@
 <div class="form-page-shell">
 <div class="toolbar">
     <div>
-        <h2>Nova Reunião de Comunicacao</h2>
-        <p class="muted">A pauta inicial sera gerada automaticamente com base no contexto atual da obra.</p>
+        <h2>Nova Reunião de Comunicação</h2>
+        <p class="muted">A pauta inicial será gerada automaticamente com base no contexto atual da obra.</p>
     </div>
     <a class="btn secondary" href="{% url 'reuniao_comunicacao_list' %}">Voltar</a>
 </div>
@@ -18,15 +18,32 @@
     {% endif %}
     <form method="post">
         {% csrf_token %}
-        <div class="grid-2">
-            {% for field in form %}
-            <div class="field">
-                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                {{ field }}
-                {% if field.help_text %}<small class="muted">{{ field.help_text }}</small>{% endif %}
-                {% for error in field.errors %}<small style="color:#7f1d1d;">{{ error }}</small>{% endfor %}
-            </div>
-            {% endfor %}
+        <h3 class="form-section-title">Identificação da Reunião</h3>
+        <div class="field form-col-md">
+            <label for="{{ form.tipo_reuniao.id_for_label }}">{{ form.tipo_reuniao.label }}</label>
+            {{ form.tipo_reuniao }}
+            {% if form.tipo_reuniao.help_text %}<small class="muted">{{ form.tipo_reuniao.help_text }}</small>{% endif %}
+            {% for error in form.tipo_reuniao.errors %}<small style="color:#7f1d1d;">{{ error }}</small>{% endfor %}
+        </div>
+        <div class="field form-col-lg">
+            <label for="{{ form.titulo.id_for_label }}">{{ form.titulo.label }}</label>
+            {{ form.titulo }}
+            {% if form.titulo.help_text %}<small class="muted">{{ form.titulo.help_text }}</small>{% endif %}
+            {% for error in form.titulo.errors %}<small style="color:#7f1d1d;">{{ error }}</small>{% endfor %}
+        </div>
+
+        <h3 class="form-section-title">Agenda da Reunião</h3>
+        <div class="field form-col-xs">
+            <label for="{{ form.data_prevista.id_for_label }}">{{ form.data_prevista.label }}</label>
+            {{ form.data_prevista }}
+            {% if form.data_prevista.help_text %}<small class="muted">{{ form.data_prevista.help_text }}</small>{% endif %}
+            {% for error in form.data_prevista.errors %}<small style="color:#7f1d1d;">{{ error }}</small>{% endfor %}
+        </div>
+        <div class="field form-col-xs">
+            <label for="{{ form.data_realizada.id_for_label }}">{{ form.data_realizada.label }}</label>
+            {{ form.data_realizada }}
+            {% if form.data_realizada.help_text %}<small class="muted">{{ form.data_realizada.help_text }}</small>{% endif %}
+            {% for error in form.data_realizada.errors %}<small style="color:#7f1d1d;">{{ error }}</small>{% endfor %}
         </div>
         {% for error in form.non_field_errors %}<small style="color:#7f1d1d;">{{ error }}</small>{% endfor %}
         <div class="actions">

@@ -2,23 +2,137 @@
 
 {% block title %}Fornecedor | Construtask{% endblock %}
 
+{% block extra_head %}
+<style>
+    .fornecedor-form-grid {
+        align-items: end;
+        display: grid;
+        gap: 16px 18px;
+        grid-template-columns: repeat(12, minmax(0, 1fr));
+    }
+    .fornecedor-form-grid .field {
+        margin-bottom: 0;
+        min-width: 0;
+    }
+    .fornecedor-section-title {
+        border-bottom: 1px solid var(--red-soft);
+        color: var(--white);
+        font-size: 0.98rem;
+        font-weight: 800;
+        grid-column: 1 / -1;
+        letter-spacing: 0;
+        margin: 8px 0 0;
+        padding-bottom: 8px;
+    }
+    .form-page-shell .panel > form.fornecedor-form-grid > .fornecedor-span-2 { grid-column: span 2 !important; }
+    .form-page-shell .panel > form.fornecedor-form-grid > .fornecedor-span-3 { grid-column: span 3 !important; }
+    .form-page-shell .panel > form.fornecedor-form-grid > .fornecedor-span-4 { grid-column: span 4 !important; }
+    .form-page-shell .panel > form.fornecedor-form-grid > .fornecedor-span-5 { grid-column: span 5 !important; }
+    .form-page-shell .panel > form.fornecedor-form-grid > .fornecedor-span-6 { grid-column: span 6 !important; }
+    .form-page-shell .panel > form.fornecedor-form-grid > .fornecedor-span-8 { grid-column: span 8 !important; }
+    .fornecedor-form-grid input:not([type="checkbox"]),
+    .fornecedor-form-grid select,
+    .fornecedor-form-grid textarea {
+        max-width: none;
+        width: 100%;
+    }
+    .fornecedor-actions {
+        grid-column: 1 / -1 !important;
+    }
+    @media (max-width: 900px) {
+        .form-page-shell .panel > form.fornecedor-form-grid > .fornecedor-span-2,
+        .form-page-shell .panel > form.fornecedor-form-grid > .fornecedor-span-3,
+        .form-page-shell .panel > form.fornecedor-form-grid > .fornecedor-span-4,
+        .form-page-shell .panel > form.fornecedor-form-grid > .fornecedor-span-5,
+        .form-page-shell .panel > form.fornecedor-form-grid > .fornecedor-span-6,
+        .form-page-shell .panel > form.fornecedor-form-grid > .fornecedor-span-8 {
+            grid-column: 1 / -1 !important;
+        }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="form-page-shell form-page-compact">
 <div class="panel">
     <h2>Novo Fornecedor</h2>
     <p>Cadastre fornecedores para uso em cotações e ordens de compra.</p>
-    <form method="post">
+    <form method="post" class="fornecedor-form-grid">
         {% csrf_token %}
-        {% for field in form %}
-        <div class="field">
-            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-            {{ field }}
-            {% if field.errors %}
-            <div class="message error" style="margin-top:8px;">{{ field.errors|striptags }}</div>
-            {% endif %}
+
+        <h3 class="fornecedor-section-title">Dados do Fornecedor</h3>
+        <div class="field fornecedor-span-5 form-col-lg">
+            <label for="{{ form.razao_social.id_for_label }}">{{ form.razao_social.label }}</label>
+            {{ form.razao_social }}
+            {% if form.razao_social.errors %}<div class="message error" style="margin-top:8px;">{{ form.razao_social.errors|striptags }}</div>{% endif %}
         </div>
-        {% endfor %}
-        <div class="actions">
+        <div class="field fornecedor-span-4 form-col-md">
+            <label for="{{ form.nome_fantasia.id_for_label }}">{{ form.nome_fantasia.label }}</label>
+            {{ form.nome_fantasia }}
+            {% if form.nome_fantasia.errors %}<div class="message error" style="margin-top:8px;">{{ form.nome_fantasia.errors|striptags }}</div>{% endif %}
+        </div>
+        <div class="field fornecedor-span-3 form-col-sm">
+            <label for="{{ form.cnpj.id_for_label }}">{{ form.cnpj.label }}</label>
+            {{ form.cnpj }}
+            {% if form.cnpj.errors %}<div class="message error" style="margin-top:8px;">{{ form.cnpj.errors|striptags }}</div>{% endif %}
+        </div>
+
+        <h3 class="fornecedor-section-title">Dados de Contato</h3>
+        <div class="field fornecedor-span-4 form-col-md">
+            <label for="{{ form.contato.id_for_label }}">{{ form.contato.label }}</label>
+            {{ form.contato }}
+            {% if form.contato.errors %}<div class="message error" style="margin-top:8px;">{{ form.contato.errors|striptags }}</div>{% endif %}
+        </div>
+        <div class="field fornecedor-span-3 form-col-sm">
+            <label for="{{ form.telefone.id_for_label }}">{{ form.telefone.label }}</label>
+            {{ form.telefone }}
+            {% if form.telefone.errors %}<div class="message error" style="margin-top:8px;">{{ form.telefone.errors|striptags }}</div>{% endif %}
+        </div>
+        <div class="field fornecedor-span-5 form-col-lg">
+            <label for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>
+            {{ form.email }}
+            {% if form.email.errors %}<div class="message error" style="margin-top:8px;">{{ form.email.errors|striptags }}</div>{% endif %}
+        </div>
+
+        <h3 class="fornecedor-section-title">Dados de Endereço</h3>
+        <div class="field fornecedor-span-2 form-col-xs">
+            <label for="{{ form.cep.id_for_label }}">{{ form.cep.label }}</label>
+            {{ form.cep }}
+            {% if form.cep.errors %}<div class="message error" style="margin-top:8px;">{{ form.cep.errors|striptags }}</div>{% endif %}
+        </div>
+        <div class="field fornecedor-span-8 form-col-xl">
+            <label for="{{ form.endereco.id_for_label }}">{{ form.endereco.label }}</label>
+            {{ form.endereco }}
+            {% if form.endereco.errors %}<div class="message error" style="margin-top:8px;">{{ form.endereco.errors|striptags }}</div>{% endif %}
+        </div>
+        <div class="field fornecedor-span-2 form-col-xs">
+            <label for="{{ form.numero.id_for_label }}">{{ form.numero.label }}</label>
+            {{ form.numero }}
+            {% if form.numero.errors %}<div class="message error" style="margin-top:8px;">{{ form.numero.errors|striptags }}</div>{% endif %}
+        </div>
+        <div class="field fornecedor-span-2 form-col-xs">
+            <label for="{{ form.uf.id_for_label }}">{{ form.uf.label }}</label>
+            {{ form.uf }}
+            {% if form.uf.errors %}<div class="message error" style="margin-top:8px;">{{ form.uf.errors|striptags }}</div>{% endif %}
+        </div>
+
+        <div class="field fornecedor-span-4 form-col-md">
+            <label for="{{ form.complemento.id_for_label }}">{{ form.complemento.label }}</label>
+            {{ form.complemento }}
+            {% if form.complemento.errors %}<div class="message error" style="margin-top:8px;">{{ form.complemento.errors|striptags }}</div>{% endif %}
+        </div>
+        <div class="field fornecedor-span-3 form-col-sm">
+            <label for="{{ form.bairro.id_for_label }}">{{ form.bairro.label }}</label>
+            {{ form.bairro }}
+            {% if form.bairro.errors %}<div class="message error" style="margin-top:8px;">{{ form.bairro.errors|striptags }}</div>{% endif %}
+        </div>
+        <div class="field fornecedor-span-3 form-col-sm">
+            <label for="{{ form.cidade.id_for_label }}">{{ form.cidade.label }}</label>
+            {{ form.cidade }}
+            {% if form.cidade.errors %}<div class="message error" style="margin-top:8px;">{{ form.cidade.errors|striptags }}</div>{% endif %}
+        </div>
+
+        <div class="actions fornecedor-actions">
             <button class="btn" type="submit">Salvar</button>
             <a class="btn secondary" href="{% url 'fornecedor_list' %}">Voltar</a>
         </div>

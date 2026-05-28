@@ -2,7 +2,7 @@
 {% load formatters %}
 
 {% block main_class %}main-full{% endblock %}
-{% block title %}Cotacao | Construtask{% endblock %}
+{% block title %}Cotação | Construtask{% endblock %}
 
 {% block extra_head %}
 <style>
@@ -47,6 +47,21 @@
         grid-column: span 6;
         margin-bottom: 0;
         min-width: 0;
+    }
+    .cotacao-form-page .cotacao-meta-grid > .field:has(.form-col-xs) {
+        grid-column: span 2;
+    }
+    .cotacao-form-page .cotacao-meta-grid > .field:has(.form-col-sm) {
+        grid-column: span 3;
+    }
+    .cotacao-form-page .cotacao-meta-grid > .field:has(.form-col-md) {
+        grid-column: span 4;
+    }
+    .cotacao-form-page .cotacao-meta-grid > .field:has(.form-col-lg) {
+        grid-column: span 6;
+    }
+    .cotacao-form-page .cotacao-meta-grid > .field:has(.form-col-xl) {
+        grid-column: span 8;
     }
     .cotacao-form-page .cotacao-meta-grid > .field:has(textarea) {
         grid-column: 1 / -1;

@@ -44,7 +44,7 @@ def titulo_padrao_reuniao(obra, tipo_reuniao):
         "MEDIO_PRAZO": "Reunião de Médio Prazo",
         "LONGO_PRAZO": "Reunião de Longo Prazo",
     }
-    return f"{titulos.get(tipo_reuniao, 'Reuniao de Comunicacao')} - {obra.codigo}"
+    return f"{titulos.get(tipo_reuniao, 'Reunião de Comunicação')} - {obra.codigo}"
 
 
 def construir_itens_automaticos_pauta(obra, *, data_reuniao=None, janela_dias=None):
@@ -155,7 +155,7 @@ def construir_itens_automaticos_pauta(obra, *, data_reuniao=None, janela_dias=No
                     "descricao": f"Previsto para {atividade.data_fim_prevista.strftime('%d/%m/%Y') if atividade.data_fim_prevista else '-'} | Concluído: {atividade.percentual_concluido}%",
                     "contexto": {
                         "dias_desvio": atividade.dias_desvio,
-                        "percentual_concluido": atividade.percentual_concluido,
+                        "percentual_concluido": str(atividade.percentual_concluido),
                     },
                 }
             )
@@ -265,7 +265,7 @@ def compilar_ata_reuniao(reuniao):
                 [
                     f"{indice}. {item.titulo}",
                     f"   Contexto: {item.descricao or '-'}",
-                    f"   O que sera feito: {item.resposta_o_que or '-'}",
+                    f"   O que será feito: {item.resposta_o_que or '-'}",
                     f"   Quem executara: {item.resposta_quem or '-'}",
                     f"   Quando: {item.resposta_quando.strftime('%d/%m/%Y') if item.resposta_quando else '-'}",
                     "",

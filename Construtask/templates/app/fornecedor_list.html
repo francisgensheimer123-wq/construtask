@@ -25,6 +25,7 @@
                 <th>Contato</th>
                 <th>Telefone</th>
                 <th>Email</th>
+                <th>Cidade/UF</th>
                 <th class="text-right">Avaliacao</th>
                 <th>Status</th>
             </tr>
@@ -38,6 +39,13 @@
                 <td>{{ fornecedor.contato|default:"-" }}</td>
                 <td>{{ fornecedor.telefone|default:"-" }}</td>
                 <td>{{ fornecedor.email|default:"-" }}</td>
+                <td>
+                    {% if fornecedor.cidade or fornecedor.uf %}
+                        {{ fornecedor.cidade|default:"-" }}{% if fornecedor.uf %}/{{ fornecedor.uf }}{% endif %}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
                 <td class="money">{{ fornecedor.media_avaliacao|trunc2 }}</td>
                 <td>{% if fornecedor.ativo %}Ativo{% else %}Inativo{% endif %}</td>
             </tr>

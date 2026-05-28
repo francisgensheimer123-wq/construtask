@@ -439,36 +439,100 @@ form .form-control-date {
     width: min(100%, 460px);
 }
 
+.form-section-title {
+    border-bottom: 1px solid var(--red-soft);
+    color: var(--white);
+    font-size: 0.98rem;
+    font-weight: 800;
+    grid-column: 1 / -1;
+    letter-spacing: 0;
+    margin: 8px 0 0;
+    padding-bottom: 8px;
+}
+
 .form-page-shell,
 .form-page-shell.form-page-compact {
     width: min(100%, calc(100vw - 36px));
 }
 
 .form-page-shell .panel > form {
-    align-items: start;
+    align-items: stretch;
     display: grid;
     gap: 16px 18px;
+    grid-auto-flow: row;
     grid-template-columns: repeat(12, minmax(0, 1fr));
 }
 
 .form-page-shell .panel > form > .field {
+    display: flex;
+    flex-direction: column;
     grid-column: span 6;
+    height: 100%;
     margin-bottom: 0;
     min-width: 0;
 }
 
-.form-page-shell .panel > form > .field:has(input[type="date"]),
-.form-page-shell .panel > form > .field:has(input[data-cnpj-mask="true"]),
-.form-page-shell .panel > form > .field:has(.form-control-phone) {
+.form-page-shell .panel > form > .field > input:not([type="checkbox"]):not([type="radio"]),
+.form-page-shell .panel > form > .field > select,
+.form-page-shell .panel > form > .field > textarea,
+.form-page-shell .panel > form > .field .form-control,
+.form-page-shell .panel > form > .field .form-select {
+    max-width: none;
+    width: 100%;
+}
+
+.form-page-shell .panel > form > .field:has(.form-field-short) {
+    grid-column: span 3;
+}
+
+.form-page-shell .panel > form > .field:has(.form-field-medium) {
+    grid-column: span 4;
+}
+
+.form-page-shell .panel > form > .field:has(.form-field-wide) {
     grid-column: span 6;
+}
+
+.form-page-shell .panel > form > .field:has(.form-col-xs),
+.form-page-shell .panel > form > .field-tiny,
+.form-page-shell .panel > form > .form-col-xs {
+    grid-column: span 2;
+}
+
+.form-page-shell .panel > form > .field:has(.form-col-sm),
+.form-page-shell .panel > form > .field-short,
+.form-page-shell .panel > form > .form-col-sm {
+    grid-column: span 3;
+}
+
+.form-page-shell .panel > form > .field:has(.form-col-md),
+.form-page-shell .panel > form > .field-medium,
+.form-page-shell .panel > form > .form-col-md {
+    grid-column: span 4;
+}
+
+.form-page-shell .panel > form > .field:has(.form-col-lg),
+.form-page-shell .panel > form > .field-wide,
+.form-page-shell .panel > form > .form-col-lg {
+    grid-column: span 6;
+}
+
+.form-page-shell .panel > form > .field:has(.form-col-xl),
+.form-page-shell .panel > form > .field-large,
+.form-page-shell .panel > form > .form-col-xl {
+    grid-column: span 8;
 }
 
 .form-page-shell .panel > form > .field:has(textarea),
 .form-page-shell .panel > form > .field:has(input[type="file"]),
+.form-page-shell .panel > form > .field:has(.form-field-full),
+.form-page-shell .panel > form > .field:has(.form-col-full),
 .form-page-shell .panel > form > .field:has(table),
 .form-page-shell .panel > form > .field:has(.compact-table),
 .form-page-shell .panel > form > .field:has(.inline-form-row),
 .form-page-shell .panel > form > .field-full,
+.form-page-shell .panel > form > .form-col-full,
+.form-page-shell .panel > form > .form-section-title,
 .form-page-shell .panel > form > .actions,
 .form-page-shell .panel > form > [style*="color:#b91c1c"] {
     grid-column: 1 / -1;
@@ -497,7 +561,17 @@ form label,
         width: 100%;
     }
 
+    .form-page-shell .panel > form {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
     .form-page-shell .panel > form > .field,
+    .form-page-shell .panel > form > .form-col-xs,
+    .form-page-shell .panel > form > .form-col-sm,
+    .form-page-shell .panel > form > .form-col-md,
+    .form-page-shell .panel > form > .form-col-lg,
+    .form-page-shell .panel > form > .form-col-xl,
+    .form-page-shell .panel > form > .form-col-full,
     .form-page-shell .panel > form > .field:has(select),
     .form-page-shell .panel > form > .field:has(input[type="email"]),
     .form-page-shell .panel > form > .field:has(input[type="date"]),
@@ -505,7 +579,7 @@ form label,
     .form-page-shell .panel > form > .field:has(.form-control-phone),
     .form-page-shell .panel > form > .actions,
     .form-page-shell .panel > form > [style*="color:#b91c1c"] {
-        grid-column: 1 / -1;
+        grid-column: 1 / -1 !important;
     }
 }
 
