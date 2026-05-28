@@ -5391,6 +5391,34 @@ class EvolucaoArquiteturalTests(BaseFinanceTestCase):
         self.assertEqual(eva["SPI"], Decimal("1.0000"))
         self.assertEqual(eva["CPI"], Decimal("1.0000"))
 
+    def test_eva_mantem_cpi_em_um_quando_custo_real_e_zero(self):
+        plano = PlanoFisico.objects.create(
+            obra=self.obra,
+            titulo="Baseline sem custo real",
+            responsavel_importacao=self.user,
+            status="BASELINE",
+            is_baseline=True,
+            data_base="2026-03-01",
+        )
+        PlanoFisicoItem.objects.create(
+            plano=plano,
+            plano_contas=self.analitico,
+            codigo_atividade="C1",
+            atividade="Serviço sem nota fiscal",
+            duracao=10,
+            data_inicio_prevista=date(2026, 3, 1),
+            data_fim_prevista=date(2026, 3, 31),
+            percentual_concluido=50,
+            valor_planejado=Decimal("100.00"),
+            valor_realizado=Decimal("0.00"),
+        )
+
+        eva = EVAService.calcular(self.obra, date(2026, 3, 21))
+
+        self.assertEqual(eva["EV"], Decimal("50.00"))
+        self.assertEqual(eva["AC"], Decimal("0.00"))
+        self.assertEqual(eva["CPI"], Decimal("1.0000"))
+
     def test_score_operacional_reduz_com_alertas_e_riscos(self):
         risco = Risco.objects.create(
             empresa=self.empresa,

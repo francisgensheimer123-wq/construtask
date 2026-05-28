@@ -41,7 +41,7 @@ class EVAService:
             cpi = Decimal("1.0000")
             spi = Decimal("1.0000")
         else:
-            cpi = cls._safe_div(ev, ac)
+            cpi = Decimal("1.0000") if ac == zero else cls._safe_div(ev, ac)
             spi = cls._safe_div(ev, pv)
         eac = cls._safe_div(bac, cpi) if cpi > zero else bac
         etc = eac - ac
