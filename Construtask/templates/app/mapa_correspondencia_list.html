@@ -13,15 +13,24 @@
         align-items: start;
     }
     .map-box {
-        border: 1px solid #d1d5db;
-        border-radius: 18px;
-        background: #fff;
+        border: 1px solid rgba(200, 200, 200, 0.16);
+        border-radius: 14px;
+        background: linear-gradient(180deg, rgba(61,61,61,.96) 0%, rgba(33,33,33,.98) 100%);
+        box-shadow: var(--panel-shadow);
+        color: var(--white);
         overflow: hidden;
     }
     .map-box-header {
-        padding: 14px 18px;
-        background: #f3f4f6;
-        border-bottom: 1px solid #d1d5db;
+        padding: 16px 18px;
+        background: linear-gradient(135deg, rgba(139,0,0,.22) 0%, rgba(61,61,61,.95) 45%, rgba(33,33,33,.95) 100%);
+        border-bottom: 1px solid rgba(255,255,255,.12);
+        border-top: 4px solid var(--red-dark);
+    }
+    .map-box-header h3 {
+        margin: 0;
+    }
+    .map-box-header .map-help {
+        margin-top: 8px;
     }
     .map-box-body {
         padding: 0;
@@ -33,14 +42,17 @@
         grid-template-columns: 160px 1fr;
         gap: 14px;
         padding: 12px 18px;
-        border-bottom: 1px solid #e5e7eb;
+        border-bottom: 1px solid rgba(255,255,255,.10);
     }
     .map-row:last-child {
         border-bottom: 0;
     }
+    .map-row:hover {
+        background: rgba(255,255,255,.035);
+    }
     .map-key {
         font-weight: 700;
-        color: #111827;
+        color: var(--white);
     }
     .map-value-list {
         display: flex;
@@ -52,14 +64,16 @@
         align-items: center;
         padding: 4px 10px;
         border-radius: 999px;
-        background: #eef2ff;
-        color: #1f2937;
+        background: rgba(255,255,255,.07);
+        border: 1px solid rgba(255,255,255,.12);
+        color: var(--white);
         font-size: 13px;
         white-space: nowrap;
     }
     .map-chip.warn {
-        background: #fef2f2;
-        color: #991b1b;
+        background: rgba(220,38,38,.18);
+        border-color: rgba(220,38,38,.50);
+        color: #fee2e2;
     }
     .map-toolbar {
         display: flex;
@@ -67,22 +81,36 @@
         flex-wrap: wrap;
     }
     .map-status-ok {
-        color: #166534;
+        color: #86efac;
         font-weight: 600;
     }
     .map-status-pending {
-        color: #9a3412;
+        color: #fde68a;
         font-weight: 600;
     }
     .map-help {
         font-size: 13px;
-        color: #4b5563;
+        color: var(--muted-soft);
         margin-top: 6px;
+    }
+    .map-error {
+        color: #fca5a5;
+    }
+    .map-suggestion {
+        color: #bfdbfe;
+    }
+    .map-activity-title {
+        color: var(--white);
+        font-weight: 600;
+        margin-bottom: 8px;
+    }
+    .selector-message {
+        margin-bottom: 14px;
     }
     .selector-panel {
         position: fixed;
         inset: 0;
-        background: rgba(15, 23, 42, 0.55);
+        background: rgba(0, 0, 0, 0.76);
         display: none;
         align-items: center;
         justify-content: center;
@@ -93,17 +121,22 @@
         width: min(920px, 100%);
         max-height: 85vh;
         overflow: auto;
-        background: #fff;
-        border-radius: 18px;
-        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.18);
+        background: linear-gradient(180deg, #313131 0%, #1e1e1e 100%);
+        border: 1px solid rgba(255,255,255,.14);
+        border-top: 5px solid var(--red-dark);
+        border-radius: 14px;
+        box-shadow: 0 24px 60px rgba(0,0,0,.45);
+        color: var(--white);
     }
     .selector-card header,
     .selector-card footer {
         padding: 18px 22px;
-        border-bottom: 1px solid #e5e7eb;
+        background: transparent;
+        border-bottom: 1px solid rgba(255,255,255,.12);
+        box-shadow: none;
     }
     .selector-card footer {
-        border-top: 1px solid #e5e7eb;
+        border-top: 1px solid rgba(255,255,255,.12);
         border-bottom: 0;
         display: flex;
         justify-content: flex-end;
@@ -122,8 +155,14 @@
         gap: 10px;
         align-items: flex-start;
         padding: 12px 14px;
-        border: 1px solid #d1d5db;
-        border-radius: 12px;
+        border: 1px solid rgba(255,255,255,.12);
+        border-radius: 10px;
+        background: rgba(255,255,255,.025);
+        color: var(--white);
+    }
+    .selector-option:hover {
+        background: rgba(255,255,255,.055);
+        border-color: rgba(255,255,255,.20);
     }
     .selector-option input {
         margin-top: 4px;
@@ -220,7 +259,7 @@
                 <div class="map-row">
                     <div class="map-key">{{ grupo.item.codigo_atividade }}</div>
                     <div>
-                        <div style="font-weight:600; margin-bottom:8px;">{{ grupo.item.atividade }}</div>
+                        <div class="map-activity-title">{{ grupo.item.atividade }}</div>
                         {% if grupo.codigos_eap %}
                         <div class="map-value-list">
                             {% for codigo in grupo.codigos_eap %}
@@ -231,7 +270,7 @@
                         <div class="map-status-pending">Sem vinculo ativo</div>
                         {% endif %}
                         {% if grupo.erro_eap %}
-                        <div class="map-help" style="color:#9f1239;">{{ grupo.erro_eap }}</div>
+                        <div class="map-help map-error">{{ grupo.erro_eap }}</div>
                         {% endif %}
                     </div>
                 </div>
@@ -313,7 +352,7 @@
             <div class="map-help" id="selector-subtitle"></div>
         </header>
         <div class="selector-body">
-            <div id="selector-message" class="map-help" style="margin-bottom:14px;"></div>
+            <div id="selector-message" class="map-help selector-message"></div>
             <div id="selector-options" class="selector-options"></div>
         </div>
         <footer>
@@ -369,8 +408,7 @@ document.addEventListener("DOMContentLoaded", function () {
             if ((payload.sugestoes_ids || []).includes(opcao.id)) {
                 const sugestao = document.createElement("div");
                 sugestao.textContent = "Sugerido pelo codigo importado";
-                sugestao.className = "map-help";
-                sugestao.style.color = "#1d4ed8";
+                sugestao.className = "map-help map-suggestion";
                 content.appendChild(sugestao);
             }
 
